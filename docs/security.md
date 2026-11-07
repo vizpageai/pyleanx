@@ -48,6 +48,20 @@ settings (public leaderboards, hosted checking of untrusted submissions), additi
 replay the compiled environment through an independent checker such as `lean4checker`
 or `comparator` (see Lean's "Validating Proofs" documentation). That is planned after M5.
 
+## Interactive sessions
+
+- The REPL (LeanInteract) is a *development aid*. Its goal states and "Completed" status
+  are never used as evidence; `session.verify()` runs the batch backend in a fresh
+  process with the full audit.
+- The REPL is a long-lived Lean process that elaborates whatever tactics you send, the
+  same trust level as running Lean locally. Raw tactic text is gated and screened as in
+  batch mode.
+- `launch="interpreted"` runs the REPL program with the pinned, already-installed `lean`
+  (`lean --run`). PyLeanX uses it automatically only when the OS refuses to execute the
+  freshly built `repl` binary. It does not move or disguise binaries to get around
+  application-control policies; if you want the compiled binary on a managed machine,
+  ask your administrator to allow it.
+
 ## Statement faithfulness
 
 The kernel certifies the **generated Lean statement**. PyLeanX makes that statement

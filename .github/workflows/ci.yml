@@ -44,7 +44,7 @@ jobs:
       - name: Fetch prebuilt Mathlib (no source rebuild)
         working-directory: lean-project
         run: lake exe cache get
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,interactive]"
       - run: pyleanx doctor
       - run: pytest tests -q -s
       - run: python -m build

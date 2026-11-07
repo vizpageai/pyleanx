@@ -61,9 +61,19 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 - Evidence: `pytest tests/unit` 119 passed; real-Lean test
   `test_unicode_types_greek_names_and_decorator` passed (4/4 verified, 7 m 38 s).
 
-### M5–M8: not started
-- M5 LeanInteract backend (`backend/leaninteract.py`): not started. Must inspect the installed `lean-interact` API first.
-- M6 domain modules, M7 theorem bank, M8 proof-agent API: not started.
+### M5: interactive Lean backend: **done** (2026-11-07, branch `m5-leaninteract`)
+- [x] `lean-interact==0.11.6` (optional extra `interactive`), REPL `v1.3.19`, API checked against installed code
+- [x] Transport isolated in `backend/leaninteract.py` (`LeanRepl`): shared REPL per project, cached import environments, timeout/crash recovery
+- [x] `ProofSession` (`thm.session()`): `goals`, `apply`, `peek`, `undo`, `reset`, `history`, `script`, `finish`, `verify`; Jupyter displays
+- [x] Re-import + replay when a tactic needs new modules; replay after REPL restart
+- [x] Raw tactics gated/screened as in batch mode
+- [x] **Gate** (`tests/integration/test_interactive.py`, real REPL): `intro` then `exact` across steps, then batch-verified; incomplete proofs show open goals and cannot be verified; `sorry` never verifies. 4/4 passed in 89 s.
+- Measured: Mathlib import env about 30 s once; then 3 steps in 0.38 s; second session open + step 0.15 s (vs 30–60 s per batch check).
+- **Environment finding:** this machine's application-control policy blocks newly built executables (`repl.exe`, also pip's `pyleanx.exe`/`jupyter.exe`). `launch="auto"` detects this and runs the same REPL program via the already-allowed pinned `lean --run REPL/Main.lean`. Documented in docs/security.md; no binaries are moved or disguised.
+- Not done: `PickleEnvironment` persistence across Python restarts; LaTeX rendering of goal strings (goals display as Lean text); REPL-based fast final verification (deliberately not done, as batch remains authoritative).
+
+### M6–M8: not started
+- M6 domain modules, M7 theorem bank, M8 proof-agent API (sessions are its foundation).
 
 ## Test evidence (commands actually run)
 
@@ -130,4 +140,5 @@ explained; to investigate on an idle machine before claiming batch speedups).
 
 ## Next unfinished milestone
 
-M4 release gates (Linux CI run, clean-machine install), then **M5** (LeanInteract backend).
+M4 release gates (push to GitHub so the Linux CI runs; clean-machine install), then **M6**
+(domain modules) or **M8** (proof-agent API on top of sessions).

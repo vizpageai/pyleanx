@@ -18,6 +18,7 @@ from . import mathlib
 from .backend.audit import DEFAULT_POLICY, STANDARD_AXIOMS, AxiomPolicy
 from .backend.cache import ResultCache
 from .backend.interface import Diagnostic, Status, VerificationResult
+from .backend.leaninteract import shutdown_repls as shutdown_sessions
 from .backend.subprocess_backend import verify_all
 from .binders import free_vars, prop_symbol, symbol, symbols
 from .errors import (
@@ -85,6 +86,7 @@ from .proofs import (
     use,
 )
 from .render.lean import render_module
+from .session import Goals, ProofSession, StepResult
 from .theorem import Hypothesis, Theorem, theorem
 from .types import Int, Nat, Prop, Rat, Real, Sort
 
@@ -110,7 +112,7 @@ __all__ = [
     # verification
     "verify_all", "VerificationResult", "Status", "Diagnostic", "AxiomPolicy",
     "DEFAULT_POLICY", "STANDARD_AXIOMS", "LeanProject", "find_project", "ResultCache",
-    "render_module", "mathlib",
+    "render_module", "mathlib", "ProofSession", "StepResult", "Goals", "shutdown_sessions",
     # errors
     "PyLeanXError", "SymbolicTruthValueError", "SortError", "LiteralError", "ScopeError",
     "IdentifierError", "TacticError", "UnsupportedConstructError", "ProjectError",

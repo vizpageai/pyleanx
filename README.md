@@ -97,6 +97,28 @@ pyleanx check examples/implication.py --json       # machine-readable
 Scripts expose a module-level `THEOREMS` list or a `build()` function. **The CLI
 executes the script as ordinary Python; only run scripts you trust.**
 
+## Interactive proving (step by step)
+
+```bash
+pip install -e ".[interactive]"     # adds LeanInteract (pinned)
+```
+
+```python
+s = thm.session()            # persistent Lean REPL; Mathlib loads once (~30 s here)
+s.goals                      # ('x y : ℝ\n⊢ (x + y) ^ 2 = x ^ 2 + 2 * x * y + y ^ 2',)
+s.apply(pl.positivity())     # ❌ "not a positivity goal" — state unchanged
+s.peek(pl.ring())            # try without recording
+s.apply(pl.ring())           # ✔ no goals — each step takes well under a second once warm
+s.undo()                     # step back
+s.apply(pl.ring())
+s.verify()                   # the ONLY way to get verified: batch Lean run + axiom audit
+```
+
+A session is an aid, like a Lean editor's goal view. `s.is_complete` only means the REPL
+sees no goals; `s.verify()` turns the recorded tactics into a proof and runs the normal
+batch check. Sessions share one REPL per project (`pl.shutdown_sessions()` stops it). In
+Jupyter, sessions, goals and step results render as formatted output.
+
 ## Decorator syntax, Greek names, LaTeX
 
 ```python

@@ -250,6 +250,24 @@ def render_tactic_lines(t: Tactic) -> list[str]:
 # =====================================================================================
 
 
+def _statement_parts(thm: Theorem, r: _ExprRenderer) -> tuple[str, str]:
+    """(``theorem name binders :``, rendered conclusion)."""
+    binders = []
+    if thm.variables:
+        binders.append(binder_groups(thm.variables, r.unicode_types))
+    for h in thm.assumptions:
+        binders.append(f"({h.name} : {r.render(h.prop)[0]})")
+    head = f"theorem {thm.name}" + ((" " + " ".join(binders)) if binders else "") + " :"
+    return head, r.render(thm.conclusion)[0]
+
+
+def render_open_statement(thm: Theorem, unicode_types: bool = False) -> str:
+    """The statement with a ``sorry`` placeholder, used ONLY to open an interactive
+    proof state. Never part of anything that is verified."""
+    head, concl = _statement_parts(thm, _ExprRenderer(unicode_types))
+    return f"{head}\n    {concl} := by\n  sorry"
+
+
 @dataclass(frozen=True)
 class RenderedModule:
     source: str
@@ -299,19 +317,13 @@ def render_module(
     for thm in theorems:
         b.add("")
         thm_start = b.next_line
-        binders = []
-        if thm.variables:
-            binders.append(binder_groups(thm.variables, unicode_types))
-        for h in thm.assumptions:
-            binders.append(f"({h.name} : {r.render(h.prop)[0]})")
-        head = f"theorem {thm.name}" + ((" " + " ".join(binders)) if binders else "") + " :"
+        head, concl = _statement_parts(thm, r)
         s, e = b.add(head)
         b.spans.append(SourceSpan(s, e, "binders", thm.name, "variables and hypotheses",
                                   thm.origin))
         for h in thm.assumptions:
             b.spans.append(SourceSpan(s, e, "hypothesis", thm.name, f"hypothesis {h.name}",
                                       h.origin or thm.origin))
-        concl = r.render(thm.conclusion)[0]
         if thm.proof is None:
             # Statement-only rendering (compile/show-lean). Never verified.
             s, e = b.add(f"    {concl} := by")

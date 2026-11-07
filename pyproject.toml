@@ -18,6 +18,7 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6", "build>=1.2"]
+interactive = ["lean-interact==0.11.6"]
 
 [project.scripts]
 pyleanx = "pyleanx.cli:main"
@@ -32,12 +33,13 @@ pyleanx = ["_lean_template/*", "py.typed"]
 testpaths = ["tests"]
 markers = [
     "lean: requires the pinned Lean/Mathlib workspace (skipped when unavailable)",
+    "interactive: requires lean-interact and the pinned workspace",
 ]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = ["lean-project"]
+extend-exclude = ["lean-project", "*.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]

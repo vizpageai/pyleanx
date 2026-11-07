@@ -161,6 +161,16 @@ class Theorem:
         state = "proved-script" if self.proof is not None else "no proof"
         return f"<pl.Theorem {self.name} ({state})>"
 
+    def session(self, project: LeanProject | str | None = None, **kwargs: Any) -> Any:
+        """Interactive proof session (goals, apply, undo) on a persistent Lean REPL.
+
+        Needs ``pip install 'pyleanx[interactive]'``. Sessions never verify by
+        themselves; ``session.verify()`` runs the batch check and axiom audit.
+        """
+        from .session import ProofSession
+
+        return ProofSession(self, project, **kwargs)
+
     def to_latex(self) -> str:
         """Typeset statement (display only): binders, hypotheses ⟹ conclusion."""
         from .render.latex import theorem_to_latex

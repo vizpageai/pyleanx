@@ -117,6 +117,12 @@ class Tactic:
     def flat(self) -> tuple[Tactic, ...]:
         return (self,)
 
+    def __str__(self) -> str:
+        """The Lean tactic text this node renders to."""
+        from .render.lean import render_tactic_lines
+
+        return "\n".join(render_tactic_lines(self))
+
     def __rshift__(self, other: Tactic) -> Steps:
         """``pl.intro("h") >> pl.exact("h")`` sequences tactics."""
         return steps(self, other)

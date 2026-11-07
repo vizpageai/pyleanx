@@ -117,6 +117,34 @@ results = pl.verify_all([thm1, thm2], project=None, use_cache=True, timeout=None
 `cache_hit`, `fingerprint`, `policy`, `raw_tactics_used`. Methods: `summary()`,
 `to_dict()`, `to_json()`, `from_dict()`.
 
+## Interactive sessions (M5; `pip install 'pyleanx[interactive]'`)
+
+```python
+s = thm.session(project=None, timeout=600, launch="auto", preload=None)   # ProofSession
+```
+
+| Member | Meaning |
+|---|---|
+| `s.goals` | `Goals` (tuple of Lean goal strings) for the current state |
+| `s.apply(*tactics)` | apply in order, stop at the first failure; returns `StepResult(ok, tactic, goals, error, status)` |
+| `s.peek(tactic)` | try without recording |
+| `s.undo(n=1)`, `s.reset()` | step back |
+| `s.history`, `s.script` | applied tactics; `pl.steps(...)` of them |
+| `s.is_complete` | the REPL reports no goals (**not** verification) |
+| `s.finish()` | attach the script as `thm.proof` (requires completeness) |
+| `s.verify()` | `finish()` + batch `thm.verify()`: the authoritative check |
+
+- All sessions for a project share one persistent REPL; import environments are cached,
+  so Mathlib loads once. `pl.shutdown_sessions()` stops the REPL processes.
+- If a tactic needs a module that isn't loaded, the session re-imports and replays its
+  history. If the REPL crashes or times out, it restarts and replays automatically.
+- `preload`: extra modules imported up front. Default: common Mathlib tactics (`ring`,
+  `positivity`, `linarith`, `norm_num`) when the statement already uses Mathlib.
+- `launch`: `"binary"` runs LeanInteract's compiled `repl`; `"interpreted"` runs the same
+  REPL program with the pinned `lean --run`; `"auto"` uses the binary unless the OS refuses
+  to execute it (e.g. application control on managed Windows machines).
+- Raw tactics follow the same policy gate and screening as the batch backend.
+
 ## Projects and policy
 
 ```python
