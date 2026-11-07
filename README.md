@@ -1,0 +1,167 @@
+# PyLeanX
+
+**Write theorems in Python. Have them checked by the Lean 4 kernel.**
+
+PyLeanX is a Python-first frontend for Lean 4 + Mathlib, built for mathematicians
+and for AI/ML pipelines. Think of the PyTorch experience: symbolic objects,
+operator overloading, a compile step, but here the "backend" is Lean, and
+Lean alone decides whether a proof is correct.
+
+```python
+import pyleanx as pl
+
+x, y = pl.symbols("x y", pl.Real)
+thm = pl.Theorem("square_identity", variables=[x, y],
+                 conclusion=(x + y)**2 == x**2 + 2*x*y + y**2)
+thm.prove(pl.ring())
+
+print(thm.to_lean())          # exact Lean source that will be checked
+result = thm.verify()         # runs Lean + axiom audit
+assert result.verified, result.diagnostics
+print(result.axioms)          # ('propext', 'Classical.choice', 'Quot.sound')
+```
+
+Generated Lean:
+
+```lean
+import Mathlib.Basic.Real.Basic
+import Mathlib.Tactic.Ring
+
+set_option autoImplicit false
+
+theorem square_identity (x y : Real) :
+    (x + y) ^ 2 = x ^ 2 + 2 * x * y + y ^ 2 := by
+  ring
+
+#print axioms square_identity
+```
+
+> **Status: 0.1.0.dev0, MVP (milestones M0–M4).** See [docs/roadmap.md](docs/roadmap.md)
+> for what is implemented and tested. The package name `pyleanx` is provisional.
+
+## What "verified" means
+
+`result.verified` is `True` only when **all** of these hold:
+
+1. Lean (pinned toolchain `v4.34.1`, pinned Mathlib) accepted the exact generated
+   file with no errors in the theorem.
+2. An `#print axioms` report was found **at the exact line PyLeanX emitted** for that
+   theorem (text printed elsewhere cannot spoof it).
+3. Every axiom the proof transitively depends on is allowed by the policy: by default
+   only `propext`, `Classical.choice`, `Quot.sound`. `sorryAx`, user axioms, and
+   native-evaluation trust (`Lean.ofReduceBool`, …) are rejected.
+
+The result also records the toolchain, Mathlib revision, Lean source, diagnostics with
+Python file:line origins, timing, and a reproducibility fingerprint.
+
+Python never decides truth. A mock backend, a symbolic simplifier, a finished tactic
+or a zero exit code is never reported as `verified`.
+
+## Install
+
+Requirements: Python ≥ 3.11 and [elan](https://lean-lang.org/install/manual/) (Lean's
+toolchain manager).
+
+```bash
+pip install -e ".[dev]"          # from a checkout
+pyleanx init                     # pinned Lean/Mathlib workspace + `lake exe cache get`
+pyleanx doctor                   # check everything
+```
+
+If a security policy blocks the generated `pyleanx.exe` launcher (as on some managed
+Windows machines), use `python -m pyleanx doctor`, `python -m pyleanx check ...` etc.
+
+In a source checkout, the repository's `lean-project/` is found automatically;
+otherwise `pyleanx init` creates `~/.pyleanx/lean-project`. Set `PYLEANX_PROJECT` to
+use another workspace. The first `lake exe cache get` downloads several GB of prebuilt
+Mathlib; nothing is rebuilt from source.
+
+## Examples
+
+| File | Statement | Tactic |
+|---|---|---|
+| [examples/square_identity.py](examples/square_identity.py) | (x+y)² = x²+2xy+y² over ℝ | `ring` |
+| [examples/square_nonnegative.py](examples/square_nonnegative.py) | x² ≥ 0 over ℝ | `positivity`, `exact sq_nonneg x` |
+| [examples/nat_add_zero.py](examples/nat_add_zero.py) | n + 0 = n over ℕ | `simp`, `omega` |
+| [examples/implication.py](examples/implication.py) | P → P; a>0 ∧ b>0 ⇒ a+b>0 | `intro`/`exact`, `linarith` |
+| [examples/bad_proof.py](examples/bad_proof.py) | false claim / wrong tactic | must be rejected |
+| [examples/ai_batch.py](examples/ai_batch.py) | candidate proofs incl. LLM text | batch + JSON |
+
+```bash
+pyleanx show-lean examples/square_identity.py
+pyleanx check examples/square_identity.py          # exit 0
+pyleanx check examples/bad_proof.py                # exit 1, with diagnostics
+pyleanx check examples/implication.py --json       # machine-readable
+```
+
+Scripts expose a module-level `THEOREMS` list or a `build()` function. **The CLI
+executes the script as ordinary Python; only run scripts you trust.**
+
+## Decorator syntax, Greek names, LaTeX
+
+```python
+@pl.theorem(proof=pl.positivity(), assumptions=lambda α, x: {"hα": α > 0})
+def scaled_square(α: pl.Real, x: pl.Real):
+    return α * x**2 + α > 0
+
+scaled_square.verify()
+scaled_square.to_latex()   # \forall \alpha, x \in \mathbb{R},\quad \alpha > 0 \;\Longrightarrow\; \alpha x^{2} + \alpha > 0
+```
+
+- `@pl.theorem` turns a function into a `pl.Theorem`. Parameter annotations give the sorts,
+  and the function is called once with fresh symbols. It runs as ordinary Python; it is not
+  a source-code compiler.
+- Variable names may use Greek letters and subscript digits: `pl.symbol("θ", pl.Real)`,
+  `pl.symbol("x₁", pl.Real)`. Python identifiers cannot contain `₁`; write `x1` there
+  (it still displays as $x_1$). `λ`, `Π`, `Σ` are rejected because they are Lean syntax.
+- `LeanProject(unicode_types=True)` / `--unicode-types` writes `ℝ ℕ ℤ ℚ` instead of
+  `Real Nat Int Rat` (and imports the Mathlib notation modules).
+- **Jupyter:** expressions render as typeset math, theorems as a typeset statement with
+  the Lean source in a collapsible block, and results with ✅/❌. `pl.latex(obj)` returns
+  the LaTeX string. LaTeX is display only; Lean only ever sees `to_lean()`.
+
+## For AI and data pipelines
+
+- `pl.verify_all(theorems)` checks many theorems in one Lean process, with a separate
+  status, axiom audit and diagnostics for each.
+- `VerificationResult.to_dict()/to_json()` and `pyleanx check --json` give a stable
+  schema (`schema_version: 1`).
+- `pl.raw_tactic("nlinarith [sq_nonneg (x - 1)]")` accepts model-generated tactic
+  text, but it is **untrusted**: rejected unless the policy sets
+  `allow_raw_tactics=True`, screened for commands/options, and still kernel-checked and
+  audited. See [docs/security.md](docs/security.md).
+- Diagnostics carry Lean positions, the tactic step that failed, and the Python line
+  that created it.
+
+## Notation caveats (read this)
+
+- `==`, `<`, `<=`, … build **propositions**. Expressions have no truth value: `if x == 0:`,
+  `and`, `or`, `not`, chained `0 <= x <= 1`, builtin `min`/`max` raise
+  `SymbolicTruthValueError`. Use `pl.And/pl.Or/pl.Not` (or `&`, `|`, `~`),
+  `pl.And(0 <= x, x <= 1)`, `pl.min/pl.max`.
+- Expressions are unhashable (no dict keys/sets); compare with `a.same_structure(b)`.
+- Python reflects comparisons with a literal on the left: `0 <= x` is rendered `x ≥ 0`
+  (the same proposition in Lean).
+- No Python floats: `0.1` is not exact. Use `pl.real("0.1")` or `pl.rat(1, 10)`.
+  `2/3` is evaluated by Python *before* PyLeanX sees it; write `pl.rat(2, 3)`.
+- No implicit coercions: `n + x` with `n : Nat`, `x : Real` is an error; write
+  `pl.cast(n, pl.Real) + x`.
+- `Nat` subtraction truncates and `/` on `Nat`/`Int` is floor division, exactly as in Lean.
+- PyLeanX is not a general Python-to-Lean compiler; arbitrary Python functions are not
+  translated.
+- A kernel check certifies the **generated Lean statement**. Whether that statement
+  faithfully captures the informal theorem you had in mind is your responsibility:
+  always read `thm.to_lean()`.
+
+## Documentation
+
+- [docs/api.md](docs/api.md): API reference
+- [docs/architecture.md](docs/architecture.md): design and trust pipeline
+- [docs/security.md](docs/security.md): trust model, raw tactics, sandboxing
+- [docs/troubleshooting.md](docs/troubleshooting.md)
+- [docs/roadmap.md](docs/roadmap.md): milestones, test evidence, blockers
+- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md): the engineering specification
+
+## License
+
+Apache-2.0 (same as Lean 4 and Mathlib). See [LICENSE](LICENSE).

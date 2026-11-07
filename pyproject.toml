@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyleanx"
+version = "0.1.0.dev0"
+description = "Python-first frontend for writing theorems and proofs that are checked by the Lean 4 kernel"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "PyLeanX contributors" }]
+dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6", "build>=1.2"]
+
+[project.scripts]
+pyleanx = "pyleanx.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pyleanx = ["_lean_template/*", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "lean: requires the pinned Lean/Mathlib workspace (skipped when unavailable)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["lean-project"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B015", "B018", "E712", "E501"]

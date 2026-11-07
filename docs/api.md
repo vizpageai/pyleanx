@@ -1,0 +1,148 @@
+# PyLeanX API reference (v0.1)
+
+All names are available as `import pyleanx as pl`.
+
+## Sorts
+
+`pl.Nat`, `pl.Int`, `pl.Rat`, `pl.Real`, `pl.Prop` are descriptors of Lean types
+(`Nat`, `Int`, `Rat`, `Real`, `Prop`), not Python numeric types.
+
+## Symbols and literals
+
+| Call | Result |
+|---|---|
+| `pl.symbol("x", pl.Real)` | fresh variable `x : Real` |
+| `pl.symbols("x y", pl.Real)` | tuple of fresh variables |
+| `pl.prop_symbol("P")` | proposition variable `P : Prop` |
+| `pl.nat(3)`, `pl.integer(-3)` | typed integer literals |
+| `pl.real("0.1")`, `pl.real(2)` | exact real literal (`1/10`, `2`) |
+| `pl.rat(2, 3, sort=None)` | exact fraction; untyped unless `sort` is given |
+| `pl.cast(e, pl.Real)` | explicit embedding Nat → Int → Rat → Real, rendered `(↑e : Real)` |
+| `pl.TRUE`, `pl.FALSE` | `True`, `False` |
+
+Each variable has an identity (`uid`). Two variables with the same name are different
+variables, and using both in one theorem is a `ScopeError`.
+
+Python `int` literals take the sort of the term they combine with (`x + 2` with
+`x : Real`). Python `float` and `bool` are rejected.
+
+## Expressions
+
+Arithmetic: `+ - * /`, `**` (natural-number exponents only), unary `-` (not on Nat),
+`//` and `%` (Nat/Int only). Functions: `pl.sqrt`, `pl.exp`, `pl.log` (Real),
+`abs(e)`/`pl.abs`, `pl.min`, `pl.max`. Custom typed functions use
+`pl.Func("Lean.name", (arg sorts…), result_sort, imports=(…))`.
+
+Propositions: `==`, `!=`, `<`, `<=`, `>`, `>=`; `pl.Eq`, `pl.Ne`;
+`pl.Not(p)`/`~p`, `pl.And(p, q, …)`/`p & q`, `pl.Or(…)`/`p | q`,
+`pl.Implies(p, q, …)` (right-nested), `pl.Iff(p, q)`,
+`pl.Forall([x, y], body)`, `pl.Exists([x], body)`.
+
+Structural API: `e.same_structure(other)`, `e.canonical()`, `e.to_lean()`,
+`pl.free_vars(e)`.
+
+## Theorems
+
+```python
+pl.Theorem(name, variables=[...], assumptions=..., conclusion=prop,
+           imports=(...), proof=None)
+```
+
+- `assumptions`: list of `pl.Hypothesis(name, prop)`, `(name, prop)` tuples, a
+  `{name: prop}` dict, or bare propositions (auto-named `h1`, `h2`, …). Order is kept.
+- `thm.prove(tactic)`: attach a proof script (returns `thm`); does **not** verify.
+- `thm.to_lean(project=None)`: deterministic Lean source (pure).
+- `thm.verify(project=None, use_cache=True, timeout=None)` returns a `VerificationResult`.
+- `thm.canonical()`: JSON-able canonical IR (used in fingerprints).
+
+Statement validation (before Lean): every free variable declared, unique names, no
+quantifier capture or shadowing, safe identifiers, proposition-valued statements.
+
+### Decorator
+
+```python
+@pl.theorem(proof=None, name=None, assumptions=None, imports=())
+def name(x: pl.Real, n: pl.Nat): return <proposition>
+```
+
+Each parameter needs a sort annotation (`*args`/`**kwargs` are rejected). `assumptions` is
+a function of the same parameters returning anything `Theorem(assumptions=...)` accepts.
+Bare `@pl.theorem` (no parentheses) also works. The result is a normal `pl.Theorem`.
+
+### Display
+
+`e.to_latex()`, `thm.to_latex()`, `pl.latex(obj)`; Jupyter uses `_repr_latex_` (expressions)
+and `_repr_markdown_` (theorems, results). Names: `α`→`\alpha`, `x₁`/`x1`/`x_1`→`x_{1}`,
+multi-letter names→`\mathit{...}`. Display only; never sent to Lean.
+
+### Identifiers
+
+ASCII letters, Greek letters (except `λ Π Σ`), digits, subscript digits `₀-₉`, `_`, `'`;
+must start with a letter (or `_` + letter/digit); Lean keywords and core names are rejected.
+
+## Tactics
+
+| PyLeanX | Lean |
+|---|---|
+| `pl.ring()` | `ring` |
+| `pl.positivity()` | `positivity` |
+| `pl.omega()` | `omega` |
+| `pl.simp(*lemmas, only=False, at=...)` | `simp [..] at ..` |
+| `pl.linarith(*lemmas)`, `pl.nlinarith(*lemmas)` | `linarith [..]` |
+| `pl.norm_num(*lemmas)` | `norm_num [..]` |
+| `pl.intro("h", ...)` | `intro h ...` |
+| `pl.exact(term)`, `pl.apply(term)` | `exact t`, `apply t` |
+| `pl.rw(rule, pl.rev(rule2), at=...)` | `rw [rule, ← rule2] at ..` |
+| `pl.use(e, ...)` | `use e, ...` |
+| `pl.rfl()`, `pl.decide()`, `pl.constructor()`, `pl.assumption()` | same |
+| `pl.steps(t1, t2)` or `t1 >> t2` | sequential tactics |
+| `pl.branches(t1, t2)` | `· t1` / `· t2` bullets (one per goal) |
+| `pl.raw_tactic(text, imports=())` | **untrusted** text; policy-gated |
+
+Terms: a string is a hypothesis/lemma name (validated); `pl.ref("Nat.add_zero")`
+references a library declaration (optionally with `imports=`); `pl.ref(theorem)`
+references an earlier `Theorem`; calling a reference applies it:
+`pl.ref("mul_pos")("ha", "hb")`, `pl.mathlib.sq_nonneg(x - 1)`.
+
+## Verification
+
+```python
+results = pl.verify_all([thm1, thm2], project=None, use_cache=True, timeout=None)
+```
+
+`VerificationResult` fields: `theorem`, `status` (`verified`, `rejected`, `timeout`,
+`environment_error`, `policy_rejected`), `verified` (property), `diagnostics`
+(`Diagnostic`: severity, message, line, column, span_kind, span_label, python_origin),
+`axioms`, `lean_source`, `toolchain`, `mathlib_revision`, `source_map`, `duration_ms`,
+`cache_hit`, `fingerprint`, `policy`, `raw_tactics_used`. Methods: `summary()`,
+`to_dict()`, `to_json()`, `from_dict()`.
+
+## Projects and policy
+
+```python
+proj = pl.find_project()                       # see resolution order in project.py
+proj = pl.LeanProject.at("path/to/lean-project", timeout=120,
+                         import_mode="minimal",  # or "mathlib" => `import Mathlib`
+                         extra_imports=("Mathlib.Tactic.Linarith",),
+                         policy=pl.AxiomPolicy(allow_raw_tactics=False),
+                         lean_options=(("maxHeartbeats", "400000"),),
+                         unicode_types=False)    # True: ℝ ℕ ℤ ℚ in generated Lean
+```
+
+`pl.AxiomPolicy(allowed=STANDARD_AXIOMS, allow_native=False, allow_raw_tactics=False,
+extra_allowed=frozenset())`. `sorryAx` is never accepted. `debug.*` Lean options are refused.
+
+## CLI
+
+```
+pyleanx init [DIR] [--force] [--no-cache-get]
+pyleanx doctor [--project P] [--json]
+pyleanx show-lean SCRIPT [--project P] [--mathlib-imports] [--unicode-types]
+pyleanx compile SCRIPT [-o OUT.lean]
+pyleanx check SCRIPT [--json] [--include-source] [--no-cache] [--timeout S] [--allow-raw-tactics]
+pyleanx cache stats|clear
+```
+
+If Windows blocks the `pyleanx.exe` launcher, use `python -m pyleanx ...` (same arguments).
+
+`check` exits 0 only if every theorem is verified; 1 otherwise; 2 on usage/script errors.
