@@ -83,8 +83,37 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 - [x] **Gate** (`tests/integration/test_domains.py`, real Lean): polynomial identity (`ring`), nonnegative square (`positivity`), AM-GM (`nlinarith [sq_nonneg (a - b)]`), `sin²+cos²=1`, `√x²=x`, plane triangle inequality, triangle angle sum = π, Pythagoras via `rw [iff]`: all **verified** in one Lean run; reversed triangle inequality **rejected**. 2 passed in 55 s.
 - Limitations: concrete sorts only (no typeclass binders: statements about ℝ², not arbitrary Euclidean spaces); no coordinates, vectors, lines, circles, limits, derivatives or integrals yet.
 
-### M7–M8: not started
-- M7 theorem bank, M8 proof-agent API (sessions are its foundation).
+### M7: theorem bank: **implemented; real-Lean gate NOT yet run** (2026-11-09)
+- [x] `pyleanx.bank.TheoremBank`: JSON file store (atomic save, schema 1); entries keep canonical ID ≠ Lean name, `Formalization` (system, library, toolchain, library revision), statement + SHA-256 (tamper check on load), assumptions, aliases, tags, provenance, dependency edges, evidence, canonical theorem
+- [x] `index_declarations` / `index_catalogs`: statements come from Lean's `#check`, never typed by hand
+- [x] `search` (IDs, names, aliases, tags, descriptions, statements); `ref` (Name + imports) and `load` / `load_with_dependencies` refuse other toolchains/revisions (`VersionMismatchError`) and non-Lean entries (`CrossSystemError`); `link` records cross-system relations as informational only
+- [x] `serialize.theorem_from_canonical`: strict, exact rebuild from canonical JSON (sort/function registries)
+- [x] CLI `pyleanx bank index|search|show|list`
+- [x] Unit tests: `tests/unit/test_bank.py`, `test_agent_server.py` (CLI)
+- [ ] **Gate** `tests/integration/test_bank.py` (search → versioned declaration → proof → verify; bank, reload, reuse in `verify_all`): written, but the run was **stopped by Claude Code because the machine ran low on memory** (two Lean processes plus other workloads, ~3.4 GB of 16 GB free afterwards). No result either way.
+
+### M8: proof-agent API: **implemented; real-Lean gate NOT yet run** (2026-11-09)
+- [x] `agent.ProofEnv`: observe / act (text, Tactic or canonical JSON) / peek / undo / verify, step budget, JSONL transcript; `TOOLS` JSON schemas + `call_tool` for tool-calling LLMs
+- [x] `agent.tactic_from_text`: common tactics → structured IR with catalog imports; anything else → `RawTactic` only with explicit `allow_raw`
+- [x] Proposers: `AutomationProposer`, `RetrievalProposer(bank)`, `ChainProposer`; `search_proof` (DFS + backtracking, visited states, budget); `try_proofs` (REPL-free, candidates as renamed copies in one batch run, winner re-verified)
+- [x] Benchmark: `agent.basic()` (13 problems: logic, Nat, algebra, inequalities, analysis, geometry), `export_jsonl`, `run_benchmark(mode="session"|"batch")`, CLI `pyleanx agent bench|export|serve` (JSON-lines stdio server; raw text only with operator `--allow-raw`)
+- [x] Unit tests: `tests/unit/test_agent.py`, `test_agent_server.py` (fake REPL; status always comes from the batch result)
+- [ ] **Gate** `tests/integration/test_agent.py` (baseline search verifies 3 problems; `sorry` and `native_decide` agents rejected by the audit after the REPL accepted their steps; tool calls; batch mode): written, run **stopped for low memory** as above. No result.
+- Not done: no benchmark numbers yet; no LLM client is bundled (any callable is a proposer); no `lean4checker` replay.
+
+### Evidence for this session (2026-11-09)
+| Command | Result |
+|---|---|
+| `pytest tests/unit -q` | **191 passed** |
+| `ruff check .` | all checks passed |
+| `pytest tests/integration/test_domains.py` | 2 passed, 1 skipped (slow catalog test), 55 s |
+| catalog `#check` of all 54 names | all exist (556 s) |
+| `python -m build --wheel` | built; wheel includes `pyleanx/agent/*`, `bank.py`, `geometry.py` |
+| M7/M8 integration gates | **not completed** (stopped for low memory) |
+
+Also fixed this session: a PowerShell rewrite had corrupted non-ASCII characters (`≤`, `∀`) in
+`algebra.py` (committed in the M6 commit: docstrings and the `"≤"`/`"≥"` keys of
+`inequality`'s operator table), `bank.py` and a test file; repaired and re-tested.
 
 ## Test evidence (commands actually run)
 
@@ -149,7 +178,9 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - Raw-tactic screening is heuristic; independent replay checking (`lean4checker`) is future work.
 - No Linux CI evidence yet; no PyPI name check beyond the plan's note that `pylean` is taken.
 
-## Next unfinished milestone
+## Next unfinished work
 
-M4 release gates (push to GitHub so the Linux CI runs; clean-machine install), then **M6**
-(domain modules) or **M8** (proof-agent API on top of sessions).
+1. Run the M7 and M8 gates one at a time on a machine with free memory:
+   `pytest tests/integration/test_bank.py -s` then `pytest tests/integration/test_agent.py -s`.
+2. `pyleanx agent bench` for baseline numbers (session and batch modes).
+3. M4 release gates: push to GitHub so the Linux CI runs; clean-machine install.

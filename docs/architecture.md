@@ -55,8 +55,28 @@ fails, Lean's error recovery adds it with `sorryAx`, so the dependent's audit fa
 constants, tactics (`ring` → `Mathlib.Tactic.Ring`), lemma references, and explicit
 theorem/project imports. `import_mode="mathlib"` emits `import Mathlib` instead.
 
-## Extension points (later milestones)
+## Layers added after the MVP
 
-- `backend/leaninteract.py` (M5): interactive goals via LeanInteract, always followed by
-  batch verification before anything is marked verified.
-- Domain modules `pyleanx.algebra`, `pyleanx.analysis`, `pyleanx.geometry` (M6).
+```
+ agent/ (M8)  ProofEnv ─ proposers ─ search_proof / try_proofs ─ benchmark ─ server (stdio)
+     │ uses                                   │ final check always via
+     ▼                                        ▼
+ session.py + backend/leaninteract.py (M5)   verify_all (batch + audit)
+     ▲                                        ▲
+ bank.py (M7): TheoremBank ── backend/declarations.py (#check @name) ── serialize.py
+     ▲
+ algebra.py / analysis.py / geometry.py (M6): sorts, Funcs, lemma catalogs (_domain.py)
+```
+
+- **Sessions (M5)** give goal states from a persistent REPL. They feed a recorded script
+  to the batch backend and never decide verification themselves.
+- **Domain modules (M6)** add sorts (`geometry.Point`), typed function constants
+  (`Real.sin`, `dist`, `EuclideanGeometry.angle`) and lemma catalogs (`Name` + imports),
+  versioned by `_domain.VERIFIED_MATHLIB`.
+- **Bank (M7)**: entries store canonical ID ≠ Lean name, formalization (toolchain,
+  library revision), statement + SHA-256, and evidence. `serialize.theorem_from_canonical`
+  rebuilds PyLeanX theorems exactly from JSON (sort and function registries:
+  `types.register_sort`, `serialize.register_func`).
+- **Agents (M8)**: tactic text → IR (`agent/parse.py`; anything unstructured is a gated
+  `RawTactic`); `ProofEnv` wraps a session and keeps a transcript; search and benchmarks
+  report `verified` only from batch results.

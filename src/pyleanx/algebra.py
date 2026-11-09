@@ -5,7 +5,7 @@
 
     a, b = pl.symbols("a b", pl.Real)
     alg.identity("sq_sum", (a + b)**2, a**2 + 2*a*b + b**2).verify()   # by ring
-    alg.am_gm_two("amgm", a, b).verify()                              # 2ab â‰¤ aÂ²+bÂ²
+    alg.am_gm_two("amgm", a, b).verify()                              # 2ab ≤ a²+b²
 
 Abstractions and limitations
 ----------------------------
@@ -76,7 +76,7 @@ def _variables(parts: Sequence[Expr], variables: Iterable[Var] | None) -> list[V
 
 def identity(name: str, lhs: object, rhs: object, *, variables: Iterable[Var] | None = None,
              proof: Tactic | None = None) -> Theorem:
-    """``âˆ€ vars, lhs = rhs``, proved by ``ring`` unless another proof is given."""
+    """``∀ vars, lhs = rhs``, proved by ``ring`` unless another proof is given."""
     concl = _compare("eq", lhs, rhs)
     return Theorem(name, _variables([concl], variables), None, concl,
                    proof=proof if proof is not None else ring())
@@ -88,7 +88,7 @@ def inequality(name: str, lhs: object, op: str, rhs: object, *, assumptions: obj
 
     The default proof is ``nlinarith`` (with hypotheses); pass a better one if known.
     """
-    ops = {"<=": "le", "<": "lt", ">=": "ge", ">": "gt", "â‰¤": "le", "â‰¥": "ge"}
+    ops = {"<=": "le", "<": "lt", ">=": "ge", ">": "gt", "≤": "le", "≥": "ge"}
     if op not in ops:
         raise SortError(f"inequality op must be one of {sorted(ops)}, got {op!r}")
     concl = _compare(ops[op], lhs, rhs)
@@ -106,12 +106,12 @@ def inequality(name: str, lhs: object, op: str, rhs: object, *, assumptions: obj
 
 def nonneg(name: str, term: object, *, assumptions: object = None,
            variables: Iterable[Var] | None = None, proof: Tactic | None = None) -> Theorem:
-    """``0 â‰¤ term``, proved by ``positivity`` unless another proof is given."""
+    """``0 ≤ term``, proved by ``positivity`` unless another proof is given."""
     return inequality(name, 0, "<=", term, assumptions=assumptions, variables=variables,
                       proof=proof if proof is not None else positivity())
 
 
 def am_gm_two(name: str, a: Var, b: Var) -> Theorem:
-    """Two-variable AM-GM in polynomial form: ``2 * a * b â‰¤ a ^ 2 + b ^ 2``."""
+    """Two-variable AM-GM in polynomial form: ``2 * a * b ≤ a ^ 2 + b ^ 2``."""
     return inequality(name, 2 * a * b, "<=", a**2 + b**2, variables=[a, b],
                       proof=nlinarith(sq_nonneg(a - b)))

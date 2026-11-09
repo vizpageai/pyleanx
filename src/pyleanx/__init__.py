@@ -21,6 +21,14 @@ from .backend.cache import ResultCache
 from .backend.interface import Diagnostic, Status, VerificationResult
 from .backend.leaninteract import shutdown_repls as shutdown_sessions
 from .backend.subprocess_backend import verify_all
+from .bank import (
+    BankEntry,
+    BankError,
+    CrossSystemError,
+    Formalization,
+    TheoremBank,
+    VersionMismatchError,
+)
 from .binders import free_vars, prop_symbol, symbol, symbols
 from .errors import (
     IdentifierError,
@@ -91,6 +99,7 @@ from .proofs import (
     use,
 )
 from .render.lean import render_module
+from .serialize import theorem_from_canonical
 from .session import Goals, ProofSession, StepResult
 from .theorem import Hypothesis, Theorem, theorem
 from .types import Int, Nat, Prop, Rat, Real, Sort
@@ -122,6 +131,9 @@ __all__ = [
     "verify_all", "VerificationResult", "Status", "Diagnostic", "AxiomPolicy",
     "DEFAULT_POLICY", "STANDARD_AXIOMS", "LeanProject", "find_project", "ResultCache",
     "render_module", "mathlib", "ProofSession", "StepResult", "Goals", "shutdown_sessions",
+    # theorem bank (M7)
+    "TheoremBank", "BankEntry", "Formalization", "BankError", "VersionMismatchError",
+    "CrossSystemError", "theorem_from_canonical",
     # errors
     "PyLeanXError", "SymbolicTruthValueError", "SortError", "LiteralError", "ScopeError",
     "IdentifierError", "TacticError", "UnsupportedConstructError", "ProjectError",

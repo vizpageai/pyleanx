@@ -46,7 +46,7 @@
 Screening is a heuristic defence-in-depth layer, not a proof of safety. For adversarial
 settings (public leaderboards, hosted checking of untrusted submissions), additionally
 replay the compiled environment through an independent checker such as `lean4checker`
-or `comparator` (see Lean's "Validating Proofs" documentation). That is planned after M5.
+or `comparator` (see Lean's "Validating Proofs" documentation). Not implemented yet.
 
 ## Interactive sessions
 
@@ -61,6 +61,32 @@ or `comparator` (see Lean's "Validating Proofs" documentation). That is planned 
   freshly built `repl` binary. It does not move or disguise binaries to get around
   application-control policies; if you want the compiled binary on a managed machine,
   ask your administrator to allow it.
+
+## Theorem bank
+
+- Entries are pointers. Using one emits a name into Lean source, and the kernel checks
+  that use; banked PyLeanX theorems are re-checked in the same Lean file as the proof
+  that uses them (`load_with_dependencies` + `verify_all`). Stored evidence is a record,
+  not a credential.
+- Statements of library declarations come from Lean (`#check`) at the pinned revision.
+  Each statement is stored with its SHA-256, entries carry their exact formalization, and
+  `ref`/`load` refuse other toolchains or library revisions.
+- Cross-system links (`bank.link`) and non-Lean entries are informational only.
+  Equivalence between formalizations is never assumed.
+- A bank file is data you chose to trust as an index. A tampered entry cannot make
+  anything verified, but it can point you at a different lemma; check `entry.statement`.
+
+## Proof agents and the agent server
+
+- Agent actions run in the interactive REPL; `ProofAttempt.verified`/`verify` come only
+  from the batch backend's fresh run and audit. The integration gate shows a `sorry` agent
+  and a `native_decide` agent being rejected after the REPL accepted their steps.
+- `allow_raw` is an explicit opt-in per environment (and per server via
+  `pyleanx agent serve --allow-raw`); a client request cannot enable it.
+- `pyleanx agent serve` executes Lean on statements supplied by the client. Run it only
+  for clients you trust as you would trust someone running Lean on your machine: it is
+  not a sandbox, has no resource accounting beyond timeouts and step budgets, and should
+  not be exposed to a network.
 
 ## Statement faithfulness
 

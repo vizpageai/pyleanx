@@ -142,6 +142,41 @@ scaled_square.to_latex()   # \forall \alpha, x \in \mathbb{R},\quad \alpha > 0 \
   the Lean source in a collapsible block, and results with ✅/❌. `pl.latex(obj)` returns
   the LaTeX string. LaTeX is display only; Lean only ever sees `to_lean()`.
 
+## Algebra, analysis and plane geometry
+
+```python
+from pyleanx import algebra as alg, analysis as an, geometry as geo
+
+alg.am_gm_two("am_gm", a, b)                         # 2ab ≤ a² + b², proof supplied
+pl.Theorem("trig", [x], conclusion=an.sin(x)**2 + an.cos(x)**2 == 1,
+           proof=pl.exact(an.sin_sq_add_cos_sq(x)))
+A, B, C = geo.points("A B C")                        # points of ℝ²
+pl.Theorem("angle_sum", [A, B, C], assumptions={"h": B != A},
+           conclusion=geo.angle(A, B, C) + geo.angle(B, C, A) + geo.angle(C, A, B) == pl.pi(),
+           proof=pl.exact(geo.angle_add_angle_add_angle_eq_pi(C, pl.hyp("h"))))
+```
+
+Each module's lemma catalog names declarations checked against the pinned Mathlib; see
+[examples/domains.py](examples/domains.py) and the module docstrings for limitations.
+
+## Theorem bank
+
+`pl.TheoremBank` indexes declarations with the statements Lean reports, searches them
+(`bank.search("triangle inequality")`), hands back version-checked lemma references
+(`bank.ref(id)`), and stores your verified theorems with their evidence for reuse
+(`bank.add_theorem`, `bank.load_with_dependencies`). CLI: `pyleanx bank index|search|show`.
+See [examples/theorem_bank.py](examples/theorem_bank.py).
+
+## Proof agents
+
+`pyleanx.agent` lets programs and AI models propose proofs that Lean checks:
+`agent.ProofEnv(thm)` (observe/act/undo/verify, plus JSON tool schemas for tool-calling
+models), `agent.search_proof(thm, proposer)` (backtracking search; an LLM is just a
+proposer), `agent.try_proofs` (no REPL needed), a 13-problem baseline benchmark
+(`pyleanx agent bench`), and `pyleanx agent serve` (JSON lines over stdio). However a
+script was found, it is **verified only by the batch Lean run and axiom audit**. See
+[examples/agent_search.py](examples/agent_search.py).
+
 ## For AI and data pipelines
 
 - `pl.verify_all(theorems)` checks many theorems in one Lean process, with a separate

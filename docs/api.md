@@ -171,6 +171,57 @@ pl.Theorem("angle_sum", [A, B, C], assumptions={"h": B != A},
 Points support only `=` and `≠`; ordering, arithmetic and numeric literals on points are
 `SortError`s. `pl.sin`, `pl.cos`, `pl.pi` are also exported at top level.
 
+## Theorem bank (M7)
+
+A local, file-backed index (`~/.pyleanx/bank.json`, or `$PYLEANX_BANK`). Each entry keeps
+a **canonical ID** (`geometry.dist_triangle`) separate from the **Lean name**
+(`dist_triangle`), plus its formalization (system, toolchain, library revision), the
+statement text and its SHA-256, assumptions, aliases, tags, provenance, dependency edges,
+and, for theorems proved through PyLeanX, the verification evidence and canonical theorem.
+
+```python
+bank = pl.TheoremBank.open()               # or pl.TheoremBank(path); TheoremBank() = in memory
+bank.index_catalogs()                      # one Lean run: statements come from `#check`
+bank.index_declarations({"my.id": pl.ref("Nat.succ_le_of_lt", imports=[...])})
+hits = bank.search("triangle inequality")  # ranked over IDs, names, aliases, tags, text
+lemma = bank.ref("geometry.dist_triangle") # Name with imports; refuses other versions
+bank.add_theorem(thm, result, id="my.lemma", dependencies=[...])  # verified results only
+lemmas = bank.load_with_dependencies("my.lemma")   # rebuilt Theorems, deps first
+pl.verify_all([*lemmas, main])             # reuse = re-check in the same Lean file
+bank.link("my.lemma", "isabelle", "Foo.bar")   # informational; never used as equivalence
+bank.save()
+```
+
+`ref`/`load` raise `VersionMismatchError` when the entry's toolchain or Mathlib revision
+differs from the project's, and `CrossSystemError` for non-Lean entries. A bank entry is a
+pointer, never a proof: anything it contributes is checked by Lean again.
+
+`pl.theorem_from_canonical(data)` rebuilds a theorem from `Theorem.canonical()` JSON
+exactly (strict: unknown sorts/functions/tactics are errors).
+
+## Proof agents (M8): `pyleanx.agent`
+
+| API | Purpose |
+|---|---|
+| `agent.ProofEnv(thm, project, allow_raw=False, max_steps=200)` | `observe()`, `act(text \| Tactic \| canonical JSON)`, `peek`, `undo`, `verify()`, `transcript`, `transcript_jsonl()` |
+| `agent.TOOLS`, `env.call_tool(name, args)` | JSON-schema tools (`get_state`, `apply_tactic`, `undo`, `verify`) for tool-calling LLMs |
+| `agent.tactic_from_text(text, allow_raw=False)` | common tactics → structured IR (with catalog imports); anything else → `RawTactic` only if allowed |
+| `agent.AutomationProposer()`, `agent.RetrievalProposer(bank)`, `agent.ChainProposer(...)` | baseline proposers (`obs -> [tactic, ...]`) |
+| `agent.search_proof(thm, proposer, project, max_depth, max_expansions)` | DFS with backtracking on the REPL → `ProofAttempt` |
+| `agent.try_proofs(thm, candidates, project)` | REPL-free: candidates as renamed copies in one batch run; winner re-verified |
+| `agent.basic()`, `agent.export_jsonl(path)`, `agent.run_benchmark(proposer, mode="session"\|"batch")` | 13-problem baseline set and scoring |
+
+`ProofAttempt.verified` is true only when the batch backend verified the script.
+`allow_raw=True` switches the project policy to `allow_raw_tactics=True` for that
+environment: free-form text then runs after screening, and the final audit still
+rejects `sorry`, foreign axioms and `native_decide`.
+
+`pyleanx agent serve` speaks JSON lines on stdin/stdout:
+`{"id":1,"method":"open","params":{"theorem":<canonical JSON>}}`, then `tools`,
+`call` (`{"name":"apply_tactic","arguments":{"tactic":"ring"}}`), `transcript`, `close`.
+Proofs inside submitted theorems are dropped; only the operator's `--allow-raw` enables
+raw text.
+
 ## Projects and policy
 
 ```python
@@ -195,6 +246,10 @@ pyleanx show-lean SCRIPT [--project P] [--mathlib-imports] [--unicode-types]
 pyleanx compile SCRIPT [-o OUT.lean]
 pyleanx check SCRIPT [--json] [--include-source] [--no-cache] [--timeout S] [--allow-raw-tactics]
 pyleanx cache stats|clear
+pyleanx bank index|search|show|list [QUERY] [--bank FILE] [--json]
+pyleanx agent bench [--mode session|batch] [--problems a,b] [--json]
+pyleanx agent export [-o FILE.jsonl]
+pyleanx agent serve [--allow-raw]
 ```
 
 If Windows blocks the `pyleanx.exe` launcher, use `python -m pyleanx ...` (same arguments).

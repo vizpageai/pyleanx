@@ -150,6 +150,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             expected = pin.split(":")[-1].lstrip("v")
             good = bool(ver and f"version {expected}," in ver)
             check("lean in project", good, ver or "could not run the project's pinned lean")
+        from ._domain import catalog_status
+
+        status = catalog_status(mrev)
+        checks.append(("domain catalogs", True, status))  # informational only
         check("mathlib cache", proj.mathlib_cache_present(),
               "prebuilt .olean files present" if proj.mathlib_cache_present()
               else f"missing; run `lake exe cache get` in {proj.path}")
@@ -218,6 +222,64 @@ def cmd_cache(args: argparse.Namespace) -> int:
     return 0
 
 
+# ------------------------------------------------------------------------------ bank
+def cmd_bank(args: argparse.Namespace) -> int:
+    from .bank import TheoremBank
+
+    bank = TheoremBank.open(args.bank)
+    if args.action == "index":
+        entries = bank.index_catalogs(args.project, timeout=args.timeout)
+        path = bank.save()
+        print(f"indexed {len(entries)} declaration(s) with Lean-reported statements -> {path}")
+        return 0
+    if args.action == "list":
+        for e in bank:
+            print(e.summary())
+        print(f"{len(bank)} entr{'y' if len(bank) == 1 else 'ies'} in {bank.path}")
+        return 0
+    if not args.query:
+        print(f"error: `bank {args.action}` needs a query/ID", file=sys.stderr)
+        return 2
+    if args.action == "show":
+        e = bank.get(args.query)
+        print(json.dumps(e.to_dict(), ensure_ascii=False, indent=2) if args.json else
+              e.summary() + "\n\n" + e.statement)
+        return 0
+    hits = bank.search(args.query, limit=args.limit)
+    if args.json:
+        print(json.dumps([{"score": h.score, **h.entry.to_dict()} for h in hits],
+                         ensure_ascii=False, indent=2))
+    else:
+        for h in hits:
+            print(f"{h.score:5.1f}  {h.entry.summary()}")
+        if not hits:
+            print("no matches" + ("" if len(bank) else " (empty bank: run `pyleanx bank index`)"))
+    return 0 if hits else 1
+
+
+# ------------------------------------------------------------------------------ agent
+def cmd_agent(args: argparse.Namespace) -> int:
+    from . import agent
+
+    if args.action == "export":
+        out = agent.export_jsonl(args.output or "pyleanx-basic.jsonl")
+        print(f"wrote {len(agent.basic())} problem statements (no proofs) to {out}")
+        return 0
+    if args.action == "serve":
+        from .agent.server import AgentServer
+
+        return AgentServer(args.project, allow_raw=args.allow_raw).serve()
+    problems = agent.basic()
+    if args.problems:
+        wanted = set(args.problems.split(","))
+        problems = [p for p in problems if p.name in wanted]
+    report = agent.run_benchmark(problems=problems, project=args.project, mode=args.mode,
+                                 timeout=args.timeout)
+    print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2) if args.json
+          else report.summary())
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="pyleanx", description=__doc__.splitlines()[0])
     p.add_argument("--version", action="version", version=f"pyleanx {__version__}")
@@ -260,6 +322,29 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("cache", help="inspect or clear the verified-result cache")
     s.add_argument("action", choices=["stats", "clear"])
     s.set_defaults(func=cmd_cache)
+
+    s = sub.add_parser("bank", help="local theorem bank: index, search, show, list")
+    s.add_argument("action", choices=["index", "search", "show", "list"])
+    s.add_argument("query", nargs="?", help="search words, or an ID/alias for `show`")
+    s.add_argument("--bank", help="bank file (default: $PYLEANX_BANK or ~/.pyleanx/bank.json)")
+    s.add_argument("--project")
+    s.add_argument("--limit", type=int, default=10)
+    s.add_argument("--timeout", type=float)
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_bank)
+
+    s = sub.add_parser("agent", help="proof-agent tools: benchmark, export problems, serve")
+    s.add_argument("action", choices=["bench", "export", "serve"])
+    s.add_argument("--project")
+    s.add_argument("--mode", choices=["session", "batch"], default="session",
+                   help="bench: search on the REPL (session) or batch-check candidates")
+    s.add_argument("--problems", help="bench: comma-separated problem names")
+    s.add_argument("--timeout", type=float)
+    s.add_argument("--json", action="store_true")
+    s.add_argument("-o", "--output", help="export: JSONL path")
+    s.add_argument("--allow-raw", action="store_true",
+                   help="serve: let clients run free-form (screened, audited) tactic text")
+    s.set_defaults(func=cmd_agent)
     return p
 
 

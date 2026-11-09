@@ -263,6 +263,12 @@ def _statement_parts(thm: Theorem, r: _ExprRenderer) -> tuple[str, str]:
     return head, r.render(thm.conclusion)[0]
 
 
+def render_statement(thm: Theorem, unicode_types: bool = False) -> str:
+    """``theorem name binders :\\n    conclusion`` with no proof (for hashing/display)."""
+    head, concl = _statement_parts(thm, _ExprRenderer(unicode_types))
+    return f"{head}\n    {concl}"
+
+
 def render_open_statement(thm: Theorem, unicode_types: bool = False) -> str:
     """The statement with a ``sorry`` placeholder, used ONLY to open an interactive
     proof state. Never part of anything that is verified."""
