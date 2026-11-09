@@ -110,8 +110,8 @@ def test_declarations_become_python_objects(monkeypatch):
         _decl("Lib.Datum", kind="inductive", result="Type", result_is_type=True,
               fields=("f₀", "E")),
         _decl("Lib.Datum.f₀", binders=[("self", "explicit", "Lib.Datum")], result="ℝ"),
-        _decl("Lib.Datum.E", binders=[("self", "explicit", "Lib.Datum")],
-              result="Lib.Vec → Lib.Vec"),
+        _decl("Lib.Datum.E", binders=[("self", "explicit", "Lib.Datum"),
+                                      ("a✝", "explicit", "Lib.Vec")], result="Lib.Vec"),
         _decl("Lib.q", binders=[("v", "explicit", "Lib.Vec")], result="ℝ"),
         _decl("Lib.Good", binders=[("d", "explicit", "Lib.Datum")], result="Prop",
               result_is_prop=True),
@@ -126,6 +126,7 @@ def test_declarations_become_python_objects(monkeypatch):
     assert isinstance(Lib.Vec, pl.LeanType) and Lib.Vec.lean == "Lib.Vec"
     d = pl.var("d", Lib.Datum)
     assert d.f0.to_lean() == "d.f₀" and d.f0.sort is pl.Real  # ASCII alias for f₀
+    assert d.E.sort == pl.Fn(Lib.Vec, Lib.Vec)  # telescoped field type is a function
     v = pl.var("v", Lib.Vec)
     assert Lib.q(v).sort is pl.Real and Lib.q(v).to_lean() == "Lib.q v"
     assert Lib.Good(d).sort is pl.Prop

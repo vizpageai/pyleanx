@@ -213,7 +213,9 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [x] **Faithfulness**: `Theorem.same_statement_as(name)` (definitional equality by `rfl`, audited).
 - [x] **M14 readable goals**: Lean goal text -> LaTeX (`Goals.to_latex`, `DeclView.to_latex`), shown in Jupyter above the Lean text (display only).
 - [x] **M15 assistants**: `agent.LLMProposer(complete)` (model-agnostic prompt + reply parsing, no bundled client); typed `aesop`/`exact?`; tactic text with arithmetic over theorem variables (`nlinarith [sq_nonneg (a - b)]`, `use k + 1`) parsed into typed IR by a safe AST walk instead of raw text; baseline proposer adds ∃-witnesses, hinted nlinarith, aesop, exact?.
-- [ ] OAI pilot (`examples/oai_vlasov_maxwell.py`): `pyleanx add oai …` vendored `ComparatorChallenges.VlasovMaxwell` and `OAI.Analysis.VlasovMaxwell.Model`; build and the example run are recorded below when finished.
+- [x] OAI library: `pyleanx add oai https://github.com/openai/math --rev 4eaee87… --subdir lean --module ComparatorChallenges.VlasovMaxwell --module OAI.Analysis.VlasovMaxwell.Model` fetched, vendored 2 modules and **built them with real Lean** (705 s + 38 s).
+- [x] Real bindings export: 57 OAI declarations (kinds, fields, docstrings); `RVM.Vec` is a sort, `RVM.q(v)` real-valued, `RVM.Admissible(d)` a proposition. Found and fixed: structure field sorts (`d.f0 : Phase → ℝ`, not ℝ).
+- [ ] OAI example run (`examples/oai_vlasov_maxwell.py`: `same_statement_as` for the main theorem and a weakened variant, proof of `1 ≤ q v` on OAI's definition, rejection of a theorem citing the challenge's `sorry`): **stopped by Claude Code for low system memory** (each step loads all of Mathlib). No result either way.
 - [ ] Benchmark re-run with the upgraded baseline proposer.
 - Unit tests: 248 passed; ruff and mypy clean.
 

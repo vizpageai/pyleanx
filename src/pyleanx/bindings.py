@@ -275,6 +275,27 @@ def _node(path_parts: list[str]) -> dict[str, Any]:
     return cur
 
 
+def _field_sort(proj: Decl, imports: tuple[str, ...]) -> Sort:
+    """Sort of a structure field from its projection ``S.f : S → A → B``.
+
+    Lean's telescope also opens the field's own function type, so explicit binders after
+    the structure argument belong to the field: the field is ``A → B``, not ``B``.
+    """
+    from .types import Fn
+
+    explicit = [b for b in proj.binders if b[1] == "explicit"]
+    bound = [b[0] for b in proj.binders]
+    result = sort_from_text(proj.result, imports, bound)
+    extra = explicit[1:]
+    if not extra:
+        return result
+    names_before = [b[0] for b in proj.binders[: proj.binders.index(extra[0])]]
+    doms = [sort_from_text(t, imports, names_before) for _, _, t in extra]
+    if any(s is UNKNOWN for s in doms) or result is UNKNOWN:
+        return UNKNOWN
+    return Fn(*doms, result)
+
+
 def _make_object(d: Decl) -> Any:
     imports = (d.module,)
     if d.is_proof:
@@ -286,8 +307,7 @@ def _make_object(d: Decl) -> Any:
             fl = []
             for f in d.fields:
                 proj = _DECLS.get(f"{d.name}.{f}")
-                fsort = (sort_from_text(proj.result, imports, [b[0] for b in proj.binders])
-                         if proj is not None else UNKNOWN)
+                fsort = _field_sort(proj, imports) if proj is not None else UNKNOWN
                 fl.append((f, fsort))
             fields = tuple(fl)
         return lean_type(d.name, imports, fields=fields)
