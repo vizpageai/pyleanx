@@ -14,7 +14,8 @@ only after Lean accepted the exact generated source and the axiom audit passed.
 
 from __future__ import annotations
 
-from . import mathlib
+from . import algebra, analysis, geometry, mathlib
+from .analysis import cos, pi, sin
 from .backend.audit import DEFAULT_POLICY, STANDARD_AXIOMS, AxiomPolicy
 from .backend.cache import ResultCache
 from .backend.interface import Diagnostic, Status, VerificationResult
@@ -41,8 +42,12 @@ from .expr import (
     Expr,
     Forall,
     Func,
+    Ge,
+    Gt,
     Iff,
     Implies,
+    Le,
+    Lt,
     Ne,
     Not,
     Or,
@@ -103,8 +108,12 @@ __all__ = [
     "Sort", "Nat", "Int", "Rat", "Real", "Prop",
     # symbols & expressions
     "symbol", "symbols", "prop_symbol", "free_vars", "Expr", "Var", "Func",
-    "Eq", "Ne", "Not", "And", "Or", "Implies", "Iff", "Forall", "Exists", "TRUE", "FALSE",
+    "Eq", "Ne", "Le", "Lt", "Ge", "Gt", "Not", "And", "Or", "Implies", "Iff", "Forall",
+    "Exists", "TRUE", "FALSE",
     "cast", "nat", "integer", "rat", "real", "sqrt", "exp", "log", "abs", "min", "max",
+    "sin", "cos", "pi",
+    # domain modules
+    "algebra", "analysis", "geometry",
     # theorems & proofs
     "Theorem", "Hypothesis", "theorem", "latex", "ring", "omega", "positivity", "rfl", "decide",
     "constructor", "assumption", "linarith", "nlinarith", "norm_num", "simp", "intro", "exact",

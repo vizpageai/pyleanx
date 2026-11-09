@@ -174,7 +174,14 @@ class _Latex:
             return rf"\sqrt{{{args[0]}}}", MAX
         if name == "abs":
             return rf"\left|{args[0]}\right|", MAX
-        op = _FUNCS.get(name) or r"\operatorname{" + name.replace("_", r"\_") + "}"
+        custom = e.func.latex
+        if custom and "{0}" in custom:
+            return custom.format(*args), MAX
+        if custom and not args:
+            return custom, MAX
+        if custom and len(args) == 1 and isinstance(e.args[0], Var):
+            return f"{custom} {args[0]}", MAX - 1  # \sin x
+        op = custom or _FUNCS.get(name) or r"\operatorname{" + name.replace("_", r"\_") + "}"
         return op + _paren(", ".join(args)), MAX - 1
 
 

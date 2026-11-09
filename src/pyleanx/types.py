@@ -56,6 +56,17 @@ Prop = Sort("Prop", "Prop", numeric=False, rank=-1, latex=r"\mathrm{Prop}")
 
 NUMERIC_SORTS = (Nat, Int, Rat, Real)
 
+#: Sorts by name, for deserialising canonical theorems (domain modules register theirs).
+SORTS: dict[str, Sort] = {s.name: s for s in (Nat, Int, Rat, Real, Prop)}
+
+
+def register_sort(sort: Sort) -> Sort:
+    existing = SORTS.get(sort.name)
+    if existing is not None and existing != sort:
+        raise ValueError(f"a different sort named {sort.name!r} is already registered")
+    SORTS[sort.name] = sort
+    return sort
+
 
 def can_cast(src: Sort, dst: Sort) -> bool:
     """Only the canonical, meaning-preserving embeddings Nat -> Int -> Rat -> Real."""

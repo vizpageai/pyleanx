@@ -327,6 +327,9 @@ class Func:
     arg_sorts: tuple[Sort, ...]
     result_sort: Sort
     imports: tuple[str, ...] = ()
+    #: Display only. A template with ``{0}``, ``{1}``... placeholders (e.g.
+    #: ``r"\angle {0}{1}{2}"``) or an operator name such as ``r"\sin"``.
+    latex: str = ""
 
     def __post_init__(self) -> None:
         validate_qualified_name(self.lean_name, "function name")
@@ -566,6 +569,18 @@ def _compare(op: str, a: object, b: object) -> Compare:
             "comparison between propositions is not supported; use pl.Iff(p, q) for "
             "logical equivalence"
         )
+    structured = [e.sort for e in (ea, eb) if e.sort is not None and not e.sort.numeric]
+    if structured:
+        # Points and other non-numeric sorts: only = and ≠, between the same sort.
+        if ea.sort is not eb.sort:
+            raise SortError(
+                f"comparison {op}: sorts differ "
+                f"({ea.sort.name if ea.sort else 'numeral'} vs "
+                f"{eb.sort.name if eb.sort else 'numeral'})"
+            )
+        if op not in ("eq", "ne"):
+            raise SortError(f"ordering ({op}) is not defined on {structured[0].name}")
+        return Compare(op, ea, eb)
     ea, eb, sort = _unify(ea, eb, f"comparison {op}")
     if sort is None:
         raise SortError(
@@ -601,6 +616,24 @@ def Eq(lhs: object, rhs: object) -> Compare:  # noqa: N802 - mathematical naming
 
 def Ne(lhs: object, rhs: object) -> Compare:  # noqa: N802
     return _compare("ne", lhs, rhs)
+
+
+# Python reflects ``0 <= x`` to ``x >= 0``. These keep the written orientation, which
+# matters when a hypothesis must match a Mathlib lemma syntactically.
+def Le(lhs: object, rhs: object) -> Compare:  # noqa: N802
+    return _compare("le", lhs, rhs)
+
+
+def Lt(lhs: object, rhs: object) -> Compare:  # noqa: N802
+    return _compare("lt", lhs, rhs)
+
+
+def Ge(lhs: object, rhs: object) -> Compare:  # noqa: N802
+    return _compare("ge", lhs, rhs)
+
+
+def Gt(lhs: object, rhs: object) -> Compare:  # noqa: N802
+    return _compare("gt", lhs, rhs)
 
 
 def Not(p: object) -> NotP:  # noqa: N802
@@ -754,7 +787,10 @@ def max_(a: object, b: object) -> App:
 
 def make_var(name: str, sort: Sort, origin: Origin | None = None) -> Var:
     if not isinstance(sort, Sort):
-        raise SortError(f"sort must be pl.Nat/pl.Int/pl.Rat/pl.Real/pl.Prop, got {sort!r}")
+        raise SortError(
+            f"sort must be a pl.Sort (pl.Nat, pl.Int, pl.Rat, pl.Real, pl.Prop, "
+            f"pl.geometry.Point, ...), got {sort!r}"
+        )
     validate_identifier(name, "variable name")
     return Var(name, sort, origin=origin or caller_origin())
 
@@ -769,7 +805,8 @@ def iter_subexprs(e: Expr) -> Iterable[Expr]:
 
 __all__ = [
     "Expr", "Var", "Lit", "PropConst", "TRUE", "FALSE", "BinOp", "Neg", "Cast", "Func", "App",
-    "Compare", "NotP", "Logic", "Quant", "Eq", "Ne", "Not", "And", "Or", "Implies", "Iff",
+    "Compare", "NotP", "Logic", "Quant", "Eq", "Ne", "Le", "Lt", "Ge", "Gt", "Not", "And", "Or",
+    "Implies", "Iff",
     "Forall", "Exists", "cast", "nat", "integer", "real", "rat", "sqrt", "exp", "log",
     "abs_", "min_", "max_", "make_var", "iter_subexprs",
 ]

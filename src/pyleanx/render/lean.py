@@ -133,6 +133,8 @@ class _ExprRenderer:
                 inner = f"({inner})"
             return f"(↑{inner} : {e.sort.lean_name(self.unicode_types)})", MAX
         if isinstance(e, App):
+            if not e.args:  # a constant such as Real.pi
+                return e.func.lean_name, MAX
             parts = [e.func.lean_name]
             for a in e.args:
                 parts.append(self.sub(a, MAX, _needs_ascription(a.sort, a)))

@@ -33,7 +33,10 @@ Arithmetic: `+ - * /`, `**` (natural-number exponents only), unary `-` (not on N
 `abs(e)`/`pl.abs`, `pl.min`, `pl.max`. Custom typed functions use
 `pl.Func("Lean.name", (arg sorts…), result_sort, imports=(…))`.
 
-Propositions: `==`, `!=`, `<`, `<=`, `>`, `>=`; `pl.Eq`, `pl.Ne`;
+Propositions: `==`, `!=`, `<`, `<=`, `>`, `>=`; `pl.Eq`, `pl.Ne`, and `pl.Le`, `pl.Lt`,
+`pl.Ge`, `pl.Gt`, which keep the written orientation (Python turns `0 <= x` into
+`x >= 0`, which matters when a hypothesis must match a Mathlib lemma such as
+`Real.sq_sqrt : 0 ≤ x → …`);
 `pl.Not(p)`/`~p`, `pl.And(p, q, …)`/`p & q`, `pl.Or(…)`/`p | q`,
 `pl.Implies(p, q, …)` (right-nested), `pl.Iff(p, q)`,
 `pl.Forall([x, y], body)`, `pl.Exists([x], body)`.
@@ -144,6 +147,29 @@ s = thm.session(project=None, timeout=600, launch="auto", preload=None)   # Proo
   REPL program with the pinned `lean --run`; `"auto"` uses the binary unless the OS refuses
   to execute it (e.g. application control on managed Windows machines).
 - Raw tactics follow the same policy gate and screening as the batch backend.
+
+## Domain modules (M6)
+
+Thin wrappers around Mathlib with concrete sorts. Each module has a `LEMMAS` catalog of
+references (`pl.proofs.Name`, with the import each needs) checked by `#check` against the
+pinned Mathlib (`VERIFIED_MATHLIB`). A reference asserts nothing; Lean checks every use.
+The module docstrings list the abstractions and limitations.
+
+| Module | Terms | Helpers / lemma examples |
+|---|---|---|
+| `pl.algebra` | (core arithmetic) | `identity(name, lhs, rhs)` (ring), `nonneg(name, e)` (positivity), `inequality(name, lhs, "<=", rhs, assumptions=…)` (nlinarith), `am_gm_two(name, a, b)`; `sq_nonneg`, `add_sq`, `sub_sq`, `abs_add_le`, `two_mul_le_add_sq`, … |
+| `pl.analysis` | `sin`, `cos`, `pi()`, plus `sqrt`, `exp`, `log`, `abs_` | `sin_sq_add_cos_sq`, `sq_sqrt`, `exp_pos`, `add_one_le_exp`, `log_le_sub_one_of_pos`, `pi_pos`, … |
+| `pl.geometry` | `Point` (= `EuclideanSpace ℝ (Fin 2)`), `point`, `points`, `dist`, `angle` | `dist_triangle`, `dist_comm`, `angle_comm`, `angle_add_angle_add_angle_eq_pi`, `pythagoras_iff`, … |
+
+```python
+A, B, C = geo.points("A B C")
+pl.Theorem("angle_sum", [A, B, C], assumptions={"h": B != A},
+           conclusion=geo.angle(A, B, C) + geo.angle(B, C, A) + geo.angle(C, A, B) == pl.pi(),
+           proof=pl.exact(geo.angle_add_angle_add_angle_eq_pi(C, pl.hyp("h"))))
+```
+
+Points support only `=` and `≠`; ordering, arithmetic and numeric literals on points are
+`SortError`s. `pl.sin`, `pl.cos`, `pl.pi` are also exported at top level.
 
 ## Projects and policy
 

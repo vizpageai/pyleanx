@@ -72,8 +72,19 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 - **Environment finding:** this machine's application-control policy blocks newly built executables (`repl.exe`, also pip's `pyleanx.exe`/`jupyter.exe`). `launch="auto"` detects this and runs the same REPL program via the already-allowed pinned `lean --run REPL/Main.lean`. Documented in docs/security.md; no binaries are moved or disguised.
 - Not done: `PickleEnvironment` persistence across Python restarts; LaTeX rendering of goal strings (goals display as Lean text); REPL-based fast final verification (deliberately not done, as batch remains authoritative).
 
-### M6–M8: not started
-- M6 domain modules, M7 theorem bank, M8 proof-agent API (sessions are its foundation).
+### M6: mathematical convenience modules: **done** (2026-11-09, branch `m6-m8-domain-bank-agent`)
+- [x] `pyleanx.algebra`: `identity`, `nonneg`, `inequality`, `am_gm_two` helpers + 20 lemma refs
+- [x] `pyleanx.analysis`: `sin`, `cos`, `pi()` (zero-argument constants now render) + 16 lemma refs
+- [x] `pyleanx.geometry`: `Point` sort (`EuclideanSpace Real (Fin 2)`), `dist`, `angle` (Mathlib `∠`) + 9 lemma refs
+- [x] Non-numeric sorts: only `=`/`≠`, same sort, no literals/arithmetic; `pl.Le/Lt/Ge/Gt` keep orientation
+- [x] Catalog versioning: `VERIFIED_MATHLIB`, `catalog_status()`; abstractions/limitations in each module docstring
+- [x] `backend/declarations.py`: `check_declarations` runs `#check @name` in the pinned Lean
+- [x] **Catalog check (real Lean)**: all 54 catalog names (incl. `pyleanx.mathlib`) resolve at the pinned Mathlib; 556 s on a loaded machine. Finding: `add_pos` at this revision is `b < c → 0 < a → b < c + a`, so it is deliberately not in `algebra`. Test kept as `PYLEANX_SLOW_TESTS=1`.
+- [x] **Gate** (`tests/integration/test_domains.py`, real Lean): polynomial identity (`ring`), nonnegative square (`positivity`), AM-GM (`nlinarith [sq_nonneg (a - b)]`), `sin²+cos²=1`, `√x²=x`, plane triangle inequality, triangle angle sum = π, Pythagoras via `rw [iff]`: all **verified** in one Lean run; reversed triangle inequality **rejected**. 2 passed in 55 s.
+- Limitations: concrete sorts only (no typeclass binders: statements about ℝ², not arbitrary Euclidean spaces); no coordinates, vectors, lines, circles, limits, derivatives or integrals yet.
+
+### M7–M8: not started
+- M7 theorem bank, M8 proof-agent API (sessions are its foundation).
 
 ## Test evidence (commands actually run)
 
