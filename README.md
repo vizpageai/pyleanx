@@ -237,4 +237,4 @@ script was found, it is **verified only by the batch Lean run and axiom audit**.
 
 ## License
 
-Apache-2.0 (same as Lean 4 and Mathlib). See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). (Lean 4 and Mathlib are Apache-2.0; they are dependencies, not bundled.)

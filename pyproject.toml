@@ -8,7 +8,7 @@ version = "0.1.0.dev0"
 description = "Python-first frontend for writing theorems and proofs that are checked by the Lean 4 kernel"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "Apache-2.0"
+license = "MIT"
 authors = [{ name = "PyLeanX contributors" }]
 dependencies = []
 classifiers = [

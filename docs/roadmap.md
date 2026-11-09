@@ -21,7 +21,7 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 ## Milestones
 
 ### M0: repository, pinned environment, baseline Lean proof: **done**
-- [x] `pyproject.toml` (setuptools, Apache-2.0), README, LICENSE, `.gitignore`, CI workflow
+- [x] `pyproject.toml` (setuptools; MIT since 2026-11-09, was Apache-2.0), README, LICENSE, `.gitignore`, CI workflow
 - [x] `lean-project/` with `lean-toolchain`, `lakefile.toml`, `lake-manifest.json`; same files shipped in the wheel (`pyleanx/_lean_template`)
 - [x] `pyleanx doctor`
 - [x] Direct Lean tests: square identity by `ring` passes with axiom report; wrong statement fails (`tests/integration/test_lean_basics.py::test_m0_*`)
