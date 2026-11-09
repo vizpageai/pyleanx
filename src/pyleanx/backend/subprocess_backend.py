@@ -19,6 +19,7 @@ import re
 import shutil
 import signal
 import subprocess
+import sys
 import time
 import uuid
 from collections.abc import Sequence
@@ -64,7 +65,7 @@ class LeanRun:
 
 def _kill_tree(proc: subprocess.Popen) -> None:
     try:
-        if os.name == "nt":
+        if sys.platform == "win32":
             subprocess.run(
                 ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
                 stdout=subprocess.DEVNULL,
@@ -72,7 +73,7 @@ def _kill_tree(proc: subprocess.Popen) -> None:
                 check=False,
             )
         else:
-            os.killpg(proc.pid, signal.SIGKILL)  # type: ignore[attr-defined,unused-ignore]
+            os.killpg(proc.pid, signal.SIGKILL)
     except (ProcessLookupError, OSError):  # pragma: no cover - already gone
         pass
     try:
@@ -108,7 +109,7 @@ def run_lean(project: LeanProject, lean_file: Path, timeout: float) -> LeanRun:
         argv = [lake, "env", "lean", "--json"]
     argv += [*option_args, str(lean_file)]
     kwargs: dict = {}
-    if os.name == "nt":
+    if sys.platform == "win32":
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
     else:
         kwargs["start_new_session"] = True

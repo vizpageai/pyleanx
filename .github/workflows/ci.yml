@@ -26,6 +26,7 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check .
       - run: mypy src/pyleanx
+      - run: mypy --platform win32 src/pyleanx
 
   unit:
     runs-on: ${{ matrix.os }}
