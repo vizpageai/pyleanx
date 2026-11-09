@@ -7,7 +7,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from ._origin import Origin, caller_origin
+from ._origin import Origin, caller_origin, resolve_annotations
 from .binders import check_scope, contains_untyped_literal
 from .errors import ScopeError, SortError, TacticError
 from .expr import Expr, Var, _as_prop, make_var
@@ -135,7 +135,7 @@ class Theorem:
                              unicode_types=uni).source
 
     def canonical(self) -> Any:
-        return {
+        data = {
             "name": self.name,
             "variables": [v.canonical() for v in self.variables],
             "assumptions": [[h.name, h.prop.canonical()] for h in self.assumptions],
@@ -143,6 +143,12 @@ class Theorem:
             "proof": self.proof.canonical() if self.proof is not None else None,
             "imports": list(self.imports),
         }
+        from .defs import theorem_definitions
+
+        defs = theorem_definitions(self)
+        if defs:  # absent for definition-free theorems (keeps old canonical forms stable)
+            data["definitions"] = [d.canonical() for d in defs]
+        return data
 
     # ------------------------------------------------------------------ verification
     def verify(
@@ -160,6 +166,39 @@ class Theorem:
     def __repr__(self) -> str:
         state = "proved-script" if self.proof is not None else "no proof"
         return f"<pl.Theorem {self.name} ({state})>"
+
+    def same_statement_as(self, declaration: Any, *, imports: Iterable[str] = (),
+                          project: LeanProject | str | None = None,
+                          timeout: float | None = None) -> Any:
+        """Ask Lean whether this statement is definitionally ``declaration``'s statement.
+
+        ``declaration`` is a name (``"OAI.RVM.global_classical_solution"``) or a binding
+        from ``pyleanx.lib``. Returns a :class:`~pyleanx.faithful.SameStatement` (truthy
+        when Lean proved the two propositions equal by ``rfl``).
+        """
+        from .faithful import same_statement
+
+        return same_statement(self, declaration, imports=imports, project=project,
+                              timeout=timeout)
+
+    def auto_prove(self, *hints: Any, project: LeanProject | str | None = None,
+                   timeout: float | None = None, library_search: bool = True) -> Any:
+        """Find a closing tactic automatically and attach it as an explicit proof.
+
+        Tries ``pl.auto``'s strategies (with ``hints``) as separate candidates in one batch
+        Lean run, attaches the first that Lean verifies, and returns the
+        :class:`~pyleanx.agent.ProofAttempt`. The attached proof is a concrete tactic, so
+        later ``verify()`` calls are reproducible.
+        """
+        from . import proofs as P
+        from .agent.search import try_proofs
+
+        terms = P._terms(hints)
+        cands: list[Tactic] = [P.Rfl(), P.Ring(), P.NormNum(lemmas=terms),
+                               P.Simp(lemmas=terms), P.Linarith(lemmas=terms), P.Positivity(),
+                               P.Nlinarith(lemmas=terms),
+                               P.Auto(hints=terms, library_search=library_search)]
+        return try_proofs(self, cands, project, timeout=timeout)  # attaches the winner
 
     def session(self, project: LeanProject | str | None = None, **kwargs: Any) -> Any:
         """Interactive proof session (goals, apply, undo) on a persistent Lean REPL.
@@ -204,7 +243,7 @@ def theorem(
 
     def build(f: Callable[..., Expr]) -> Theorem:
         try:
-            hints = inspect.get_annotations(f, eval_str=True)
+            hints = resolve_annotations(f)
         except Exception as exc:  # noqa: BLE001 - unresolved annotation names
             raise SortError(f"@theorem {f.__name__}: cannot evaluate annotations: {exc}") from exc
         origin = Origin(f.__code__.co_filename, f.__code__.co_firstlineno)

@@ -26,7 +26,7 @@ from typing import Any
 from ._origin import Origin, caller_origin
 from .errors import LiteralError, ScopeError, SortError, SymbolicTruthValueError
 from .names import validate_identifier, validate_qualified_name
-from .types import Int, Nat, Prop, Real, Sort, can_cast
+from .types import UNKNOWN, Int, LeanType, Nat, Prop, Real, Sort, can_cast
 
 _uid_counter = itertools.count(1)
 
@@ -125,6 +125,8 @@ class Expr:
 
     def __neg__(self) -> Expr:
         e = _as_numeric_term(self, "unary minus")
+        if e.sort is not None and e.sort.opaque:
+            return Neg(e, e.sort)
         if e.sort is not None and not e.sort.allows_negation:
             raise SortError(
                 "unary minus is not available on Nat; cast to Int first: -pl.cast(n, pl.Int)"
@@ -154,6 +156,24 @@ class Expr:
 
     def __invert__(self) -> Expr:
         return Not(self)
+
+    # ---- application and fields (open Lean types) ---------------------------------
+    def __call__(self, *args: object) -> Expr:
+        """Apply a function-valued term: ``f(x)`` for ``f : A → B``."""
+        from .terms import apply
+
+        return apply(self, *args)
+
+    def __getattr__(self, name: str) -> Expr:
+        # Only reached when normal lookup fails: structure fields of a structure-typed term.
+        if name.startswith("_"):
+            raise AttributeError(name)
+        sort = object.__getattribute__(self, "sort")
+        if isinstance(sort, LeanType) and sort.kind in ("struct", "prod"):
+            from .terms import field
+
+            return field(self, name)
+        raise AttributeError(f"{type(self).__name__} has no attribute {name!r}")
 
     # ---- structural API ----------------------------------------------------------
     def same_structure(self, other: Expr) -> bool:
@@ -226,7 +246,7 @@ class Var(Expr):
         return ("var", self.uid)
 
     def canonical(self) -> Any:
-        return ["var", self.name, self.sort.name]
+        return ["var", self.name, self.sort.canonical()]
 
 
 @dataclass(frozen=True, eq=False, repr=False)
@@ -491,14 +511,30 @@ def _with_sort(e: Expr, sort: Sort) -> Expr:
 
 def _as_numeric_term(value: object, what: str) -> Expr:
     e = _lift(value)
+    if e.sort is not None and e.sort.opaque:
+        return e
     if e.sort is not None and not e.sort.numeric:
         raise SortError(f"{what} needs a numeric term, got a {e.sort.name}: {_safe_text(e)}")
     return e
 
 
+def _opaque_result(sa: Sort | None, sb: Sort | None) -> Sort:
+    """Result sort when an opaque Lean type is involved: Lean decides, Python only labels."""
+    for s in (sa, sb):
+        if s is not None and s.opaque and s is not UNKNOWN:
+            return s
+    for s in (sa, sb):
+        if s is not None and not s.opaque:
+            return s
+    return UNKNOWN
+
+
 def _unify(a: object, b: object, what: str) -> tuple[Expr, Expr, Sort | None]:
     ea, eb = _as_numeric_term(a, what), _as_numeric_term(b, what)
     sa, sb = ea.sort, eb.sort
+    if (sa is not None and sa.opaque) or (sb is not None and sb.opaque):
+        # Untyped numerals stay untyped: Lean elaborates them at the expected type.
+        return ea, eb, _opaque_result(sa, sb)
     if sa is None and sb is None:
         return ea, eb, None
     if sa is None:
@@ -524,6 +560,8 @@ def _coerce_to(value: object, sort: Sort, what: str) -> Expr:
 
 
 def _check_op_allowed(op: str, sort: Sort) -> None:
+    if sort.opaque:
+        return
     if op == "mod" and sort not in (Nat, Int):
         raise SortError(f"% is only supported on Nat and Int, not {sort.name}")
 
@@ -554,6 +592,8 @@ def _pow(base: object, exponent: object) -> Expr:
     ee = _lift(exponent)
     if isinstance(ee, Lit) and ee.sort is None:
         ee = Lit(ee.value, Nat)  # raises for negative / fractional exponents
+    if ee.sort is not None and ee.sort.opaque:
+        return BinOp("pow", eb, ee, eb.sort if eb.sort is not None else UNKNOWN)
     if ee.sort is not Nat:
         raise SortError(
             "exponents must be natural numbers (Lean's Monoid.npow); got "
@@ -569,6 +609,8 @@ def _compare(op: str, a: object, b: object) -> Compare:
             "comparison between propositions is not supported; use pl.Iff(p, q) for "
             "logical equivalence"
         )
+    if any(e.sort is not None and e.sort.opaque for e in (ea, eb)):
+        return Compare(op, ea, eb)  # Lean checks the types and the relation
     structured = [e.sort for e in (ea, eb) if e.sort is not None and not e.sort.numeric]
     if structured:
         # Points and other non-numeric sorts: only = and ≠, between the same sort.
@@ -602,7 +644,7 @@ def _as_prop(value: object, what: str) -> Expr:
         raise LiteralError(f"{what}: Python bool is not a proposition; use pl.TRUE / pl.FALSE")
     if not isinstance(value, Expr):
         raise SortError(f"{what} expects propositions, got {type(value).__name__}")
-    if not value.is_prop:
+    if not value.is_prop and value.sort is not UNKNOWN:
         raise SortError(
             f"{what} expects propositions, got a term of sort "
             f"{value.sort.name if value.sort else 'numeral'}: {_safe_text(value)}"

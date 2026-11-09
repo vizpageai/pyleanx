@@ -19,7 +19,21 @@ if TYPE_CHECKING:
     from .theorem import Theorem
 
 
+#: Modules that define the notation of the general term nodes (checked at the pinned Mathlib).
+NOTATION_IMPORTS = {
+    "sum": ("Mathlib.Algebra.BigOperators.Group.Finset.Defs",),
+    "prod": ("Mathlib.Algebra.BigOperators.Group.Finset.Defs",),
+    "integral": ("Mathlib.MeasureTheory.Integral.Bochner.Basic",),
+    "interval_integral": ("Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic",),
+    "norm": ("Mathlib.Analysis.Normed.Group.Basic",),
+    "smul": ("Mathlib.Algebra.Group.Defs",),
+}
+
+
 def expr_imports(e: Expr) -> list[str]:
+    from .expr import BinOp
+    from .terms import BigOp, Const, Lam, Norm, TypeTerm
+
     out: list[str] = []
     for sub in iter_subexprs(e):
         if sub.sort is not None:
@@ -29,25 +43,38 @@ def expr_imports(e: Expr) -> list[str]:
             for a in sub.args:
                 if a.sort is not None:
                     out.extend(a.sort.imports)
+        elif isinstance(sub, Const):
+            out.extend(sub.imports)
+            if sub.definition is not None:
+                out.extend(sub.definition.imports())
+        elif isinstance(sub, TypeTerm):
+            out.extend(sub.type.imports)
+        elif isinstance(sub, Lam):
+            out.extend(i for v in sub.vars for i in v.sort.imports)
+        elif isinstance(sub, BigOp):
+            out.extend(sub.var.sort.imports)
+            key = "interval_integral" if sub.bounds is not None else sub.kind
+            out.extend(NOTATION_IMPORTS[key])
+        elif isinstance(sub, Norm):
+            out.extend(NOTATION_IMPORTS["norm"])
+        elif isinstance(sub, BinOp) and sub.op == "smul":
+            out.extend(NOTATION_IMPORTS["smul"])
+        elif isinstance(sub, Quant):
+            out.extend(i for v in sub.vars for i in v.sort.imports)
     return out
 
 
 def tactic_imports(t: Tactic | None) -> list[str]:
-    from .proofs import Branches, Exact, Steps, Use
+    from .defs import proof_exprs
 
     if t is None:
         return []
-    if isinstance(t, Steps):
-        return [i for s in t.tactics for i in tactic_imports(s)]
-    if isinstance(t, Branches):
-        return [i for s in t.branches for i in tactic_imports(s)]
     out = list(t.imports())
-    # Expressions inside tactics (use witnesses, exact terms) may need sort imports.
-    if isinstance(t, Use):
-        for w in t.witnesses:
-            out.extend(expr_imports(w))
-    if isinstance(t, Exact) and isinstance(t.term, Expr):
-        out.extend(expr_imports(t.term))
+    for sub in t.sub_tactics():  # nested blocks (have/calc/induction/steps/branches)
+        out.extend(tactic_imports(sub))
+    # Expressions inside tactics (witnesses, terms, have/calc statements) need their imports.
+    for e in proof_exprs(t):
+        out.extend(expr_imports(e))
     return out
 
 
@@ -85,8 +112,12 @@ def resolve_imports(
         return ("Mathlib",)
     if mode != "minimal":
         raise ValueError(f"unknown import mode {mode!r} (use 'minimal' or 'mathlib')")
+    from .defs import theorem_definitions
+
     mods: set[str] = set()
     for thm in theorems:
+        for d in theorem_definitions(thm):
+            mods.update(d.imports())
         mods.update(statement_imports(thm))
         mods.update(tactic_imports(thm.proof))
         mods.update(thm.imports)

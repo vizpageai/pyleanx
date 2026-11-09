@@ -61,6 +61,7 @@ _ARITH = {
     "div": ("/", 70, 70, 71),
     "mod": ("%", 70, 70, 71),
     "pow": ("^", 75, 76, 75),
+    "smul": ("•", 73, 74, 73),
 }
 _CMP = {"eq": "=", "ne": "≠", "lt": "<", "le": "≤", "gt": ">", "ge": "≥"}
 _LOGIC = {
@@ -77,7 +78,9 @@ def _paren(text: str, prec: int, need: int) -> str:
 
 def _has_anchor(e: Expr) -> bool:
     """Does this arithmetic group contain a leaf that fixes its type for Lean?"""
-    if isinstance(e, (Var, Cast, App)):
+    from ..terms import Apply, Ascribe, BigOp, Const, Field, Norm
+
+    if isinstance(e, (Var, Cast, App, Const, Apply, Ascribe, BigOp, Field, Norm)):
         return True
     if isinstance(e, BinOp):
         if e.op == "pow":
@@ -89,7 +92,9 @@ def _has_anchor(e: Expr) -> bool:
 
 
 def _needs_ascription(sort: Sort | None, *group: Expr) -> bool:
-    return sort is not None and sort is not Nat and not any(_has_anchor(g) for g in group)
+    if sort is None or sort is Nat or sort.opaque:
+        return False
+    return not any(_has_anchor(g) for g in group)
 
 
 def _lit_text(value: Fraction) -> tuple[str, int]:
@@ -152,6 +157,53 @@ class _ExprRenderer:
         if isinstance(e, Quant):
             q = "∀" if e.kind == "forall" else "∃"
             return f"{q} {binder_groups(e.vars, self.unicode_types)}, {self.sub(e.body, 0)}", 0
+        return self.render_term(e)
+
+    def type_text(self, s: Sort) -> str:
+        return s.lean_name(self.unicode_types)
+
+    def render_term(self, e: Expr) -> tuple[str, int]:
+        from ..terms import Apply, Ascribe, BigOp, Const, Field, Lam, Norm, Pair, TypeTerm
+
+        if isinstance(e, Const):
+            return e.name, MAX
+        if isinstance(e, TypeTerm):
+            text = self.type_text(e.type)
+            simple = " " not in text or (text.startswith("(") and text.endswith(")"))
+            return (text if simple else f"({text})"), MAX
+        if isinstance(e, Apply):
+            parts = [self.sub(e.fn, MAX)]
+            parts.extend(self.sub(a, MAX) for a in e.args)
+            return " ".join(parts), MAX - 1
+        if isinstance(e, Lam):
+            return (f"fun {binder_groups(e.vars, self.unicode_types)} => "
+                    f"{self.sub(e.body, 0)}"), 0
+        if isinstance(e, BigOp):
+            sym = {"sum": "∑", "prod": "∏", "integral": "∫"}[e.kind]
+            v = e.var
+            if e.bounds is not None:
+                lo, hi = (self.sub(b, MAX) for b in e.bounds)
+                head = f"{sym} {v.name} in {lo}..{hi}"
+            elif e.over is not None:
+                head = f"{sym} {v.name} ∈ {self.sub(e.over, MAX)}"
+            else:
+                head = f"{sym} {v.name} : {self.type_text(v.sort)}"
+            # Mathlib parses the body of ∑/∏/∫ at precedence 67: `∑ i, f i + 1` would mean
+            # `(∑ i, f i) + 1`, so lower-precedence bodies are parenthesized.
+            return f"{head}, {self.sub(e.body, 67)}", 0
+        if isinstance(e, Pair):
+            return f"({self.sub(e.fst, 0)}, {self.sub(e.snd, 0)})", MAX
+        if isinstance(e, Field):
+            return f"{self.sub(e.arg, MAX)}.{e.name}", MAX
+        if isinstance(e, Ascribe):
+            return f"({self.sub(e.arg, 0)} : {self.type_text(e.sort)})", MAX
+        if isinstance(e, Norm):
+            return f"‖{self.sub(e.arg, 0)}‖", MAX
+        from ..terms import StructLit
+
+        if isinstance(e, StructLit):
+            vals = ", ".join(f"{n} := {self.sub(v, 0)}" for n, v in e.values)
+            return f"({{ {vals} }} : {self.type_text(e.sort)})", MAX
         raise UnsupportedConstructError(f"cannot render {type(e).__name__}")  # pragma: no cover
 
     def sub(self, e: Expr, need: int, ascribe: bool = False) -> str:
@@ -244,7 +296,64 @@ def render_tactic_lines(t: Tactic) -> list[str]:
         return ["use " + ", ".join(ws)]
     if isinstance(t, RawTactic):
         return t.text.splitlines()
+    return _structured_lines(t)
+
+
+def _by(t: Tactic | None, indent: str = "  ") -> list[str]:
+    """``by <tactic>`` on one line when short, else ``by`` + an indented block."""
+    from ..proofs import Auto
+
+    lines = render_tactic_lines(t if t is not None else Auto())
+    if len(lines) == 1:
+        return ["by " + lines[0]]
+    return ["by", *(indent + ln for ln in lines)]
+
+
+def _attach(head: str, block: list[str], indent: str = "  ") -> list[str]:
+    """``head`` followed by a ``by`` block (continuation lines indented under it)."""
+    return [head + " " + block[0], *(indent + ln for ln in block[1:])]
+
+
+def _structured_lines(t: Tactic) -> list[str]:
+    from ..proofs import Auto, Calc, Cases, Ext, Have, Induction, Obtain, Show, Unfold
+
+    if isinstance(t, Auto):
+        return ["first", *("  | " + alt for alt in t.alternatives())]
+    if isinstance(t, Have):
+        return _attach(f"have {t.name} : {render_expr(t.prop)} :=", _by(t.proof))
+    if isinstance(t, Show):
+        return [f"show {render_expr(t.prop)}"]
+    if isinstance(t, Calc):
+        out = [f"calc {render_expr(t.first)}"]
+        for rel, rhs, proof in t.links:
+            out.extend("  " + ln for ln in _attach(f"_ {rel} {render_expr(rhs)} :=", _by(proof)))
+        return out
+    if isinstance(t, Obtain):
+        return [f"obtain ⟨{', '.join(t.names)}⟩ := {render_term(t.source)}"]
+    if isinstance(t, Cases):
+        alts = " | ".join(
+            (f"⟨{', '.join(a)}⟩" if len(a) > 1 else a[0]) for a in t.alternatives)
+        return [f"rcases {render_term(t.source)} with {alts}"]
+    if isinstance(t, Induction):
+        k, ih = t.succ_names
+        return [f"induction {t.var} with",
+                *_alternative("| zero =>", t.zero),
+                *_alternative(f"| succ {k} {ih} =>", t.succ)]
+    if isinstance(t, Unfold):
+        return ["unfold " + " ".join(t.names)]
+    if isinstance(t, Ext):
+        return ["ext" + ("".join(" " + n for n in t.names))]
     raise UnsupportedConstructError(f"cannot render tactic {type(t).__name__}")
+
+
+def _alternative(head: str, t: Tactic | None) -> list[str]:
+    """``| case => tac`` (one line) or the block on its own, deeper-indented lines."""
+    from ..proofs import Auto
+
+    lines = render_tactic_lines(t if t is not None else Auto())
+    if len(lines) == 1:
+        return [f"{head} {lines[0]}"]
+    return [head, *("    " + ln for ln in lines)]
 
 
 # =====================================================================================
@@ -272,8 +381,11 @@ def render_statement(thm: Theorem, unicode_types: bool = False) -> str:
 def render_open_statement(thm: Theorem, unicode_types: bool = False) -> str:
     """The statement with a ``sorry`` placeholder, used ONLY to open an interactive
     proof state. Never part of anything that is verified."""
+    from ..defs import theorem_definitions
+
     head, concl = _statement_parts(thm, _ExprRenderer(unicode_types))
-    return f"{head}\n    {concl} := by\n  sorry"
+    defs = [ln for d in theorem_definitions(thm) for ln in (*d.render(unicode_types), "")]
+    return "\n".join(defs) + f"{head}\n    {concl} := by\n  sorry"
 
 
 @dataclass(frozen=True)
@@ -299,6 +411,28 @@ class _Builder:
         return start, self.next_line - 1
 
 
+def _uses_auto(t: Tactic | None) -> bool:
+    from ..proofs import Auto
+
+    if t is None:
+        return False
+    if isinstance(t, Auto) or _auto_default(t):
+        return True
+    return any(_uses_auto(s) for s in t.sub_tactics())
+
+
+def _auto_default(t: Tactic) -> bool:
+    """Structured steps without an explicit proof are closed by ``auto``."""
+    name = type(t).__name__
+    if name == "Have":
+        return getattr(t, "proof", None) is None
+    if name == "Calc":
+        return any(p is None for _, _, p in getattr(t, "links", ()))
+    if name == "Induction":
+        return getattr(t, "zero", None) is None or getattr(t, "succ", None) is None
+    return False
+
+
 def render_module(
     theorems: Sequence[Theorem],
     *,
@@ -319,8 +453,18 @@ def render_module(
     if header_lines:
         header_lines.append("")
     header_lines.append("set_option autoImplicit false")
+    if any(_uses_auto(t.proof) for t in theorems):
+        # `first | …` alternatives that are never tried would each produce linter warnings.
+        header_lines += ["set_option linter.unusedTactic false",
+                         "set_option linter.unreachableTactic false"]
     s, e = b.add(*header_lines)
     b.spans.append(SourceSpan(s, e, "header", None, "imports and options"))
+    from ..defs import module_definitions
+
+    for d in module_definitions(theorems):
+        b.add("")
+        s, e = b.add(*d.render(unicode_types))
+        b.spans.append(SourceSpan(s, e, "definition", None, f"definition {d.name}", d.origin))
     r = _ExprRenderer(unicode_types)
     for thm in theorems:
         b.add("")

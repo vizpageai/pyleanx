@@ -86,8 +86,31 @@ def _base_latex(base: str) -> str:
     return r"\mathit{" + word + "}"
 
 
+def _const_latex(name: str) -> str:
+    """``Real.pi`` -> ``\\pi``; ``OAI.RVM.q`` -> ``\\mathrm{q}`` (last component)."""
+    last = name.rsplit(".", 1)[-1]
+    known = {"pi": r"\pi", "exp": r"\exp", "log": r"\log", "sin": r"\sin", "cos": r"\cos",
+             "sqrt": r"\sqrt", "fderiv": r"D", "deriv": r"\frac{d}{dx}"}
+    if last in known:
+        return known[last]
+    return latex_name(last) if len(last) == 1 else r"\operatorname{" + last.replace(
+        "_", r"\_") + "}"
+
+
 def latex_sort(sort: Sort) -> str:
-    return sort.latex or r"\mathrm{" + sort.name + "}"
+    from ..types import LeanType
+
+    if sort.latex:
+        return sort.latex
+    if isinstance(sort, LeanType):
+        if sort.kind == "fn":
+            *dom, cod = sort.parts
+            return r" \to ".join([*(latex_sort(d) for d in dom), latex_sort(cod)])
+        if sort.kind == "prod":
+            return r" \times ".join(latex_sort(p) for p in sort.parts)
+        text = sort.lean.replace("ℝ", r"\mathbb{R}").replace("ℕ", r"\mathbb{N}")
+        return r"\mathrm{" + text.replace("_", r"\_").replace(" ", r"\ ") + "}"
+    return r"\mathrm{" + sort.name + "}"
 
 
 def _lit(value) -> tuple[str, int]:
@@ -138,6 +161,59 @@ class _Latex:
         if isinstance(e, Quant):
             q = r"\forall" if e.kind == "forall" else r"\exists"
             return rf"{q} {binders_latex(e.vars)},\ {self.sub(e.body, 0)}", 0
+        return self.term(e)
+
+    def term(self, e: Expr) -> tuple[str, int]:
+        from ..terms import Apply, Ascribe, BigOp, Const, Field, Lam, Norm, Pair, TypeTerm
+
+        if isinstance(e, Const):
+            if e.latex:
+                return e.latex, MAX
+            return _const_latex(e.name), MAX
+        if isinstance(e, TypeTerm):
+            return latex_sort(e.type), MAX
+        if isinstance(e, Apply):
+            fn = e.fn
+            args = [self.render(a)[0] for a in e.args]
+            if isinstance(fn, Const) and fn.latex and "{0}" in fn.latex:
+                try:
+                    return fn.latex.format(*args), MAX
+                except IndexError:
+                    pass
+            head = self.sub(fn, MAX)
+            return head + _paren(", ".join(args)), MAX - 1
+        if isinstance(e, Lam):
+            vs = ", ".join(latex_name(v.name) for v in e.vars)
+            return rf"{vs} \mapsto {self.sub(e.body, 0)}", 0
+        if isinstance(e, BigOp):
+            v = latex_name(e.var.name)
+            body = self.sub(e.body, 66)
+            if e.kind == "integral":
+                if e.bounds is not None:
+                    lo, hi = (self.render(b)[0] for b in e.bounds)
+                    return rf"\int_{{{lo}}}^{{{hi}}} {body}\, d{v}", 66
+                return rf"\int_{{{latex_sort(e.var.sort)}}} {body}\, d{v}", 66
+            sym = r"\sum" if e.kind == "sum" else r"\prod"
+            dom = (rf"{v} \in {self.render(e.over)[0]}" if e.over is not None
+                   else rf"{v} \in {latex_sort(e.var.sort)}")
+            return rf"{sym}_{{{dom}}} {body}", 66
+        if isinstance(e, Pair):
+            return _paren(f"{self.render(e.fst)[0]}, {self.render(e.snd)[0]}"), MAX
+        if isinstance(e, Field):
+            name = {"1": "1", "2": "2", "fst": "1", "snd": "2"}.get(e.name)
+            base = self.sub(e.arg, MAX)
+            if name is not None:
+                return f"{base}_{{{name}}}", MAX
+            return rf"{base}.\mathrm{{{e.name.replace('_', chr(92) + '_')}}}", MAX
+        if isinstance(e, Ascribe):
+            return self.render(e.arg)
+        if isinstance(e, Norm):
+            return rf"\left\lVert {self.render(e.arg)[0]} \right\rVert", MAX
+        from ..terms import StructLit
+
+        if isinstance(e, StructLit):
+            vals = r",\ ".join(rf"\mathrm{{{n}}} = {self.render(v)[0]}" for n, v in e.values)
+            return r"\left\{" + vals + r"\right\}", MAX
         raise UnsupportedConstructError(f"no LaTeX for {type(e).__name__}")  # pragma: no cover
 
     def sub(self, e: Expr, need: int) -> str:
@@ -158,6 +234,8 @@ class _Latex:
             return f"{self.sub(e.lhs, 65)} {sym} {self.sub(e.rhs, 66)}", 65
         if e.op == "mod":
             return rf"{self.sub(e.lhs, 70)} \bmod {self.sub(e.rhs, 71)}", 70
+        if e.op == "smul":
+            return rf"{self.sub(e.lhs, 74)} \, {self.sub(e.rhs, 73)}", 73
         # multiplication: juxtapose when the right factor starts with a letter-like atom
         lhs = self.sub(e.lhs, 70)
         rhs = self.sub(e.rhs, 71)

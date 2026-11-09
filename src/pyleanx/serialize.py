@@ -88,7 +88,7 @@ def _builtin_funcs() -> None:
 
 
 _POLY: dict[str, Callable[..., Expr]] = {"abs": abs_, "min": min_, "max": max_}
-_ARITH = {"add", "sub", "mul", "div", "mod", "pow"}
+_ARITH = {"add", "sub", "mul", "div", "mod", "pow", "smul"}
 _CMP = {"eq", "ne", "lt", "le", "gt", "ge"}
 _LOGIC = {"and", "or", "implies", "iff"}
 
@@ -97,7 +97,27 @@ def _json(obj: Any) -> str:
     return json.dumps(obj, sort_keys=True, ensure_ascii=False)
 
 
-def _sort(name: Any) -> Sort:
+def _sort(name: Any, defs: Mapping[str, Any] | None = None) -> Sort:
+    from .types import TYPE, UNKNOWN, Fn, Prod, lean_type
+
+    if isinstance(name, list) and name:
+        tag = name[0]
+        if tag == "fn":
+            return Fn(*(_sort(p, defs) for p in name[1]))
+        if tag == "prod":
+            return Prod(*(_sort(p, defs) for p in name[1]))
+        if tag == "type":
+            if len(name) == 4:
+                for dname in name[3]:
+                    d = (defs or {}).get(dname)
+                    if d is not None and hasattr(d, "type") and d.type.lean == name[1]:
+                        return d.type
+                raise SerializationError(f"type {name[1]!r} refers to unknown definitions")
+            if name[1] == "_":
+                return UNKNOWN
+            if name[1] == "Type":
+                return TYPE
+            return lean_type(name[1], tuple(name[2]))
     s = SORTS.get(name) if isinstance(name, str) else None
     if s is None:
         raise SerializationError(f"unknown sort {name!r}")
@@ -111,6 +131,38 @@ class _Decoder:
         # Lean sees those by name only, so they are rebuilt as fresh variables there.
         self.in_proof = False
         self.proof_locals: dict[tuple[str, str], Var] = {}
+        self.defs: dict[str, Any] = {}
+
+    def sort(self, d: Any) -> Sort:
+        return _sort(d, self.defs)
+
+    def definition(self, d: Any) -> Any:
+        from .defs import Definition, StructureDefinition, TypeDefinition
+
+        tag = d[0]
+        if tag == "abbrev":
+            return TypeDefinition(d[1], self.sort(d[2]), doc=d[3])
+        if tag == "structure":
+            return StructureDefinition(d[1], tuple((n, self.sort(s)) for n, s in d[2]),
+                                       doc=d[3])
+        if tag == "def":
+            params = tuple(Var(p[1], self.sort(p[2])) for p in d[2])
+            saved = dict(self.scope)
+            self.scope = {p.name: p for p in params}
+            body = self.expr(d[3])
+            self.scope = saved
+            return Definition(d[1], params, body, self.sort(d[4]), doc=d[5])
+        raise SerializationError(f"unknown definition kind {tag!r}")
+
+    def bound(self, vds: Any) -> list[Var]:
+        vs = []
+        for vd in vds:
+            if not (isinstance(vd, list) and len(vd) == 3 and vd[0] == "var"):
+                raise SerializationError(f"bad bound variable {vd!r}")
+            v = Var(vd[1], self.sort(vd[2]))
+            self.scope[v.name] = v
+            vs.append(v)
+        return vs
 
     def expr(self, d: Any) -> Expr:
         if not isinstance(d, list) or not d:
@@ -119,17 +171,17 @@ class _Decoder:
         if tag == "var":
             _, name, sort = d
             v = self.scope.get(name)
-            if v is not None and v.sort.name == sort:
+            if v is not None and _json(v.sort.canonical()) == _json(sort):
                 return v
             if self.in_proof:
-                key = (name, sort)
+                key = (name, _json(sort))
                 if key not in self.proof_locals:
-                    self.proof_locals[key] = Var(name, _sort(sort))
+                    self.proof_locals[key] = Var(name, self.sort(sort))
                 return self.proof_locals[key]
             raise SerializationError(f"free or mistyped variable {name!r}")
         if tag == "lit":
             _, value, sort = d
-            return Lit(Fraction(value), _sort(sort) if sort is not None else None)
+            return Lit(Fraction(value), self.sort(sort) if sort is not None else None)
         if tag == "propconst":
             return TRUE if d[1] else FALSE
         if tag in _ARITH:
@@ -137,12 +189,14 @@ class _Decoder:
             sort = lhs.sort if lhs.sort is not None else rhs.sort
             if tag == "pow":
                 sort = lhs.sort
+            elif tag == "smul":
+                sort = rhs.sort
             return BinOp(tag, lhs, rhs, sort)
         if tag == "neg":
             arg = self.expr(d[1])
             return Neg(arg, arg.sort)
         if tag == "cast":
-            return Cast(self.expr(d[2]), _sort(d[1]))
+            return Cast(self.expr(d[2]), self.sort(d[1]))
         if tag == "app":
             name, args = d[1], [self.expr(a) for a in d[2]]
             if name in _POLY:
@@ -160,16 +214,54 @@ class _Decoder:
             return Logic(tag, self.expr(d[1]), self.expr(d[2]))
         if tag in ("forall", "exists"):
             saved = dict(self.scope)
-            vs = []
-            for vd in d[1]:
-                if not (isinstance(vd, list) and len(vd) == 3 and vd[0] == "var"):
-                    raise SerializationError(f"bad bound variable {vd!r}")
-                v = Var(vd[1], _sort(vd[2]))
-                self.scope[v.name] = v
-                vs.append(v)
+            vs = self.bound(d[1])
             body = self.expr(d[2])
             self.scope = saved
             return Quant(tag, tuple(vs), body)
+        return self.general_term(tag, d)
+
+    def general_term(self, tag: str, d: Any) -> Expr:
+        from . import terms as T
+        from .types import UNKNOWN, Fn
+
+        if tag == "const":
+            arity = d[4] if len(d) > 4 else None
+            result = self.sort(d[5]) if len(d) > 5 and d[5] is not None else None
+            return T.Const(d[1], self.sort(d[2]), tuple(d[3]), arity=arity, result=result)
+        if tag == "defref":
+            defn = self.defs.get(d[1])
+            if defn is None or not hasattr(defn, "const"):
+                raise SerializationError(f"unknown definition {d[1]!r}")
+            return defn.const
+        if tag == "apply":
+            return T.Apply(self.expr(d[1]), tuple(self.expr(a) for a in d[2]), self.sort(d[3]))
+        if tag == "typeterm":
+            return T.TypeTerm(self.sort(d[1]))
+        if tag == "lam":
+            saved = dict(self.scope)
+            vs = self.bound(d[1])
+            body = self.expr(d[2])
+            self.scope = saved
+            return T.Lam(tuple(vs), body, Fn(*(v.sort for v in vs), body.sort or UNKNOWN))
+        if tag == "bigop":
+            _, kind, vd, bd, over, bounds = d
+            over_e = self.expr(over) if over is not None else None
+            bounds_e = (self.expr(bounds[0]), self.expr(bounds[1])) if bounds else None
+            saved = dict(self.scope)
+            (v,) = self.bound([vd])
+            body = self.expr(bd)
+            self.scope = saved
+            return T.BigOp(kind, v, body, body.sort or UNKNOWN, over_e, bounds_e)
+        if tag == "pair":
+            return T.pair(self.expr(d[1]), self.expr(d[2]))
+        if tag == "field":
+            return T.Field(self.expr(d[1]), d[2], self.sort(d[3]))
+        if tag == "ascribe":
+            return T.Ascribe(self.expr(d[1]), self.sort(d[2]))
+        if tag == "norm":
+            return T.Norm(self.expr(d[1]))
+        if tag == "structlit":
+            return T.StructLit(tuple((n, self.expr(v)) for n, v in d[2]), self.sort(d[1]))
         raise SerializationError(f"unknown expression tag {tag!r}")
 
     def term(self, d: Any) -> Term:
@@ -212,6 +304,35 @@ class _Decoder:
             return Branches(branches=tuple(self.tactic(t) for t in d[1]))
         if kw == "raw":
             return RawTactic(text=d[1])
+        return self.structured(kw, d)
+
+    def opt_tactic(self, d: Any) -> Tactic | None:
+        return self.tactic(d) if d is not None else None
+
+    def structured(self, kw: str, d: Any) -> Tactic:
+        from . import proofs as P
+
+        if kw == "auto":
+            return P.Auto(hints=tuple(self.term(t) for t in d[1]), aesop=bool(d[2]),
+                          library_search=bool(d[3]))
+        if kw == "have":
+            return P.Have(name=d[1], prop=self.expr(d[2]), proof=self.opt_tactic(d[3]))
+        if kw == "calc":
+            links = tuple((rel, self.expr(e), self.opt_tactic(t)) for rel, e, t in d[2])
+            return P.Calc(first=self.expr(d[1]), links=links)
+        if kw == "show":
+            return P.Show(prop=self.expr(d[1]))
+        if kw == "obtain":
+            return P.Obtain(names=tuple(d[1]), source=self.term(d[2]))
+        if kw == "cases":
+            return P.Cases(source=self.term(d[1]), alternatives=tuple(tuple(a) for a in d[2]))
+        if kw == "induction":
+            return P.Induction(var=d[1], zero=self.opt_tactic(d[2]), succ=self.opt_tactic(d[3]),
+                               succ_names=tuple(d[4]))
+        if kw == "unfold":
+            return P.Unfold(names=tuple(d[1]))
+        if kw == "ext":
+            return P.Ext(names=tuple(d[1]))
         raise SerializationError(f"unknown tactic {kw!r}")
 
 
@@ -225,8 +346,12 @@ def theorem_from_canonical(data: Mapping[str, Any], *, imports: Iterable[str] = 
     from .theorem import Theorem
 
     try:
-        variables = [Var(name, _sort(sort)) for tag, name, sort in data["variables"]]
-        dec = _Decoder({v.name: v for v in variables})
+        dec = _Decoder({})
+        for dd in data.get("definitions", []):
+            defn = dec.definition(dd)
+            dec.defs[defn.name] = defn
+        variables = [Var(name, dec.sort(sort)) for tag, name, sort in data["variables"]]
+        dec.scope = {v.name: v for v in variables}
         hyps = [(name, dec.expr(prop)) for name, prop in data["assumptions"]]
         concl = dec.expr(data["conclusion"])
         dec.in_proof = True

@@ -257,6 +257,74 @@ def cmd_bank(args: argparse.Namespace) -> int:
     return 0 if hits else 1
 
 
+# ------------------------------------------------------------------------------ libraries
+def cmd_add(args: argparse.Namespace) -> int:
+    from .libs import add_library
+
+    opts = []
+    for o in args.lean_option or []:
+        k, sep, v = o.partition("=")
+        if not sep:
+            print(f"error: --lean-option needs NAME=VALUE, got {o!r}", file=sys.stderr)
+            return 2
+        opts.append((k, v))
+    lib = add_library(args.name, args.source, rev=args.rev or "", subdir=args.subdir or "",
+                      roots=args.module, project=args.project, build=not args.no_build,
+                      lean_options=opts, allow_version_mismatch=args.allow_version_mismatch,
+                      timeout=args.timeout)
+    print(f"added {lib.name}: {len(lib.modules)} module(s) @ {lib.rev[:12] or 'local'}")
+    return 0
+
+
+def cmd_libs(args: argparse.Namespace) -> int:
+    from .libs import list_libraries
+
+    libs = list_libraries(args.project)
+    if args.json:
+        import dataclasses as dc
+
+        print(json.dumps([dc.asdict(x) for x in libs], ensure_ascii=False, indent=2))
+        return 0
+    for x in libs:
+        print(f"{x.name:16s} {len(x.modules):4d} modules  {x.rev[:12] or 'local':12s} "
+              f"{x.source}  roots: {', '.join(x.roots)}")
+    if not libs:
+        print("no libraries (add one with `pyleanx add`)")
+    return 0
+
+
+def cmd_build_lib(args: argparse.Namespace) -> int:
+    from .libs import build_library
+
+    build_library(args.name, args.project, timeout=args.timeout)
+    return 0
+
+
+def cmd_remove(args: argparse.Namespace) -> int:
+    from .libs import remove_library
+
+    remove_library(args.name, args.project)
+    print(f"removed {args.name}")
+    return 0
+
+
+def cmd_bindings(args: argparse.Namespace) -> int:
+    from .bindings import export_declarations, write_bindings
+
+    if args.output:
+        out = write_bindings(args.modules, args.output, project=args.project,
+                             timeout=args.timeout)
+        print(f"wrote {out}")
+        return 0
+    decls = export_declarations(args.modules, args.project, timeout=args.timeout)
+    words = (args.search or "").lower().split()
+    for d in decls:
+        text = (d.name + " " + d.type + " " + (d.doc or "")).lower()
+        if all(w in text for w in words):
+            print(f"{d.kind:11s} {d.signature()[:160]}")
+    return 0
+
+
 # ------------------------------------------------------------------------------ infoview
 def cmd_infoview(args: argparse.Namespace) -> int:
     from .infoview import DeclViews, infoview
@@ -349,6 +417,44 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--timeout", type=float)
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_bank)
+
+    s = sub.add_parser("add", help="vendor and build an external Lean library (e.g. OAI)")
+    s.add_argument("name", help="local name for the library, e.g. oai")
+    s.add_argument("source", help="git URL or local directory")
+    s.add_argument("--rev", help="commit SHA, tag or branch (recorded as a SHA)")
+    s.add_argument("--subdir", help="directory of the Lean sources inside the repository")
+    s.add_argument("--module", action="append", required=True,
+                   help="root module to vendor with its import closure (repeatable)")
+    s.add_argument("--lean-option", action="append", help="NAME=VALUE passed to lean -D")
+    s.add_argument("--no-build", action="store_true")
+    s.add_argument("--allow-version-mismatch", action="store_true")
+    s.add_argument("--project")
+    s.add_argument("--timeout", type=float)
+    s.set_defaults(func=cmd_add)
+
+    s = sub.add_parser("libs", help="list vendored libraries")
+    s.add_argument("--project")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_libs)
+
+    s = sub.add_parser("build-lib", help="(re)build a vendored library incrementally")
+    s.add_argument("name")
+    s.add_argument("--project")
+    s.add_argument("--timeout", type=float)
+    s.set_defaults(func=cmd_build_lib)
+
+    s = sub.add_parser("remove", help="remove a vendored library")
+    s.add_argument("name")
+    s.add_argument("--project")
+    s.set_defaults(func=cmd_remove)
+
+    s = sub.add_parser("bindings", help="list or generate Python bindings for Lean modules")
+    s.add_argument("modules", nargs="+", help="Lean modules, e.g. Mathlib.Analysis.Real.Sqrt")
+    s.add_argument("-o", "--output", help="write a Python bindings module to this file")
+    s.add_argument("--search", help="only list declarations containing these words")
+    s.add_argument("--project")
+    s.add_argument("--timeout", type=float)
+    s.set_defaults(func=cmd_bindings)
 
     s = sub.add_parser("infoview", help="show Mathlib/core declarations as Lean states them")
     s.add_argument("names", nargs="+", help="declaration names, e.g. two_mul_le_add_sq")

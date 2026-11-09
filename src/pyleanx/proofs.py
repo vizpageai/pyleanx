@@ -93,6 +93,10 @@ def term_imports(t: Term) -> tuple[str, ...]:
         for a in t.args:
             out.extend(term_imports(a))
         return tuple(out)
+    if isinstance(t, Expr):
+        from .imports import expr_imports
+
+        return tuple(expr_imports(t))
     return ()
 
 
@@ -116,6 +120,10 @@ class Tactic:
 
     def flat(self) -> tuple[Tactic, ...]:
         return (self,)
+
+    def sub_tactics(self) -> tuple[Tactic, ...]:
+        """Tactics nested inside this one (for policy checks and imports)."""
+        return ()
 
     def __str__(self) -> str:
         """The Lean tactic text this node renders to."""
@@ -277,6 +285,9 @@ class Steps(Tactic):
     def imports(self) -> tuple[str, ...]:
         return tuple(i for t in self.tactics for i in t.imports())
 
+    def sub_tactics(self) -> tuple[Tactic, ...]:
+        return self.tactics
+
     def flat(self) -> tuple[Tactic, ...]:
         return tuple(x for t in self.tactics for x in t.flat())
 
@@ -292,6 +303,9 @@ class Branches(Tactic):
 
     def imports(self) -> tuple[str, ...]:
         return tuple(i for t in self.branches for i in t.imports())
+
+    def sub_tactics(self) -> tuple[Tactic, ...]:
+        return self.branches
 
     def canonical(self) -> Any:
         return ["branches", [t.canonical() for t in self.branches]]
@@ -505,21 +519,279 @@ def raw_tactic(text: str, imports: Iterable[str] = ()) -> RawTactic:
 
 
 def contains_raw(t: Tactic) -> bool:
-    if isinstance(t, RawTactic):
-        return True
-    if isinstance(t, Steps):
-        return any(contains_raw(x) for x in t.tactics)
-    if isinstance(t, Branches):
-        return any(contains_raw(x) for x in t.branches)
-    return False
+    """Does the tactic tree contain untrusted raw text anywhere (including nested blocks)?"""
+    return any(True for _ in iter_raw(t))
 
 
 def iter_raw(t: Tactic) -> Iterable[RawTactic]:
     if isinstance(t, RawTactic):
         yield t
-    elif isinstance(t, Steps):
-        for x in t.tactics:
-            yield from iter_raw(x)
-    elif isinstance(t, Branches):
-        for x in t.branches:
-            yield from iter_raw(x)
+    for x in t.sub_tactics():
+        yield from iter_raw(x)
+
+
+# =====================================================================================
+# Structured proofs (mathematical style) and automation
+# =====================================================================================
+
+#: Each alternative must close the goal completely (``done``), so ``auto`` never leaves a
+#: partially simplified goal behind.
+_AUTO_IMPORTS = ("Mathlib.Tactic.Ring", "Mathlib.Tactic.Linarith", "Mathlib.Tactic.Positivity",
+                 "Mathlib.Tactic.NormNum", "Mathlib.Tactic.FieldSimp")
+
+
+@dataclass(frozen=True)
+class Auto(Tactic):
+    """Try standard closing tactics in order; succeed only if one closes the goal."""
+
+    hints: tuple[Term, ...] = ()
+    aesop: bool = True
+    library_search: bool = False
+
+    def imports(self) -> tuple[str, ...]:
+        out = list(_AUTO_IMPORTS)
+        if self.aesop:
+            out.append("Aesop")
+        for t in self.hints:
+            out.extend(term_imports(t))
+        return tuple(out)
+
+    def alternatives(self) -> list[str]:
+        from .render.lean import render_term
+
+        h = (" [" + ", ".join(render_term(t) for t in self.hints) + "]") if self.hints else ""
+        alts = ["rfl", "ring1", f"(norm_num{h}; done)", f"(simp{h}; done)", f"linarith{h}",
+                "positivity", f"nlinarith{h}", "(field_simp; ring1)"]
+        if self.aesop:
+            alts.append("(aesop; done)")
+        if self.library_search:
+            alts.append("exact?")
+        return alts
+
+    def canonical(self) -> Any:
+        return ["auto", [_canon_term(t) for t in self.hints], self.aesop, self.library_search]
+
+
+def _block(t: Tactic | None) -> list[str]:
+    from .render.lean import render_tactic_lines
+
+    return render_tactic_lines(t if t is not None else Auto())
+
+
+@dataclass(frozen=True)
+class Have(Tactic):
+    """``have name : P := by …`` (proved by ``auto`` when no proof is given)."""
+
+    name: str = ""
+    prop: Expr = None  # type: ignore[assignment]
+    proof: Tactic | None = None
+
+    def imports(self) -> tuple[str, ...]:
+        return (Auto() if self.proof is None else self.proof).imports()
+
+    def sub_tactics(self) -> tuple[Tactic, ...]:
+        return (self.proof,) if self.proof is not None else ()
+
+    def canonical(self) -> Any:
+        return ["have", self.name, self.prop.canonical(),
+                self.proof.canonical() if self.proof is not None else None]
+
+
+CALC_RELATIONS = {"=": "=", "<=": "≤", "≤": "≤", "<": "<", ">=": "≥", "≥": "≥", ">": ">",
+                  "!=": "≠", "≠": "≠"}
+
+
+@dataclass(frozen=True)
+class Calc(Tactic):
+    """``calc a = b := by … ; _ ≤ c := by …`` (a chain of relations)."""
+
+    first: Expr = None  # type: ignore[assignment]
+    links: tuple[tuple[str, Expr, Tactic | None], ...] = ()
+
+    def imports(self) -> tuple[str, ...]:
+        return tuple(i for _, _, t in self.links for i in (t or Auto()).imports())
+
+    def sub_tactics(self) -> tuple[Tactic, ...]:
+        return tuple(t for _, _, t in self.links if t is not None)
+
+    def canonical(self) -> Any:
+        return ["calc", self.first.canonical(),
+                [[rel, e.canonical(), t.canonical() if t is not None else None]
+                 for rel, e, t in self.links]]
+
+
+@dataclass(frozen=True)
+class Show(Tactic):
+    """``show P``: state the current goal explicitly (Lean checks it matches)."""
+
+    prop: Expr = None  # type: ignore[assignment]
+
+    def canonical(self) -> Any:
+        return ["show", self.prop.canonical()]
+
+
+@dataclass(frozen=True)
+class Obtain(Tactic):
+    """``obtain ⟨x, hx⟩ := h``: destructure ∃ / ∧ hypotheses or lemma results."""
+
+    names: tuple[str, ...] = ()
+    source: Term = None  # type: ignore[assignment]
+
+    def imports(self) -> tuple[str, ...]:
+        return term_imports(self.source)
+
+    def canonical(self) -> Any:
+        return ["obtain", list(self.names), _canon_term(self.source)]
+
+
+@dataclass(frozen=True)
+class Cases(Tactic):
+    """``rcases h with h₁ | h₂``: split a disjunction (one new goal per alternative)."""
+
+    source: Term = None  # type: ignore[assignment]
+    alternatives: tuple[tuple[str, ...], ...] = ()
+
+    def imports(self) -> tuple[str, ...]:
+        return term_imports(self.source)
+
+    def canonical(self) -> Any:
+        return ["cases", _canon_term(self.source), [list(a) for a in self.alternatives]]
+
+
+@dataclass(frozen=True)
+class Induction(Tactic):
+    """``induction n with | zero => … | succ k ih => …`` on a natural number."""
+
+    var: str = ""
+    zero: Tactic | None = None
+    succ: Tactic | None = None
+    succ_names: tuple[str, str] = ("k", "ih")
+
+    def imports(self) -> tuple[str, ...]:
+        return tuple(i for t in (self.zero, self.succ) for i in (t or Auto()).imports())
+
+    def sub_tactics(self) -> tuple[Tactic, ...]:
+        return tuple(t for t in (self.zero, self.succ) if t is not None)
+
+    def canonical(self) -> Any:
+        return ["induction", self.var,
+                self.zero.canonical() if self.zero is not None else None,
+                self.succ.canonical() if self.succ is not None else None,
+                list(self.succ_names)]
+
+
+@dataclass(frozen=True)
+class Unfold(Tactic):
+    """``unfold f g``: replace definitions by their bodies."""
+
+    names: tuple[str, ...] = ()
+
+    def canonical(self) -> Any:
+        return ["unfold", list(self.names)]
+
+
+@dataclass(frozen=True)
+class Ext(Tactic):
+    """``ext i``: prove an equality of functions/vectors pointwise."""
+
+    names: tuple[str, ...] = ()
+
+    def canonical(self) -> Any:
+        return ["ext", list(self.names)]
+
+
+def _proof_arg(p: Tactic | None, what: str) -> Tactic | None:
+    if p is not None and not isinstance(p, Tactic):
+        raise TacticError(f"{what}: proof must be a tactic, got {p!r}")
+    return p
+
+
+def auto(*hints: TermLike, aesop: bool = True, library_search: bool = False) -> Auto:
+    """Close the goal automatically: tries rfl, ring, norm_num, simp, linarith, positivity,
+    nlinarith (with ``hints``), field_simp, aesop (and ``exact?`` if ``library_search``).
+    """
+    return Auto(hints=_terms(hints), aesop=aesop, library_search=library_search,
+                origin=caller_origin())
+
+
+def have(name: str, prop: object, proof: Tactic | None = None) -> Have:
+    """``have name : prop`` proved by ``proof`` (default: ``pl.auto()``)."""
+    from .expr import _as_prop
+
+    validate_identifier(name, "have name")
+    return Have(name=name, prop=_as_prop(prop, f"have {name}"),
+                proof=_proof_arg(proof, f"have {name}"), origin=caller_origin())
+
+
+def calc(first: object, *chain: object) -> Calc:
+    """``pl.calc(a, "=", b, "≤", c, by=...)`` style chains:
+
+        pl.calc(a, ("=", b), ("<=", c, pl.nlinarith(...)))
+
+    Each link is ``(relation, next_term)`` or ``(relation, next_term, proof)``; missing
+    proofs default to ``pl.auto()``. Relations: = ≠ < ≤ > ≥ (or ASCII forms).
+    """
+    from .expr import _lift
+
+    links = []
+    for link in chain:
+        if not isinstance(link, tuple) or len(link) not in (2, 3):
+            raise TacticError("calc links are (relation, term) or (relation, term, proof)")
+        rel = CALC_RELATIONS.get(link[0])
+        if rel is None:
+            raise TacticError(f"unknown calc relation {link[0]!r}")
+        proof = _proof_arg(link[2], "calc step") if len(link) == 3 else None
+        links.append((rel, _lift(link[1]), proof))
+    if not links:
+        raise TacticError("calc needs at least one link")
+    return Calc(first=_lift(first), links=tuple(links), origin=caller_origin())
+
+
+def show(prop: object) -> Show:
+    """``show prop``: Lean checks the goal is (definitionally) ``prop``."""
+    from .expr import _as_prop
+
+    return Show(prop=_as_prop(prop, "show"), origin=caller_origin())
+
+
+def obtain(names: str | Iterable[str], source: TermLike) -> Obtain:
+    """``obtain ⟨x, hx⟩ := source`` (names space-separated or a list)."""
+    ns = names.split() if isinstance(names, str) else list(names)
+    return Obtain(names=_names(ns), source=_term(source), origin=caller_origin())
+
+
+def cases(source: TermLike, *alternatives: str | Iterable[str]) -> Cases:
+    """``rcases source with a | b``; each alternative may bind several names ("x hx")."""
+    alts = tuple(_names(a.split() if isinstance(a, str) else list(a)) for a in alternatives)
+    if len(alts) < 1:
+        raise TacticError("cases needs at least one alternative")
+    return Cases(source=_term(source), alternatives=alts, origin=caller_origin())
+
+
+def induction(var: str, zero: Tactic | None = None, succ: Tactic | None = None, *,
+              names: tuple[str, str] = ("k", "ih")) -> Induction:
+    """Induction on a natural-number variable; cases default to ``pl.auto()``."""
+    validate_identifier(var, "induction variable")
+    return Induction(var=var, zero=_proof_arg(zero, "induction zero case"),
+                     succ=_proof_arg(succ, "induction succ case"),
+                     succ_names=_names(names), origin=caller_origin())  # type: ignore[arg-type]
+
+
+def unfold(*defs: object) -> Unfold:
+    """``unfold f``: expand PyLeanX/Lean definitions (pass definitions or names)."""
+    out: list[str] = []
+    for d in defs:
+        out.append(str(getattr(d, "name", d)))
+    for n in out:
+        validate_qualified_name(n, "definition name")
+    return Unfold(names=tuple(out), origin=caller_origin())
+
+
+def ext(*names: str) -> Ext:
+    """``ext i``: reduce an equality of functions or vectors to coordinates."""
+    return Ext(names=_names(names), origin=caller_origin())
+
+
+def proof(*steps_: Tactic) -> Tactic:
+    """A proof as a sequence of steps (``pl.proof(pl.have(...), pl.calc(...))``)."""
+    return steps(*steps_) if len(steps_) != 1 else steps_[0]

@@ -142,7 +142,12 @@ class LeanRepl:
         )
         repl_dir = Path(self._config._cache_repl_dir)
         if launch == "auto":
-            launch = "interpreted" if _binary_blocked(repl_dir) else "binary"
+            from ..libs import library_lean_paths
+
+            # The interpreted launch controls LEAN_PATH itself, so vendored libraries
+            # (`pyleanx add`) are visible; the binary launch goes through `lake env`.
+            blocked = _binary_blocked(repl_dir) or bool(library_lean_paths(project.path))
+            launch = "interpreted" if blocked else "binary"
         self.launch = launch
         self._server = self._make_server(repl_dir)
         self._envs: dict[tuple[str, ...], int] = {}
@@ -237,7 +242,7 @@ _REPLS_LOCK = threading.Lock()
 
 def get_repl(project: LeanProject, launch: str = "auto") -> LeanRepl:
     """Shared REPL for this project configuration (created on first use)."""
-    key = (str(project.path), project.config_hash(), launch)
+    key = (str(project.path), project.config_hash(), project.libraries_hash(), launch)
     with _REPLS_LOCK:
         repl = _REPLS.get(key)
         if repl is None or not repl.is_alive():

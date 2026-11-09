@@ -191,6 +191,9 @@ def fingerprint(thm_canonical: object, module: RenderedModule, project: LeanProj
         "import_mode": project.import_mode,
         "lean_options": [list(o) for o in project.lean_options],
     }
+    libs = project.libraries_hash()
+    if libs:  # vendored libraries the module may import (absent: old fingerprints unchanged)
+        blob["libraries_sha256"] = libs
     data = json.dumps(blob, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
     return hashlib.sha256(data).hexdigest()
 
@@ -252,6 +255,15 @@ def classify(
             "imports failed to load; is the Mathlib cache present (`lake exe cache get`) and "
             "are the requested modules part of the pinned Mathlib?"))
         return {n: (Status.ENVIRONMENT_ERROR, diags, None) for n in names}
+
+    def_spans = [s for s in sm.spans if s.kind == "definition"]
+    def_errors = [m for m in run.messages if m.severity == "error" and m.line is not None
+                  and any(s.contains(m.line) for s in def_spans)]
+    if def_errors:
+        # A broken definition invalidates every theorem in the file (fail closed).
+        diags = [_diag(m, module) for m in def_errors]
+        diags.append(_pyleanx_diag("a definition in this Lean file failed to elaborate"))
+        return {n: (Status.REJECTED, diags, None) for n in names}
 
     header_notes = [_diag(m, module) for m in run.messages
                     if m.line is not None and header.contains(m.line)]

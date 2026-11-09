@@ -96,6 +96,23 @@ class LeanProject:
         return h.hexdigest()
 
     def lake_env(self, refresh: bool = False, timeout: float = 900.0) -> dict[str, str]:
+        """The Lake environment plus the build directories of vendored libraries
+        (``pyleanx add``), which are prepended to ``LEAN_PATH``."""
+        env = dict(self._lake_env_base(refresh, timeout))
+        from .libs import library_lean_paths
+
+        extra = library_lean_paths(self.path)
+        if extra:
+            env["LEAN_PATH"] = os.pathsep.join([*extra, env["LEAN_PATH"]])
+        return env
+
+    def libraries_hash(self) -> str:
+        """Hash of vendored library contents ("" without libraries)."""
+        from .libs import libraries_hash
+
+        return libraries_hash(self.path)
+
+    def _lake_env_base(self, refresh: bool = False, timeout: float = 900.0) -> dict[str, str]:
         """Environment that ``lake env`` would set (LEAN, LEAN_PATH, LEAN_SYSROOT, ...).
 
         ``lake env`` costs seconds per call, so it is resolved once per pin
