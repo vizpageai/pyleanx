@@ -72,6 +72,7 @@ from .expr import (
 from .expr import abs_ as abs  # noqa: A001 - intentional mathematical name
 from .expr import max_ as max  # noqa: A001
 from .expr import min_ as min  # noqa: A001
+from .infoview import DeclView, infoview
 from .project import LeanProject, find_project
 from .proofs import (
     apply,
@@ -134,6 +135,8 @@ __all__ = [
     # theorem bank (M7)
     "TheoremBank", "BankEntry", "Formalization", "BankError", "VersionMismatchError",
     "CrossSystemError", "theorem_from_canonical",
+    # library declarations, infoview-style
+    "infoview", "DeclView",
     # errors
     "PyLeanXError", "SymbolicTruthValueError", "SortError", "LiteralError", "ScopeError",
     "IdentifierError", "TacticError", "UnsupportedConstructError", "ProjectError",

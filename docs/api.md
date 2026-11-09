@@ -199,6 +199,27 @@ pointer, never a proof: anything it contributes is checked by Lean again.
 `pl.theorem_from_canonical(data)` rebuilds a theorem from `Theorem.canonical()` JSON
 exactly (strict: unknown sorts/functions/tactics are errors).
 
+## Library declarations, infoview-style
+
+`pl.infoview(*items, imports=(), project=None)` shows Mathlib/core declarations the way the
+editor's infoview does, from Lean's own `#check name` output, without restating them:
+
+```python
+pl.infoview(pl.algebra.abs_add_le)   # or pl.infoview("abs_add_le", imports=[...])
+# α : Type u_1
+# inst✝ : Lattice α
+# inst✝ : AddCommGroup α
+# inst✝ : AddLeftMono α
+# a b : α
+# ⊢ |a + b| ≤ |a| + |b|
+```
+
+Items are names, `pl.ref(...)` or catalog lemmas; with no known module, `import Mathlib` is
+used (slow). The result is a `DeclView` (`.goal`, `.signature`, `.binders`, `.conclusion`;
+a `DeclViews` tuple for several items) and renders as a Lean block in Jupyter. PyLeanX only
+splits the signature for layout (instances are shown as `inst✝`, numbering omitted); this is
+display, never verification. CLI: `pyleanx infoview NAME... [--import MODULE] [--json]`.
+
 ## Proof agents (M8): `pyleanx.agent`
 
 | API | Purpose |
@@ -247,6 +268,7 @@ pyleanx compile SCRIPT [-o OUT.lean]
 pyleanx check SCRIPT [--json] [--include-source] [--no-cache] [--timeout S] [--allow-raw-tactics]
 pyleanx cache stats|clear
 pyleanx bank index|search|show|list [QUERY] [--bank FILE] [--json]
+pyleanx infoview NAME... [--import MODULE]... [--json]
 pyleanx agent bench [--mode session|batch] [--problems a,b] [--json]
 pyleanx agent export [-o FILE.jsonl]
 pyleanx agent serve [--allow-raw]

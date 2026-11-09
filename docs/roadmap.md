@@ -101,6 +101,11 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 - [ ] **Gate** `tests/integration/test_agent.py` (baseline search verifies 3 problems; `sorry` and `native_decide` agents rejected by the audit after the REPL accepted their steps; tool calls; batch mode): written, run **stopped for low memory** as above. No result.
 - Not done: no benchmark numbers yet; no LLM client is bundled (any callable is a proposer); no `lean4checker` replay.
 
+### Addition: infoview-style display of library declarations (2026-11-09)
+- [x] `pl.infoview(...)` / `pyleanx infoview NAME --import M`: Lean's `#check name` signature split into `hypotheses ⊢ conclusion` (display only; `check_declarations(signature=True)`)
+- [x] Unit tests `tests/unit/test_infoview.py` (parser, Jupyter markdown, imports, CLI parser)
+- [x] Real Lean: `python -m pyleanx infoview two_mul_le_add_sq sq_nonneg abs_add_le --import Mathlib.Algebra.Order.Ring.Unbundled.Basic --import Mathlib.Algebra.Order.Group.Unbundled.Abs` printed all three goal views (3 min, 1.7 GB free RAM). `tests/integration/test_infoview.py` written, not run separately.
+
 ### Evidence for this session (2026-11-09)
 | Command | Result |
 |---|---|

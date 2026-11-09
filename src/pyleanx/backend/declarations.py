@@ -26,8 +26,15 @@ class DeclInfo:
     error: str | None = None
 
 
-def render_check_file(names: Sequence[str], imports: Iterable[str]) -> tuple[str, dict[int, str]]:
-    """Lean source with one ``#check @name`` per line, and line -> name."""
+def render_check_file(names: Sequence[str], imports: Iterable[str], *,
+                      signature: bool = False) -> tuple[str, dict[int, str]]:
+    """Lean source with one ``#check @name`` per line, and line -> name.
+
+    With ``signature=True`` it emits ``#check name`` instead, which Lean prints in
+    signature form (``name.{u} {α : Type u} [inst] (a b : α) : concl``), as the editor's
+    hover/infoview does.
+    """
+    at = "" if signature else "@"
     mods = sorted(set(imports))
     for m in mods:
         validate_qualified_name(m, "import module")
@@ -36,7 +43,7 @@ def render_check_file(names: Sequence[str], imports: Iterable[str]) -> tuple[str
     by_line: dict[int, str] = {}
     for n in names:
         validate_qualified_name(n, "declaration name")
-        lines.append(f"#check @{n}")
+        lines.append(f"#check {at}{n}")
         by_line[len(lines)] = n
     return "\n".join(lines) + "\n", by_line
 
@@ -55,11 +62,17 @@ def check_declarations(
     project: LeanProject | str | None = None,
     *,
     timeout: float | None = None,
+    signature: bool = False,
 ) -> dict[str, DeclInfo]:
-    """Run ``#check @name`` for every name in one Lean process."""
+    """Run ``#check @name`` for every name in one Lean process.
+
+    ``signature=True`` runs ``#check name`` and stores Lean's whole signature line in
+    ``DeclInfo.type`` (see :mod:`pyleanx.infoview`).
+    """
     proj = find_project(project)
     proj.validate()
-    source, by_line = render_check_file(list(dict.fromkeys(names)), imports)
+    source, by_line = render_check_file(list(dict.fromkeys(names)), imports,
+                                        signature=signature)
     work = proj.path / ".pyleanx" / "build" / uuid.uuid4().hex
     work.mkdir(parents=True, exist_ok=True)
     lean_file = work / "PyLeanXDecls.lean"
@@ -86,5 +99,6 @@ def check_declarations(
         if not info:
             infos[name] = DeclInfo(name, False, None, "no #check output")
             continue
-        infos[name] = DeclInfo(name, True, _strip_head(info[0], name))
+        text = info[0].strip() if signature else _strip_head(info[0], name)
+        infos[name] = DeclInfo(name, True, text)
     return infos

@@ -159,6 +159,22 @@ pl.Theorem("angle_sum", [A, B, C], assumptions={"h": B != A},
 Each module's lemma catalog names declarations checked against the pinned Mathlib; see
 [examples/domains.py](examples/domains.py) and the module docstrings for limitations.
 
+## Seeing a Mathlib theorem as Lean states it
+
+```python
+pl.infoview(pl.algebra.two_mul_le_add_sq)      # or pl.infoview("name", imports=[...])
+```
+```
+R : Type u
+inst✝ : CommSemiring R
+...
+a b : R
+⊢ 2 * a * b ≤ a ^ 2 + b ^ 2
+```
+
+This is Lean's own `#check` output laid out like the editor's infoview (no restating, no
+proof). CLI: `python -m pyleanx infoview two_mul_le_add_sq --import Mathlib.Algebra.Order.Ring.Unbundled.Basic`.
+
 ## Theorem bank
 
 `pl.TheoremBank` indexes declarations with the statements Lean reports, searches them

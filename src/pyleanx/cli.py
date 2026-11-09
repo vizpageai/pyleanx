@@ -257,6 +257,23 @@ def cmd_bank(args: argparse.Namespace) -> int:
     return 0 if hits else 1
 
 
+# ------------------------------------------------------------------------------ infoview
+def cmd_infoview(args: argparse.Namespace) -> int:
+    from .infoview import DeclViews, infoview
+
+    views = infoview(*args.names, imports=args.imports, project=args.project,
+                     timeout=args.timeout)
+    views = views if isinstance(views, DeclViews) else (views,)
+    if args.json:
+        print(json.dumps([{"name": v.name, "signature": v.signature,
+                           "binders": [dataclasses.asdict(b) for b in v.binders],
+                           "conclusion": v.conclusion, "goal": v.goal} for v in views],
+                         ensure_ascii=False, indent=2))
+    else:
+        print(str(DeclViews(views)))
+    return 0
+
+
 # ------------------------------------------------------------------------------ agent
 def cmd_agent(args: argparse.Namespace) -> int:
     from . import agent
@@ -332,6 +349,15 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--timeout", type=float)
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_bank)
+
+    s = sub.add_parser("infoview", help="show Mathlib/core declarations as Lean states them")
+    s.add_argument("names", nargs="+", help="declaration names, e.g. two_mul_le_add_sq")
+    s.add_argument("--import", dest="imports", action="append", default=[],
+                   help="module to import (repeatable; default: import Mathlib)")
+    s.add_argument("--project")
+    s.add_argument("--timeout", type=float)
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_infoview)
 
     s = sub.add_parser("agent", help="proof-agent tools: benchmark, export problems, serve")
     s.add_argument("action", choices=["bench", "export", "serve"])
