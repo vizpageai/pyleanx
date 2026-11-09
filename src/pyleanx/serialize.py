@@ -278,8 +278,11 @@ class _Decoder:
         if not isinstance(d, list) or not d:
             raise SerializationError(f"bad tactic {d!r}")
         kw = d[0]
+        from .proofs import Aesop, LibrarySearch
+
         simple = {"ring": Ring, "omega": Omega, "positivity": Positivity, "rfl": Rfl,
-                  "decide": Decide, "constructor": Constructor, "assumption": Assumption}
+                  "decide": Decide, "constructor": Constructor, "assumption": Assumption,
+                  "aesop": Aesop, "exact?": LibrarySearch}
         if kw in simple and len(d) == 1:
             return simple[kw]()
         with_lemmas = {"linarith": Linarith, "nlinarith": Nlinarith, "norm_num": NormNum}

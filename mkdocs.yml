@@ -31,6 +31,8 @@ nav:
   - Tutorials:
       - Your first theorem: tutorials/first-theorem.md
       - Using Mathlib: tutorials/mathlib.md
+      - Any Lean vocabulary: tutorials/general.md
+      - Libraries beyond Mathlib: tutorials/libraries.md
       - Interactive proving: tutorials/interactive.md
       - Checking derivations: tutorials/scientists.md
       - Proof agents: tutorials/ai.md

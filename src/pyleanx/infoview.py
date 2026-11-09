@@ -56,8 +56,18 @@ class DeclView:
     def __str__(self) -> str:
         return self.goal
 
+    def to_latex(self) -> str:
+        """The goal view as LaTeX (display only)."""
+        from .render.goal_latex import goal_to_latex
+
+        return goal_to_latex(self.goal)
+
     def _repr_markdown_(self) -> str:  # Jupyter
-        return (f"**`{self.name}`**\n\n```lean\n{self.goal}\n```\n\n"
+        try:
+            math = "$$\n" + self.to_latex() + "\n$$\n\n"
+        except Exception:  # noqa: BLE001 - display must never fail
+            math = ""
+        return (f"**`{self.name}`**\n\n{math}```lean\n{self.goal}\n```\n\n"
                 f"<details><summary>signature</summary>\n\n```lean\n{self.signature}\n```\n"
                 "</details>")
 

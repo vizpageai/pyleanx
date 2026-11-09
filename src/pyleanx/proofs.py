@@ -182,6 +182,21 @@ class Assumption(_Simple):
 
 
 @dataclass(frozen=True)
+class Aesop(_Simple):
+    """``aesop``: Mathlib's best-first proof search (logic, sets, simple goals)."""
+
+    keyword: str = "aesop"
+    IMPORTS = ("Aesop",)
+
+
+@dataclass(frozen=True)
+class LibrarySearch(_Simple):
+    """``exact?``: search the imported library for a lemma that closes the goal."""
+
+    keyword: str = "exact?"
+
+
+@dataclass(frozen=True)
 class _WithLemmas(Tactic):
     keyword: str = ""
     lemmas: tuple[Term, ...] = ()

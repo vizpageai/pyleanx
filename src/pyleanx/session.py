@@ -37,6 +37,16 @@ COMMON_TACTIC_IMPORTS = (
 )
 
 
+def _math(goal: str) -> str:
+    """Typeset a goal for Jupyter (best effort; empty on failure)."""
+    try:
+        from .render.goal_latex import goal_to_latex
+
+        return "$$\n" + goal_to_latex(goal) + "\n$$\n\n"
+    except Exception:  # noqa: BLE001 - display must never fail
+        return ""
+
+
 class Goals(tuple):
     """Tuple of goal strings (Lean's pretty-printed hypotheses ⊢ target)."""
 
@@ -44,8 +54,15 @@ class Goals(tuple):
         if not self:
             return "**No goals** (the REPL reports the proof complete; call `.verify()`)"
         parts = [f"**{len(self)} goal{'s' if len(self) != 1 else ''}**"]
-        parts += [f"```lean\n{g}\n```" for g in self]
+        for g in self:
+            parts.append(_math(g) + f"```lean\n{g}\n```")
         return "\n\n".join(parts)
+
+    def to_latex(self) -> list[str]:
+        """Each goal as LaTeX (display only; the Lean text is authoritative)."""
+        from .render.goal_latex import goal_to_latex
+
+        return [goal_to_latex(g) for g in self]
 
     def __str__(self) -> str:
         return "\n\n".join(self) if self else "no goals"

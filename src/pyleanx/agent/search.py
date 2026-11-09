@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 Proposer = Callable[[dict[str, Any]], Sequence["str | Tactic"]]
 
 CLOSERS = ("rfl", "norm_num", "simp", "ring", "linarith", "positivity", "nlinarith",
-           "omega", "decide", "assumption")
+           "omega", "decide", "assumption", "aesop", "exact?")
 
 
 def _target(goal: str) -> str:
@@ -76,8 +76,32 @@ class AutomationProposer:
             out.append("intro " + _fresh(goal, "h"))
         if "∧" in target or "↔" in target:
             out.append("constructor")
+        names = _context_vars(goal)
+        if target.startswith("∃"):
+            out += ["use 0", "use 1"] + [f"use {v} + 1" for v in names]
+        real = [v for v, ty in _context_typed(goal) if ty in ("ℝ", "Real", "ℚ", "ℤ")]
+        if len(real) >= 2:
+            a, b = real[0], real[1]
+            out.append(f"nlinarith [sq_nonneg ({a} - {b}), sq_nonneg ({a} + {b})]")
         out.extend(self.closers)
         return out
+
+
+def _context_typed(goal: str) -> list[tuple[str, str]]:
+    """(name, type) for variables declared in the goal's context (``a b : ℝ``)."""
+    out = []
+    for line in goal.splitlines():
+        if line.startswith("⊢") or " : " not in line:
+            continue
+        names, _, ty = line.partition(" : ")
+        for n in names.split():
+            if re.fullmatch(r"[^\W\d][\w']*", n):
+                out.append((n, ty.strip()))
+    return out
+
+
+def _context_vars(goal: str) -> list[str]:
+    return [n for n, ty in _context_typed(goal) if ty in ("ℕ", "Nat", "ℤ", "Int", "ℝ", "Real")]
 
 
 class RetrievalProposer:

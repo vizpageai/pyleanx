@@ -79,7 +79,8 @@ class ProofEnv:
         self.theorem = theorem
         self.allow_raw = allow_raw
         self.max_steps = max_steps
-        self.parser = TacticParser(allow_raw=allow_raw)
+        self.parser = TacticParser(allow_raw=allow_raw,
+                                   scope={v.name: v for v in theorem.variables})
         if session_factory is None:
             from ..session import ProofSession
 

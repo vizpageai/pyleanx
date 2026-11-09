@@ -68,6 +68,14 @@ theorem/project imports. `import_mode="mathlib"` emits `import Mathlib` instead.
  algebra.py / analysis.py / geometry.py (M6): sorts, Funcs, lemma catalogs (_domain.py)
 ```
 
+- **General vocabulary (M11-M13)**: `types.LeanType` (open sorts), `terms.py` (constants,
+  application, `fun`, big operators, …), `defs.py` (definitions emitted before theorems),
+  structured tactics in `proofs.py`. Python checks scope and syntax; Lean checks types.
+- **Libraries (M10)**: `libs.py` vendors an import closure at a pinned commit and builds it
+  with the pinned `lean` into `<project>/.pyleanx/libs`, prepended to `LEAN_PATH`
+  (`LeanProject.lake_env`) and hashed into fingerprints. `bindings.py` exports declarations
+  with a Lean metaprogram and builds Python namespaces. `faithful.py` checks statements by
+  `rfl`.
 - **Sessions (M5)** give goal states from a persistent REPL. They feed a recorded script
   to the batch backend and never decide verification themselves.
 - **Domain modules (M6)** add sorts (`geometry.Point`), typed function constants

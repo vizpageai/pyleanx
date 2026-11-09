@@ -48,6 +48,23 @@ settings (public leaderboards, hosted checking of untrusted submissions), additi
 replay the compiled environment through an independent checker such as `lean4checker`
 or `comparator` (see Lean's "Validating Proofs" documentation). Not implemented yet.
 
+## Definitions, open types and libraries
+
+- Lean type text (`pl.Type("…")`, generated bindings) is spliced into generated Lean only
+  after validation: one line, balanced brackets, no `:=`, `#`, comments, `sorry`, `axiom`,
+  `set_option` or other command keywords. Lean still elaborates it.
+- `@pl.define`/`@pl.structure` produce definitions with no proofs; a definition that fails
+  to elaborate rejects every theorem in the same file. Theorems are audited as before,
+  transitively through the definitions and library declarations they use.
+- `pyleanx add` vendors source files at a pinned commit and compiles them with the pinned
+  `lean`. Compiling runs the library's Lean code (macros, tactics, `#eval`), the same trust
+  as running `lake build` on it. Theorems from a library are checked by the kernel when the
+  library is compiled; verifying your theorem audits every axiom it depends on, including
+  through the library. Library content hashes are part of the fingerprint, so a changed
+  library never reuses cached results.
+- `same_statement_as` is a Lean proof by `rfl` with the usual audit; a failure means
+  "not shown to be the same", never "different".
+
 ## Interactive sessions
 
 - The REPL (LeanInteract) is a *development aid*. Its goal states and "Completed" status

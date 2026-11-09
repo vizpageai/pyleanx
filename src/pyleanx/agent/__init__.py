@@ -11,6 +11,7 @@ without the batch backend's fresh Lean run and ``#print axioms`` audit.
 
 from .benchmark import BenchmarkReport, Problem, basic, export_jsonl, run_benchmark
 from .env import TOOLS, ProofEnv
+from .llm import LLMProposer, parse_tactics
 from .parse import TacticParser, tactic_from_text
 from .search import (
     CLOSERS,
@@ -27,5 +28,5 @@ __all__ = [
     "ProofEnv", "TOOLS", "TacticParser", "tactic_from_text", "Proposer",
     "AutomationProposer", "RetrievalProposer", "ChainProposer", "CLOSERS", "ProofAttempt",
     "search_proof", "try_proofs", "Problem", "basic", "export_jsonl", "run_benchmark",
-    "BenchmarkReport",
+    "BenchmarkReport", "LLMProposer", "parse_tactics",
 ]

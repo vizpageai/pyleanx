@@ -14,12 +14,17 @@ import pyleanx as pl
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from docs_blocks import ROOT, TUTORIALS, python_blocks  # noqa: E402
 
+# Pages whose examples need resources CI does not have (shown as ```py, compiled only).
+ILLUSTRATIVE = {"libraries.md"}
+
 
 @pytest.mark.parametrize("page", TUTORIALS, ids=lambda p: p.name)
 def test_tutorial_blocks_compile(page):
     blocks = python_blocks(page)
-    assert blocks, f"{page.name} has no runnable python blocks"
-    for i, block in enumerate(blocks):
+    if page.name not in ILLUSTRATIVE:
+        assert blocks, f"{page.name} has no runnable python blocks"
+    shown = re.findall(r"^```py\n(.*?)^```", page.read_text(encoding="utf-8"), re.S | re.M)
+    for i, block in enumerate(blocks + shown):
         compile(block, f"{page.name}[{i}]", "exec")
 
 

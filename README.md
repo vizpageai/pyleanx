@@ -189,6 +189,30 @@ a b : R
 This is Lean's own `#check` output laid out like the editor's infoview (no restating, no
 proof). CLI: `python -m pyleanx infoview two_mul_le_add_sq --import Mathlib.Algebra.Order.Ring.Unbundled.Basic`.
 
+## Any Lean vocabulary, your own definitions, other libraries
+
+```python
+V = pl.EuclideanSpace(3)
+x, c = pl.var("x", V), pl.var("c", pl.Real)
+pl.norm(pl.smul(c, x)) == pl.norm(c) * pl.norm(x)          # ‖c • x‖ = ‖c‖ * ‖x‖
+
+@pl.define(returns=pl.Real)
+def q(v: V):
+    return pl.sqrt(1 + pl.norm(v)**2)
+
+pl.Theorem("one_le_q", [x], conclusion=pl.Le(1, q(x)), proof=pl.proof(
+    pl.unfold(q),
+    pl.have("h", pl.Le(1, 1 + pl.norm(x)**2), pl.auto(pl.ref("sq_nonneg")(pl.norm(x)))),
+    pl.exact(pl.ref("Real.one_le_sqrt.mpr")("h"))))
+```
+
+Functions (`pl.fun`), sums and integrals (`pl.sum`, `pl.integral`), structures
+(`@pl.structure`), step-by-step proofs (`pl.have`, `pl.calc`, `pl.induction`, `pl.auto`), and
+libraries beyond Mathlib (`pyleanx add`, then `pl.lib.use(...)`), including a check that a
+Python statement *is* a library theorem's statement (`thm.same_statement_as(...)`). See
+[docs/tutorials/general.md](docs/tutorials/general.md) and
+[docs/tutorials/libraries.md](docs/tutorials/libraries.md).
+
 ## Theorem bank
 
 `pl.TheoremBank` indexes declarations with the statements Lean reports, searches them

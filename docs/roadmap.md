@@ -203,6 +203,20 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - Raw-tactic screening is heuristic; independent replay checking (`lean4checker`) is future work.
 - No Linux CI evidence yet; no PyPI name check beyond the plan's note that `pylean` is taken.
 
+### M10-M15: writing proofs without touching Lean (2026-11-09)
+- [x] **M11 general vocabulary**: open Lean types (`pl.Type`, `Fn`, `Prod`, `Fin`, `EuclideanSpace`), `pl.var/const/app/fun/sum/prod/integral/pair/field/ascribe/smul/norm`; scope checks for `fun`/∑/∫; LaTeX; canonical round trip. Big-operator bodies are parenthesized (Mathlib parses `∑ i, f i + 1` as `(∑ i, f i) + 1`).
+- [x] **M12 definitions**: `@pl.define`, `pl.define_type`, `@pl.structure`, `pl.mk`; emitted in dependency order; a failing definition rejects every theorem in its file.
+- [x] **M13 structured proofs**: `have`, `calc`, `show`, `obtain`, `cases`, `induction`, `unfold`, `ext`, `pl.auto` (each alternative must close the goal), `Theorem.auto_prove`. Raw text nested anywhere in a proof is gated (fixed: the gate used to look only inside `steps`/`branches`).
+- [x] Real Lean gate `tests/integration/test_general_lean.py`: **2 passed** (454 s): ‖c•x‖ = ‖c‖‖x‖ in ℝ³, `fun` β-reduction, ∑ of odd numbers = n² by induction, a definition proved with `unfold`+`have`, a structure field, a `calc` chain, `obtain`/`use`; a false vector identity and a file with a broken definition are rejected.
+- [x] **M10 libraries**: `pyleanx add/libs/build-lib/remove`: import-closure vendoring at a pinned commit (git, lazily fetched) or local directory, toolchain/Mathlib check, NOTICE with the upstream license, incremental build with the pinned `lean`, `LEAN_PATH` extension (batch, bindings, interpreted REPL), library hash in fingerprints and REPL keys. Unit-tested with a local fixture.
+- [x] **M11 bindings**: Lean exporter metaprogram -> `pl.lib.use(module)` namespaces (types -> sorts, definitions -> callables, predicates -> propositions, theorems -> lemmas, ASCII aliases for `f₀`), `pl.lib.search/decl`, `pyleanx bindings -o module.py`.
+- [x] **Faithfulness**: `Theorem.same_statement_as(name)` (definitional equality by `rfl`, audited).
+- [x] **M14 readable goals**: Lean goal text -> LaTeX (`Goals.to_latex`, `DeclView.to_latex`), shown in Jupyter above the Lean text (display only).
+- [x] **M15 assistants**: `agent.LLMProposer(complete)` (model-agnostic prompt + reply parsing, no bundled client); typed `aesop`/`exact?`; tactic text with arithmetic over theorem variables (`nlinarith [sq_nonneg (a - b)]`, `use k + 1`) parsed into typed IR by a safe AST walk instead of raw text; baseline proposer adds ∃-witnesses, hinted nlinarith, aesop, exact?.
+- [ ] OAI pilot (`examples/oai_vlasov_maxwell.py`): `pyleanx add oai …` vendored `ComparatorChallenges.VlasovMaxwell` and `OAI.Analysis.VlasovMaxwell.Model`; build and the example run are recorded below when finished.
+- [ ] Benchmark re-run with the upgraded baseline proposer.
+- Unit tests: 248 passed; ruff and mypy clean.
+
 ### Case study: OpenAI relativistic Vlasov–Maxwell (2026-11-09)
 - [x] `examples/vlasov_maxwell_kinematics.py`: coordinate restatements of 9 OAI lemmas (+3 helpers): **12/12 verified** with real Lean (41 s). See `docs/case-studies/vlasov-maxwell.md`.
 - Gaps found (not implemented): vector sorts (`EuclideanSpace ℝ (Fin n)`), function-valued variables / `fun`, named definitions and structures, `fderiv`/`∫`/`Lp`/`ContDiff`/set predicates, depending on external Lake libraries.

@@ -11,3 +11,4 @@ lean-project/.pyleanx/
 .ipynb_checkpoints/
 example-bank.json
 pyleanx-basic.jsonl
+lean-project/pyleanx-libs.json

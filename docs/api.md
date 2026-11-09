@@ -220,6 +220,63 @@ a `DeclViews` tuple for several items) and renders as a Lean block in Jupyter. P
 splits the signature for layout (instances are shown as `inst✝`, numbering omitted); this is
 display, never verification. CLI: `pyleanx infoview NAME... [--import MODULE] [--json]`.
 
+## General Lean vocabulary (open types, terms)
+
+| Python | Lean |
+|---|---|
+| `pl.Type("Set ℝ", imports=[…])`, `pl.Fn(A, B)`, `pl.Prod(A, B)`, `pl.Fin(n)`, `pl.EuclideanSpace(n)` | any type; `A → B`; `A × B`; `Fin n`; `EuclideanSpace ℝ (Fin n)` |
+| `pl.var("f", pl.Fn(V, pl.Real))`, `f(x)` | `(f : V → ℝ)`, `f x` |
+| `pl.const("Finset.range", imports=[…])`, `pl.app(fn, *args)` | any declaration, application |
+| `pl.fun(lambda x: …, sort)` | `fun (x : T) => …` |
+| `pl.sum(pl.Fin(3), lambda i: …)`, `pl.sum(s, lambda i: …, sort=pl.Nat)` | `∑ i : Fin 3, …`, `∑ i ∈ s, …` |
+| `pl.prod(…)`, `pl.integral(lambda t: …, V)`, `pl.integral(f, bounds=(a, b))` | `∏`, `∫ t : V, …`, `∫ t in a..b, …` |
+| `pl.norm(e)`, `pl.smul(c, v)`, `pl.pair(a, b)`, `pl.field(e, "f")` / `e.f`, `pl.ascribe(e, T)` | `‖e‖`, `c • v`, `(a, b)`, `e.f`, `(e : T)` |
+
+Terms of open types are checked by Lean, not by Python (comparisons and operators pass
+through; numerals are elaborated at the expected type). Built-in sorts keep their strict
+Python checks. Type text is validated (one line, balanced, no commands).
+
+## Definitions
+
+`@pl.define(returns=T)` (function → `noncomputable def`), `pl.define_type(name, T)`
+(`abbrev`), `@pl.structure` (annotated class → `structure`; fields as attributes, values with
+`pl.mk(T, field=…)`). Definitions are emitted before the theorems that use them; a
+definition that fails to elaborate rejects every theorem in the file.
+
+## Structured proofs and automation
+
+| Python | Lean |
+|---|---|
+| `pl.proof(step, …)` | steps in order |
+| `pl.have("h", P, proof=None)` | `have h : P := by …` |
+| `pl.calc(a, ("=", b, proof), ("<=", c))` | `calc a` / `_ = b := by …` / `_ ≤ c := by …` |
+| `pl.show(P)`, `pl.unfold(f)`, `pl.ext("i")` | `show P`, `unfold f`, `ext i` |
+| `pl.obtain("x hx", h)`, `pl.cases(h, "h1", "h2")` | `obtain ⟨x, hx⟩ := h`, `rcases h with h1 \| h2` |
+| `pl.induction("n", zero=…, succ=…)` | `induction n with \| zero => … \| succ k ih => …` |
+| `pl.auto(*hints, aesop=True, library_search=False)` | `first` over rfl, ring1, norm_num, simp, linarith, positivity, nlinarith, field_simp, aesop (each must close the goal) |
+
+Missing step proofs default to `pl.auto()`. `thm.auto_prove(*hints)` tries the strategies as
+separate candidates and attaches the first one Lean verifies.
+
+## Libraries and generated bindings
+
+```
+pyleanx add NAME SOURCE --rev SHA [--subdir DIR] --module ROOT [--module ROOT …] [--lean-option K=V]
+pyleanx libs | build-lib NAME | remove NAME
+pyleanx bindings MODULE… [-o bindings.py] [--search WORDS]
+```
+
+`pl.add_library(...)`, `pl.list_libraries()`, `pl.build_library(name)`, `pl.remove_library(name)`.
+`ns = pl.lib.use(*modules)` exports declarations once (cached) and returns a namespace:
+types become sorts, definitions callable constants, predicates propositions, theorems
+citable lemmas. `pl.lib.get(name)`, `pl.lib.decl(name)` (Lean's type and docstring),
+`pl.lib.search(words)`, `pl.lib.write_bindings(modules, path)`.
+
+## Faithfulness
+
+`thm.same_statement_as(name_or_binding)` returns `SameStatement` (truthy if Lean proves the
+two statements equal by `rfl`); `pl.same_statement(thm, name)`.
+
 ## Proof agents (M8): `pyleanx.agent`
 
 | API | Purpose |

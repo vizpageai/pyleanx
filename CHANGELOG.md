@@ -7,6 +7,23 @@ see [docs/stability.md](docs/stability.md)).
 
 ## [Unreleased]
 
+### Added
+- Open Lean types: `pl.Type("…")`, `pl.Fn`, `pl.Prod`, `pl.Fin`, `pl.EuclideanSpace`;
+  terms of these types are checked by Lean (built-in sorts keep their Python checks).
+- General terms: `pl.var`, `pl.const`, `pl.app`, `pl.fun`, `pl.sum`, `pl.prod`, `pl.integral`,
+  `pl.pair`, `pl.field`, `pl.ascribe`, `pl.smul`, `pl.norm`; structure fields as attributes.
+- Definitions: `@pl.define`, `pl.define_type`, `@pl.structure`, `pl.mk`.
+- Structured proofs: `pl.have`, `pl.calc`, `pl.show`, `pl.obtain`, `pl.cases`, `pl.induction`,
+  `pl.unfold`, `pl.ext`, `pl.proof`, `pl.auto`; `Theorem.auto_prove`.
+- External libraries: `pyleanx add/libs/build-lib/remove` (`pl.add_library`, …).
+- Generated bindings: `pl.lib.use(module)`, `pl.lib.search`, `pyleanx bindings`.
+- Faithfulness: `Theorem.same_statement_as(name)`.
+
+### Security
+- Raw tactic text nested inside structured proof steps is gated like top-level raw text.
+- Lean type text is validated so it cannot escape its binder or add commands.
+- A definition that fails to elaborate rejects every theorem in its Lean file.
+
 ## [0.1.0] - not yet released
 
 First public release. Pinned to Lean `v4.34.1` and Mathlib
