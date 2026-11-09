@@ -10,7 +10,7 @@ still has to be checked by Lean.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from fractions import Fraction
 from typing import Any
 
@@ -87,7 +87,7 @@ def _builtin_funcs() -> None:
         register_func(f)
 
 
-_POLY = {"abs": abs_, "min": min_, "max": max_}
+_POLY: dict[str, Callable[..., Expr]] = {"abs": abs_, "min": min_, "max": max_}
 _ARITH = {"add", "sub", "mul", "div", "mod", "pow"}
 _CMP = {"eq", "ne", "lt", "le", "gt", "ge"}
 _LOGIC = {"and", "or", "implies", "iff"}

@@ -33,5 +33,7 @@ theorems = [
 for t in theorems:
     print(t.name, " $" + t.to_latex() + "$")
 
-for r in pl.verify_all(theorems, timeout=1800):  # one Lean process for all five
+results = pl.verify_all(theorems, timeout=1800)  # one Lean process for all of them
+for r in results:
     print(r.summary())
+raise SystemExit(0 if all(r.verified for r in results) else 1)

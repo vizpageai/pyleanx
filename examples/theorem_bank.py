@@ -32,3 +32,5 @@ if result.verified:
                      aliases=["plane triangle inequality"])
     bank.save()
     print("banked with evidence:", bank.get("examples.tri_ineq_plane").evidence["fingerprint"][:16])
+else:
+    raise SystemExit(1)

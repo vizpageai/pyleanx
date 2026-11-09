@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sys
 from dataclasses import dataclass
+from types import FrameType
 
 _PKG_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -20,7 +21,7 @@ class Origin:
 
 def caller_origin() -> Origin | None:
     """First stack frame outside the pyleanx package, if any."""
-    frame = sys._getframe(1)
+    frame: FrameType | None = sys._getframe(1)
     while frame is not None:
         fn = os.path.abspath(frame.f_code.co_filename)
         if not fn.startswith(_PKG_DIR):

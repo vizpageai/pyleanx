@@ -32,3 +32,4 @@ for name, args in [("get_state", {}), ("apply_tactic", {"tactic": "positivity"})
     print(name, "->", json.dumps(env.call_tool(name, args), ensure_ascii=False)[:160])
 
 pl.shutdown_sessions()
+raise SystemExit(0 if attempt.verified else 1)

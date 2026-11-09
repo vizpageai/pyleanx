@@ -2,32 +2,54 @@ name: ci
 
 on:
   push:
+    branches: [main]
+    tags: ["v*"]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
+  lint:
+    name: lint + types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: mypy src/pyleanx
+
   unit:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.11", "3.13"]
+        python: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - run: pip install -e ".[dev]"
-      - run: ruff check .
-      - run: pytest tests/unit -q --cov=pyleanx --cov-report=term-missing
+      - run: pytest tests/unit -q --cov=pyleanx --cov-report=term-missing --cov-fail-under=80
 
   lean-integration:
-    # Full proof verification is a release gate; it runs on Linux.
+    # Full proof verification against the pinned Lean + Mathlib (release gate).
     runs-on: ubuntu-latest
     env:
       PYLEANX_REQUIRE_LEAN: "1"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install elan
@@ -44,7 +66,42 @@ jobs:
       - name: Fetch prebuilt Mathlib (no source rebuild)
         working-directory: lean-project
         run: lake exe cache get
-      - run: pip install -e ".[dev,interactive]"
-      - run: pyleanx doctor
-      - run: pytest tests -q -s
+      - run: pip install -e ".[dev,interactive]" pytest-github-actions-annotate-failures
+      - run: python -m pyleanx doctor
+      - name: Integration tests (real Lean + axiom audit)
+        run: pytest tests -q -rfE --durations=15
+      - name: Every example script
+        run: python scripts/run_examples.py
+
+  package:
+    name: build + clean install
+    # A new user's path: wheel from PyPI, `pyleanx init`, verify an example.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install build twine
       - run: python -m build
+      - run: twine check --strict dist/*
+      - name: Install elan
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Fresh virtualenv outside the checkout
+        run: |
+          python -m venv /tmp/fresh
+          /tmp/fresh/bin/pip install dist/*.whl
+          mkdir /tmp/user && cp examples/square_identity.py examples/bad_proof.py /tmp/user/
+      - name: pyleanx init + check (no source checkout on the path)
+        working-directory: /tmp/user
+        run: |
+          /tmp/fresh/bin/pyleanx init
+          /tmp/fresh/bin/pyleanx doctor
+          /tmp/fresh/bin/pyleanx check square_identity.py
+          if /tmp/fresh/bin/pyleanx check bad_proof.py; then echo "bad proof was accepted" && exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/

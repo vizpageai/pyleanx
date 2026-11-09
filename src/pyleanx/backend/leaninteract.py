@@ -154,7 +154,7 @@ class LeanRepl:
             return li.LeanServer(self._config)
         project = self.project
 
-        class InterpretedServer(li.LeanServer):  # type: ignore[misc, name-defined]
+        class InterpretedServer(li.LeanServer):  # type: ignore[misc,name-defined,unused-ignore]
             def start(self) -> None:
                 env = {**os.environ, **project.lake_env()}
                 lib = repl_dir / ".lake" / "build" / "lib" / "lean"

@@ -4,24 +4,52 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyleanx"
-version = "0.1.0.dev0"
-description = "Python-first frontend for writing theorems and proofs that are checked by the Lean 4 kernel"
+dynamic = ["version"]
+description = "Write theorems in Python; have them checked by the Lean 4 kernel and Mathlib"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "PyLeanX contributors" }]
+keywords = [
+    "lean", "lean4", "mathlib", "theorem-proving", "formal-verification", "proof-assistant",
+    "mathematics", "formal-mathematics", "ai-for-math", "autoformalization",
+]
 dependencies = []
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Framework :: Jupyter",
+    "Typing :: Typed",
 ]
 
+[project.urls]
+Homepage = "https://github.com/vizpageai/pyleanx"
+Documentation = "https://vizpageai.github.io/pyleanx/"
+Source = "https://github.com/vizpageai/pyleanx"
+Issues = "https://github.com/vizpageai/pyleanx/issues"
+Changelog = "https://github.com/vizpageai/pyleanx/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6", "build>=1.2"]
 interactive = ["lean-interact==0.11.6"]
+dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6", "mypy>=1.11", "build>=1.2", "twine>=5"]
+docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.26"]
 
 [project.scripts]
 pyleanx = "pyleanx.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "pyleanx.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -36,10 +64,28 @@ markers = [
     "interactive: requires lean-interact and the pinned workspace",
 ]
 
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["lean_interact", "lean_interact.*"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["pyleanx"]
+branch = false
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = ["lean-project", "*.ipynb"]
+extend-exclude = ["lean-project", "*.ipynb", "build"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]

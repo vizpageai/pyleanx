@@ -29,7 +29,7 @@ from .theorem import Theorem
 def _utf8_stdout() -> None:
     for stream in (sys.stdout, sys.stderr):
         try:
-            stream.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
+            stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
         except (AttributeError, ValueError):  # pragma: no cover
             pass
 
@@ -261,16 +261,16 @@ def cmd_bank(args: argparse.Namespace) -> int:
 def cmd_infoview(args: argparse.Namespace) -> int:
     from .infoview import DeclViews, infoview
 
-    views = infoview(*args.names, imports=args.imports, project=args.project,
+    found = infoview(*args.names, imports=args.imports, project=args.project,
                      timeout=args.timeout)
-    views = views if isinstance(views, DeclViews) else (views,)
+    views = found if isinstance(found, DeclViews) else DeclViews([found])
     if args.json:
         print(json.dumps([{"name": v.name, "signature": v.signature,
                            "binders": [dataclasses.asdict(b) for b in v.binders],
                            "conclusion": v.conclusion, "goal": v.goal} for v in views],
                          ensure_ascii=False, indent=2))
     else:
-        print(str(DeclViews(views)))
+        print(str(views))
     return 0
 
 

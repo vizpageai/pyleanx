@@ -72,7 +72,7 @@ def _kill_tree(proc: subprocess.Popen) -> None:
                 check=False,
             )
         else:
-            os.killpg(proc.pid, signal.SIGKILL)
+            os.killpg(proc.pid, signal.SIGKILL)  # type: ignore[attr-defined,unused-ignore]
     except (ProcessLookupError, OSError):  # pragma: no cover - already gone
         pass
     try:
@@ -282,10 +282,10 @@ def classify(
         any_rejected = any(st is Status.REJECTED for st, _, _ in out.values())
         stray = [m for m in run.messages if m.severity == "error"]
         if not any_rejected:
-            d = [_pyleanx_diag(f"Lean exited with code {run.returncode}: "
-                               f"{run.other_output[:2000]}")]
-            d.extend(_diag(m, module) for m in stray)
-            return {n: (Status.ENVIRONMENT_ERROR, d, None) for n in names}
+            env_diags = [_pyleanx_diag(f"Lean exited with code {run.returncode}: "
+                                       f"{run.other_output[:2000]}")]
+            env_diags.extend(_diag(m, module) for m in stray)
+            return {n: (Status.ENVIRONMENT_ERROR, env_diags, None) for n in names}
     return out
 
 

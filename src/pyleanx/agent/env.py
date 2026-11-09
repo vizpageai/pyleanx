@@ -81,7 +81,9 @@ class ProofEnv:
         self.max_steps = max_steps
         self.parser = TacticParser(allow_raw=allow_raw)
         if session_factory is None:
-            from ..session import ProofSession as session_factory  # noqa: N813
+            from ..session import ProofSession
+
+            session_factory = ProofSession
         self.session = session_factory(theorem, proj, **session_kwargs)
         self.transcript: list[dict[str, Any]] = []
         self.steps_taken = 0

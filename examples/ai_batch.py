@@ -23,7 +23,10 @@ THEOREMS = [pl.Theorem(name, [x], conclusion=goal, proof=tac) for name, tac in c
 if __name__ == "__main__":
     project = pl.find_project()
     project = project.with_(policy=dataclasses.replace(project.policy, allow_raw_tactics=True))
-    for r in pl.verify_all(THEOREMS, project=project):
+    results = pl.verify_all(THEOREMS, project=project)
+    for r in results:
         print(json.dumps({"theorem": r.theorem, "status": r.status.value,
                           "axioms": r.axioms, "raw": r.raw_tactics_used,
                           "errors": [d.message for d in r.errors]}, ensure_ascii=False))
+    expected = {"cand_ring": False, "cand_positivity": True, "cand_llm_text": True}
+    raise SystemExit(0 if all(r.verified == expected[r.theorem] for r in results) else 1)

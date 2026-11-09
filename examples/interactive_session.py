@@ -30,3 +30,4 @@ print("REPL says complete:", s.is_complete, "(not a verification!)")
 result = s.verify()  # fresh batch Lean run + axiom audit
 print(result.summary())
 pl.shutdown_sessions()
+raise SystemExit(0 if result.verified else 1)
