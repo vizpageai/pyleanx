@@ -83,23 +83,28 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 - [x] **Gate** (`tests/integration/test_domains.py`, real Lean): polynomial identity (`ring`), nonnegative square (`positivity`), AM-GM (`nlinarith [sq_nonneg (a - b)]`), `sin²+cos²=1`, `√x²=x`, plane triangle inequality, triangle angle sum = π, Pythagoras via `rw [iff]`: all **verified** in one Lean run; reversed triangle inequality **rejected**. 2 passed in 55 s.
 - Limitations: concrete sorts only (no typeclass binders: statements about ℝ², not arbitrary Euclidean spaces); no coordinates, vectors, lines, circles, limits, derivatives or integrals yet.
 
-### M7: theorem bank: **implemented; real-Lean gate NOT yet run** (2026-11-09)
+### M7: theorem bank: **done** (2026-11-09, gate passed 2026-11-09)
 - [x] `pyleanx.bank.TheoremBank`: JSON file store (atomic save, schema 1); entries keep canonical ID ≠ Lean name, `Formalization` (system, library, toolchain, library revision), statement + SHA-256 (tamper check on load), assumptions, aliases, tags, provenance, dependency edges, evidence, canonical theorem
 - [x] `index_declarations` / `index_catalogs`: statements come from Lean's `#check`, never typed by hand
 - [x] `search` (IDs, names, aliases, tags, descriptions, statements); `ref` (Name + imports) and `load` / `load_with_dependencies` refuse other toolchains/revisions (`VersionMismatchError`) and non-Lean entries (`CrossSystemError`); `link` records cross-system relations as informational only
 - [x] `serialize.theorem_from_canonical`: strict, exact rebuild from canonical JSON (sort/function registries)
 - [x] CLI `pyleanx bank index|search|show|list`
 - [x] Unit tests: `tests/unit/test_bank.py`, `test_agent_server.py` (CLI)
-- [ ] **Gate** `tests/integration/test_bank.py` (search → versioned declaration → proof → verify; bank, reload, reuse in `verify_all`): written, but the run was **stopped by Claude Code because the machine ran low on memory** (two Lean processes plus other workloads, ~3.4 GB of 16 GB free afterwards). No result either way.
+- [x] **Gate** `tests/integration/test_bank.py` (search → versioned declaration → proof → verify; bank, reload, reuse in `verify_all`): **1 passed** in 466 s (real Lean, ~5 GB RAM free). An earlier attempt had been stopped for low memory.
 
-### M8: proof-agent API: **implemented; real-Lean gate NOT yet run** (2026-11-09)
+### M8: proof-agent API: **done** (2026-11-09, gate passed 2026-11-09)
 - [x] `agent.ProofEnv`: observe / act (text, Tactic or canonical JSON) / peek / undo / verify, step budget, JSONL transcript; `TOOLS` JSON schemas + `call_tool` for tool-calling LLMs
 - [x] `agent.tactic_from_text`: common tactics → structured IR with catalog imports; anything else → `RawTactic` only with explicit `allow_raw`
 - [x] Proposers: `AutomationProposer`, `RetrievalProposer(bank)`, `ChainProposer`; `search_proof` (DFS + backtracking, visited states, budget); `try_proofs` (REPL-free, candidates as renamed copies in one batch run, winner re-verified)
 - [x] Benchmark: `agent.basic()` (13 problems: logic, Nat, algebra, inequalities, analysis, geometry), `export_jsonl`, `run_benchmark(mode="session"|"batch")`, CLI `pyleanx agent bench|export|serve` (JSON-lines stdio server; raw text only with operator `--allow-raw`)
 - [x] Unit tests: `tests/unit/test_agent.py`, `test_agent_server.py` (fake REPL; status always comes from the batch result)
-- [ ] **Gate** `tests/integration/test_agent.py` (baseline search verifies 3 problems; `sorry` and `native_decide` agents rejected by the audit after the REPL accepted their steps; tool calls; batch mode): written, run **stopped for low memory** as above. No result.
-- Not done: no benchmark numbers yet; no LLM client is bundled (any callable is a proposer); no `lean4checker` replay.
+- [x] **Gate** `tests/integration/test_agent.py` (baseline search verifies 3 problems; `sorry` and `native_decide` agents rejected by the audit after the REPL accepted their steps; tool calls; batch mode): **3 passed** in 309 s (real Lean).
+- [x] Baseline numbers (`python -m pyleanx agent bench`, automation proposer only, no retrieval/LLM):
+  - session mode: **9/13 verified**, 198 s
+  - batch mode (`--mode batch`): **9/13 verified**, 178 s
+  - unsolved in both: `b_and_comm` (needs `constructor`/anonymous-constructor steps), `b_am_gm` (needs a hinted `nlinarith`), `b_exists_gt` (needs a witness via `use`), `b_dist_symm` (needs the `dist_comm` lemma). These are the targets for retrieval/LLM proposers.
+  - note: session mode found `intro h1 ; omega` for `P → P` and `ring ; positivity` for `x² ≥ 0`; both verified by the batch run and audit, though they are not the idiomatic proofs.
+- Not done: no LLM client is bundled (any callable is a proposer); no `lean4checker` replay.
 
 ### Addition: infoview-style display of library declarations (2026-11-09)
 - [x] `pl.infoview(...)` / `pyleanx infoview NAME --import M`: Lean's `#check name` signature split into `hypotheses ⊢ conclusion` (display only; `check_declarations(signature=True)`)
@@ -114,7 +119,9 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 | `pytest tests/integration/test_domains.py` | 2 passed, 1 skipped (slow catalog test), 55 s |
 | catalog `#check` of all 54 names | all exist (556 s) |
 | `python -m build --wheel` | built; wheel includes `pyleanx/agent/*`, `bank.py`, `geometry.py` |
-| M7/M8 integration gates | **not completed** (stopped for low memory) |
+| M7/M8 integration gates | first attempt stopped for low memory; rerun 2026-11-09: `test_bank.py` 1 passed (466 s), `test_agent.py` 3 passed (309 s) |
+| `pyleanx agent bench` (session / batch) | 9/13 (198 s) / 9/13 (178 s) |
+| `pytest tests/unit -q` (after infoview) | **201 passed** |
 
 Also fixed this session: a PowerShell rewrite had corrupted non-ASCII characters (`≤`, `∀`) in
 `algebra.py` (committed in the M6 commit: docstrings and the `"≤"`/`"≥"` keys of
@@ -185,7 +192,7 @@ explained; to investigate on an idle machine before claiming batch speedups).
 
 ## Next unfinished work
 
-1. Run the M7 and M8 gates one at a time on a machine with free memory:
-   `pytest tests/integration/test_bank.py -s` then `pytest tests/integration/test_agent.py -s`.
-2. `pyleanx agent bench` for baseline numbers (session and batch modes).
-3. M4 release gates: push to GitHub so the Linux CI runs; clean-machine install.
+1. M4 release gates: merge the milestone branches, push to GitHub so the Linux CI runs; clean-machine install.
+2. Make the benchmark's retrieval proposer (bank lemmas, `constructor`, `use` witnesses) solve the 4 unsolved baseline problems; plug in an LLM proposer.
+3. Independent replay check (`lean4checker`) for adversarial settings.
+4. Run `tests/integration/test_infoview.py` on its own (the CLI path was exercised with real Lean).
