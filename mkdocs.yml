@@ -34,6 +34,8 @@ nav:
       - Interactive proving: tutorials/interactive.md
       - Checking derivations: tutorials/scientists.md
       - Proof agents: tutorials/ai.md
+  - Case studies:
+      - Relativistic Vlasov–Maxwell: case-studies/vlasov-maxwell.md
   - Reference:
       - API guide: api.md
       - Python reference: reference.md

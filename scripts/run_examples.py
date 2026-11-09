@@ -29,6 +29,7 @@ CASES: dict[str, tuple[list[str], int]] = {
     "theorem_bank": (RUN, 0),
     "interactive_session": (RUN, 0),
     "agent_search": (RUN, 0),
+    "vlasov_maxwell_kinematics": (RUN, 0),
 }
 
 

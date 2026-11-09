@@ -203,8 +203,13 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - Raw-tactic screening is heuristic; independent replay checking (`lean4checker`) is future work.
 - No Linux CI evidence yet; no PyPI name check beyond the plan's note that `pylean` is taken.
 
+### Case study: OpenAI relativistic Vlasov–Maxwell (2026-11-09)
+- [x] `examples/vlasov_maxwell_kinematics.py`: coordinate restatements of 9 OAI lemmas (+3 helpers): **12/12 verified** with real Lean (41 s). See `docs/case-studies/vlasov-maxwell.md`.
+- Gaps found (not implemented): vector sorts (`EuclideanSpace ℝ (Fin n)`), function-valued variables / `fun`, named definitions and structures, `fderiv`/`∫`/`Lp`/`ContDiff`/set predicates, depending on external Lake libraries.
+
 ## Next unfinished work
 
 1. M9: get CI green on GitHub (push access, then read the Lean job's failure annotations); run the tutorial gate; publish 0.1.0 (docs/releasing.md).
 2. Make the benchmark's retrieval proposer (bank lemmas, `constructor`, `use` witnesses) solve the 4 unsolved baseline problems; plug in an LLM proposer.
 3. Independent replay check (`lean4checker`) for adversarial settings.
+4. From the Vlasov–Maxwell case study: external Lake dependencies (cite and `infoview` a library such as OAI), then vector sorts, function variables with `fun`, named definitions.
