@@ -103,14 +103,18 @@ assert all(r.verified for r in results)
 
 ```python
 P = pl.prop_symbol("P")
-imp = pl.Theorem("imp_self", [P], conclusion=pl.Implies(P, P),
+imp = pl.Theorem("p_implies_p", [P], conclusion=pl.Implies(P, P),
                  proof=pl.intro("h") >> pl.exact("h"))      # tactics in sequence
 
 n = pl.symbol("n", pl.Nat)
-add_zero = pl.Theorem("add_zero", [n], conclusion=n + 0 == n, proof=pl.simp())
+add_zero = pl.Theorem("nat_n_add_zero", [n], conclusion=n + 0 == n, proof=pl.simp())
 
 assert all(r.verified for r in pl.verify_all([imp, add_zero]))
 ```
+
+!!! tip "Theorem names must be new"
+    Lean and Mathlib already use names like `imp_self`, `add_zero` or `sq_nonneg`. Reusing
+    one gives "has already been declared"; pick a distinctive name.
 
 ## The decorator form
 

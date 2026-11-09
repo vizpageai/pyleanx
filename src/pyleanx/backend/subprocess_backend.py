@@ -200,11 +200,21 @@ def fingerprint(thm_canonical: object, module: RenderedModule, project: LeanProj
 # ======================================================================================
 
 
+_NAME_TAKEN = "has already been declared"
+_NAME_TAKEN_HINT = (
+    "\n[pyleanx] Lean or Mathlib already has a declaration with this name; give the theorem "
+    "a distinctive name (e.g. a prefix such as `my_`)."
+)
+
+
 def _diag(msg: LeanMessage, module: RenderedModule) -> Diagnostic:
     span = module.source_map.innermost(msg.line) if msg.line is not None else None
+    text = msg.text.strip()
+    if msg.severity == "error" and _NAME_TAKEN in text:
+        text += _NAME_TAKEN_HINT
     return Diagnostic(
         severity=msg.severity,
-        message=msg.text.strip(),
+        message=text,
         line=msg.line,
         column=msg.column,
         end_line=msg.end_line,

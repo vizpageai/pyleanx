@@ -111,6 +111,17 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 - [x] Unit tests `tests/unit/test_infoview.py` (parser, Jupyter markdown, imports, CLI parser)
 - [x] Real Lean: `python -m pyleanx infoview two_mul_le_add_sq sq_nonneg abs_add_le --import Mathlib.Algebra.Order.Ring.Unbundled.Basic --import Mathlib.Algebra.Order.Group.Unbundled.Abs` printed all three goal views (3 min, 1.7 GB free RAM). `tests/integration/test_infoview_lean.py` written, not run separately.
 
+### M9: release engineering ("PyTorch-grade" packaging): **in progress** (2026-11-09)
+- [x] Repository on GitHub (`vizpageai/pyleanx`, branch `main`), MIT license (merged GitHub's initial commit)
+- [x] Type checking: `mypy src/pyleanx` clean (also `--platform win32`); 12 type errors fixed
+- [x] CI (`ci.yml`): lint + types; unit tests on Linux/Windows/macOS × Python 3.11/3.12/3.13 with an 80% coverage floor (currently 82%); Lean integration with failures as annotations; every example (`scripts/run_examples.py`); build + `twine check --strict` + clean wheel install → `pyleanx init` → check/reject outside the checkout
+- [x] Packaging: dynamic version, classifiers, keywords, project URLs, `docs` extra, `MANIFEST.in` (sdist ships tests/examples/docs); `python -m build` + `twine check --strict` pass locally
+- [x] Documentation site (MkDocs Material + mkdocstrings): install guide, 5 executable tutorials, API reference from docstrings (all exports documented, enforced by `tests/unit/test_docs.py`), stability policy, release guide; `mkdocs build --strict` passes; `docs.yml` deploys to GitHub Pages
+- [x] Community/release files: CONTRIBUTING, CODE_OF_CONDUCT, SECURITY (private soundness reports), CHANGELOG, CITATION.cff, issue/PR templates, dependabot; `release.yml` (tag = version check, clean install, PyPI trusted publishing behind the `pypi` environment, GitHub release)
+- [ ] **CI green on GitHub.** First runs: unit jobs passed on all OSes; the Lean job first failed at test collection (duplicate test basenames, fixed) and then with test failures whose logs need a GitHub login to read (annotation reporting added); a later run showed only 5 of 12 jobs and a mypy failure (Linux-only platform check, fixed). Not yet re-run: the last push was refused (credentials of a GitHub account without write access).
+- [~] Tutorials executed against real Lean (`tests/integration/test_docs_lean.py`): **4 of 5 pages pass** (first-theorem, mathlib, interactive, scientists). The first run found a real doc bug (a theorem named `imp_self` clashes with Lean core): renamed, and PyLeanX now adds a hint to "has already been declared" errors. `ai.md`: REPL crash in the first run (low memory), then no network (`Could not resolve host: github.com` while fetching the REPL); its search and batch blocks did verify in an earlier dry run. Re-run pending.
+- [ ] PyPI publication: needs the trusted-publisher setup and a maintainer decision (docs/releasing.md).
+
 ### Evidence for this session (2026-11-09)
 | Command | Result |
 |---|---|
@@ -123,6 +134,7 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 | GitHub CI run 42669750768 (first push) | unit jobs on Linux/Windows/macOS × Python 3.11/3.13 **passed**; `lean-integration` **failed at collection** (duplicate test basenames in `tests/unit` and `tests/integration`); integration tests renamed `*_lean.py` |
 | `pyleanx agent bench` (session / batch) | 9/13 (198 s) / 9/13 (178 s) |
 | `pytest tests/unit -q` (after infoview) | **201 passed** |
+| `pytest tests/unit -q` (M9) | **210 passed**; `mypy` clean (linux/win32/darwin); `mkdocs build --strict` OK; `twine check --strict` PASSED |
 
 Also fixed this session: a PowerShell rewrite had corrupted non-ASCII characters (`≤`, `∀`) in
 `algebra.py` (committed in the M6 commit: docstrings and the `"≤"`/`"≥"` keys of
@@ -193,7 +205,6 @@ explained; to investigate on an idle machine before claiming batch speedups).
 
 ## Next unfinished work
 
-1. M4 release gates: merge the milestone branches, push to GitHub so the Linux CI runs; clean-machine install.
+1. M9: get CI green on GitHub (push access, then read the Lean job's failure annotations); run the tutorial gate; publish 0.1.0 (docs/releasing.md).
 2. Make the benchmark's retrieval proposer (bank lemmas, `constructor`, `use` witnesses) solve the 4 unsolved baseline problems; plug in an LLM proposer.
 3. Independent replay check (`lean4checker`) for adversarial settings.
-4. Run `tests/integration/test_infoview_lean.py` on its own (the CLI path was exercised with real Lean).

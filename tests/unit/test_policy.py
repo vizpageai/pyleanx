@@ -193,3 +193,18 @@ def test_unsafe_lean_options_rejected(tmp_path, opt):
     proj = LeanProject.at(tmp_path, lean_options=(opt,))
     with pytest.raises(ProjectError):
         run_lean(proj, tmp_path / "x.lean", 1)
+
+
+def test_name_clash_gets_a_hint():
+    mod = _module()
+    sm = mod.source_map
+    head = next(s for s in sm.spans if s.theorem == "good")
+    out = "\n".join([
+        _msg("error", head.start_line, "`good` has already been declared"),
+        _msg("information", sm.audit_line("bad"), "'bad' depends on axioms: [propext]"),
+    ])
+    msgs, _ = parse_json_messages(out)
+    run = LeanRun(returncode=1, messages=msgs, other_output="", timed_out=False, duration_ms=1)
+    v = classify(run, mod, PROJ)
+    assert v["good"][0] is Status.REJECTED
+    assert "distinctive name" in v["good"][1][0].message
