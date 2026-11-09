@@ -1,7 +1,7 @@
 """M8 agent API: parsing, environment bookkeeping, search control (fake REPL).
 
 Nothing here asserts `verified`; that is only tested with real Lean
-(tests/integration/test_agent.py).
+(tests/integration/test_agent_lean.py).
 """
 
 from __future__ import annotations

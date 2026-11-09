@@ -80,7 +80,7 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 - [x] Catalog versioning: `VERIFIED_MATHLIB`, `catalog_status()`; abstractions/limitations in each module docstring
 - [x] `backend/declarations.py`: `check_declarations` runs `#check @name` in the pinned Lean
 - [x] **Catalog check (real Lean)**: all 54 catalog names (incl. `pyleanx.mathlib`) resolve at the pinned Mathlib; 556 s on a loaded machine. Finding: `add_pos` at this revision is `b < c → 0 < a → b < c + a`, so it is deliberately not in `algebra`. Test kept as `PYLEANX_SLOW_TESTS=1`.
-- [x] **Gate** (`tests/integration/test_domains.py`, real Lean): polynomial identity (`ring`), nonnegative square (`positivity`), AM-GM (`nlinarith [sq_nonneg (a - b)]`), `sin²+cos²=1`, `√x²=x`, plane triangle inequality, triangle angle sum = π, Pythagoras via `rw [iff]`: all **verified** in one Lean run; reversed triangle inequality **rejected**. 2 passed in 55 s.
+- [x] **Gate** (`tests/integration/test_domains_lean.py`, real Lean): polynomial identity (`ring`), nonnegative square (`positivity`), AM-GM (`nlinarith [sq_nonneg (a - b)]`), `sin²+cos²=1`, `√x²=x`, plane triangle inequality, triangle angle sum = π, Pythagoras via `rw [iff]`: all **verified** in one Lean run; reversed triangle inequality **rejected**. 2 passed in 55 s.
 - Limitations: concrete sorts only (no typeclass binders: statements about ℝ², not arbitrary Euclidean spaces); no coordinates, vectors, lines, circles, limits, derivatives or integrals yet.
 
 ### M7: theorem bank: **done** (2026-11-09, gate passed 2026-11-09)
@@ -90,7 +90,7 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 - [x] `serialize.theorem_from_canonical`: strict, exact rebuild from canonical JSON (sort/function registries)
 - [x] CLI `pyleanx bank index|search|show|list`
 - [x] Unit tests: `tests/unit/test_bank.py`, `test_agent_server.py` (CLI)
-- [x] **Gate** `tests/integration/test_bank.py` (search → versioned declaration → proof → verify; bank, reload, reuse in `verify_all`): **1 passed** in 466 s (real Lean, ~5 GB RAM free). An earlier attempt had been stopped for low memory.
+- [x] **Gate** `tests/integration/test_bank_lean.py` (search → versioned declaration → proof → verify; bank, reload, reuse in `verify_all`): **1 passed** in 466 s (real Lean, ~5 GB RAM free). An earlier attempt had been stopped for low memory.
 
 ### M8: proof-agent API: **done** (2026-11-09, gate passed 2026-11-09)
 - [x] `agent.ProofEnv`: observe / act (text, Tactic or canonical JSON) / peek / undo / verify, step budget, JSONL transcript; `TOOLS` JSON schemas + `call_tool` for tool-calling LLMs
@@ -98,7 +98,7 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 - [x] Proposers: `AutomationProposer`, `RetrievalProposer(bank)`, `ChainProposer`; `search_proof` (DFS + backtracking, visited states, budget); `try_proofs` (REPL-free, candidates as renamed copies in one batch run, winner re-verified)
 - [x] Benchmark: `agent.basic()` (13 problems: logic, Nat, algebra, inequalities, analysis, geometry), `export_jsonl`, `run_benchmark(mode="session"|"batch")`, CLI `pyleanx agent bench|export|serve` (JSON-lines stdio server; raw text only with operator `--allow-raw`)
 - [x] Unit tests: `tests/unit/test_agent.py`, `test_agent_server.py` (fake REPL; status always comes from the batch result)
-- [x] **Gate** `tests/integration/test_agent.py` (baseline search verifies 3 problems; `sorry` and `native_decide` agents rejected by the audit after the REPL accepted their steps; tool calls; batch mode): **3 passed** in 309 s (real Lean).
+- [x] **Gate** `tests/integration/test_agent_lean.py` (baseline search verifies 3 problems; `sorry` and `native_decide` agents rejected by the audit after the REPL accepted their steps; tool calls; batch mode): **3 passed** in 309 s (real Lean).
 - [x] Baseline numbers (`python -m pyleanx agent bench`, automation proposer only, no retrieval/LLM):
   - session mode: **9/13 verified**, 198 s
   - batch mode (`--mode batch`): **9/13 verified**, 178 s
@@ -109,17 +109,18 @@ then fetched prebuilt `.olean`s. No Mathlib source was rebuilt.
 ### Addition: infoview-style display of library declarations (2026-11-09)
 - [x] `pl.infoview(...)` / `pyleanx infoview NAME --import M`: Lean's `#check name` signature split into `hypotheses ⊢ conclusion` (display only; `check_declarations(signature=True)`)
 - [x] Unit tests `tests/unit/test_infoview.py` (parser, Jupyter markdown, imports, CLI parser)
-- [x] Real Lean: `python -m pyleanx infoview two_mul_le_add_sq sq_nonneg abs_add_le --import Mathlib.Algebra.Order.Ring.Unbundled.Basic --import Mathlib.Algebra.Order.Group.Unbundled.Abs` printed all three goal views (3 min, 1.7 GB free RAM). `tests/integration/test_infoview.py` written, not run separately.
+- [x] Real Lean: `python -m pyleanx infoview two_mul_le_add_sq sq_nonneg abs_add_le --import Mathlib.Algebra.Order.Ring.Unbundled.Basic --import Mathlib.Algebra.Order.Group.Unbundled.Abs` printed all three goal views (3 min, 1.7 GB free RAM). `tests/integration/test_infoview_lean.py` written, not run separately.
 
 ### Evidence for this session (2026-11-09)
 | Command | Result |
 |---|---|
 | `pytest tests/unit -q` | **191 passed** |
 | `ruff check .` | all checks passed |
-| `pytest tests/integration/test_domains.py` | 2 passed, 1 skipped (slow catalog test), 55 s |
+| `pytest tests/integration/test_domains_lean.py` | 2 passed, 1 skipped (slow catalog test), 55 s |
 | catalog `#check` of all 54 names | all exist (556 s) |
 | `python -m build --wheel` | built; wheel includes `pyleanx/agent/*`, `bank.py`, `geometry.py` |
 | M7/M8 integration gates | first attempt stopped for low memory; rerun 2026-11-09: `test_bank.py` 1 passed (466 s), `test_agent.py` 3 passed (309 s) |
+| GitHub CI run 42669750768 (first push) | unit jobs on Linux/Windows/macOS × Python 3.11/3.13 **passed**; `lean-integration` **failed at collection** (duplicate test basenames in `tests/unit` and `tests/integration`); integration tests renamed `*_lean.py` |
 | `pyleanx agent bench` (session / batch) | 9/13 (198 s) / 9/13 (178 s) |
 | `pytest tests/unit -q` (after infoview) | **201 passed** |
 
@@ -195,4 +196,4 @@ explained; to investigate on an idle machine before claiming batch speedups).
 1. M4 release gates: merge the milestone branches, push to GitHub so the Linux CI runs; clean-machine install.
 2. Make the benchmark's retrieval proposer (bank lemmas, `constructor`, `use` witnesses) solve the 4 unsolved baseline problems; plug in an LLM proposer.
 3. Independent replay check (`lean4checker`) for adversarial settings.
-4. Run `tests/integration/test_infoview.py` on its own (the CLI path was exercised with real Lean).
+4. Run `tests/integration/test_infoview_lean.py` on its own (the CLI path was exercised with real Lean).

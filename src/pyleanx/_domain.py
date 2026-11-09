@@ -1,7 +1,7 @@
 """Shared versioning for the domain modules (``pyleanx.algebra/analysis/geometry``).
 
 Every curated lemma reference names a declaration *in the pinned Mathlib*.
-``tests/integration/test_domains.py`` checks each one with ``#check`` against that
+``tests/integration/test_domains_lean.py`` checks each one with ``#check`` against that
 revision. Under a different Mathlib the names may have moved; :func:`catalog_status`
 reports this, and Lean itself still rejects any wrong use.
 """
