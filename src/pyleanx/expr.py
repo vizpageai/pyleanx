@@ -611,32 +611,41 @@ def _as_prop(value: object, what: str) -> Expr:
 
 
 def Eq(lhs: object, rhs: object) -> Compare:  # noqa: N802 - mathematical naming
+    """The proposition ``lhs = rhs`` (same as ``lhs == rhs``)."""
     return _compare("eq", lhs, rhs)
 
 
 def Ne(lhs: object, rhs: object) -> Compare:  # noqa: N802
+    """The proposition ``lhs ≠ rhs`` (same as ``lhs != rhs``)."""
     return _compare("ne", lhs, rhs)
 
 
 # Python reflects ``0 <= x`` to ``x >= 0``. These keep the written orientation, which
 # matters when a hypothesis must match a Mathlib lemma syntactically.
 def Le(lhs: object, rhs: object) -> Compare:  # noqa: N802
+    """The proposition ``lhs ≤ rhs``, kept in the order written (``0 <= x`` would be reflected by
+    Python).
+    """
     return _compare("le", lhs, rhs)
 
 
 def Lt(lhs: object, rhs: object) -> Compare:  # noqa: N802
+    """The proposition ``lhs < rhs``, kept in the order written."""
     return _compare("lt", lhs, rhs)
 
 
 def Ge(lhs: object, rhs: object) -> Compare:  # noqa: N802
+    """The proposition ``lhs ≥ rhs``, kept in the order written."""
     return _compare("ge", lhs, rhs)
 
 
 def Gt(lhs: object, rhs: object) -> Compare:  # noqa: N802
+    """The proposition ``lhs > rhs``, kept in the order written."""
     return _compare("gt", lhs, rhs)
 
 
 def Not(p: object) -> NotP:  # noqa: N802
+    """Negation ``¬p`` (same as ``~p``; Python's ``not`` cannot be overloaded)."""
     return NotP(_as_prop(p, "Not"))
 
 
@@ -656,6 +665,7 @@ def And(*props: object) -> Expr:  # noqa: N802
 
 
 def Or(*props: object) -> Expr:  # noqa: N802
+    """Disjunction ``p ∨ q ∨ …`` (same as ``p | q``)."""
     return _fold_right("or", props)
 
 
@@ -665,6 +675,7 @@ def Implies(*props: object) -> Expr:  # noqa: N802
 
 
 def Iff(p: object, q: object) -> Logic:  # noqa: N802
+    """Logical equivalence ``p ↔ q``."""
     return Logic("iff", _as_prop(p, "Iff"), _as_prop(q, "Iff"))
 
 
@@ -683,10 +694,14 @@ def _quant(kind: str, variables: Var | Iterable[Var], body: object) -> Quant:
 
 
 def Forall(variables: Var | Iterable[Var], body: object) -> Quant:  # noqa: N802
+    """Universal quantification ``∀ variables, body``; bound names must not shadow variables in
+    scope.
+    """
     return _quant("forall", variables, body)
 
 
 def Exists(variables: Var | Iterable[Var], body: object) -> Quant:  # noqa: N802
+    """Existential quantification ``∃ variables, body``; prove with ``pl.use(witness)``."""
     return _quant("exists", variables, body)
 
 
@@ -717,10 +732,12 @@ def _lit(value: object, sort: Sort) -> Lit:
 
 
 def nat(value: int) -> Lit:
+    """An exact natural-number literal (sort ``Nat``)."""
     return _lit(value, Nat)
 
 
 def integer(value: int) -> Lit:
+    """An exact integer literal (sort ``Int``)."""
     return _lit(value, Int)
 
 
@@ -745,14 +762,19 @@ _LOG = Func("Real.log", (Real,), Real, ("Mathlib.Analysis.SpecialFunctions.Log.B
 
 
 def sqrt(x: object) -> App:
+    """``Real.sqrt x``, the square root on ℝ (0 for negative ``x``, as in Mathlib)."""
     return _SQRT(x)
 
 
 def exp(x: object) -> App:
+    """``Real.exp x``, the exponential function on ℝ."""
     return _EXP(x)
 
 
 def log(x: object) -> App:
+    """``Real.log x``, the natural logarithm on ℝ (``log 0 = 0`` and ``log |x|`` for negatives, as
+    in Mathlib).
+    """
     return _LOG(x)
 
 
@@ -774,14 +796,17 @@ def _binary_poly(name: str, a: object, b: object) -> App:
 
 
 def abs_(x: object) -> App:
+    """Absolute value ``|x|`` (also via Python's ``abs(x)``)."""
     return _unary_poly("abs", x)
 
 
 def min_(a: object, b: object) -> App:
+    """``min a b`` (Python's builtin ``min`` cannot build expressions; use ``pl.min``)."""
     return _binary_poly("min", a, b)
 
 
 def max_(a: object, b: object) -> App:
+    """``max a b`` (Python's builtin ``max`` cannot build expressions; use ``pl.max``)."""
     return _binary_poly("max", a, b)
 
 

@@ -32,10 +32,12 @@ _PI = Func("Real.pi", (), Real, (_TRIG,), latex=r"\pi")
 
 
 def sin(x: object) -> App:
+    """``Real.sin x``, the sine function on ℝ."""
     return _SIN(x)
 
 
 def cos(x: object) -> App:
+    """``Real.cos x``, the cosine function on ℝ."""
     return _COS(x)
 
 

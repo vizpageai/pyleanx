@@ -363,61 +363,84 @@ def _terms(lemmas: Iterable[TermLike]) -> tuple[Term, ...]:
 
 
 def ring() -> Ring:
+    """``ring``: proves equalities in commutative (semi)rings, e.g. polynomial identities."""
     return Ring(origin=caller_origin())
 
 
 def omega() -> Omega:
+    """``omega``: decides linear arithmetic over ℕ and ℤ."""
     return Omega(origin=caller_origin())
 
 
 def positivity() -> Positivity:
+    """``positivity``: proves goals ``0 ≤ e``, ``0 < e``, ``e ≠ 0`` from the structure of ``e``."""
     return Positivity(origin=caller_origin())
 
 
 def rfl() -> Rfl:
+    """``rfl``: closes goals that hold by definition (``a = a`` up to computation)."""
     return Rfl(origin=caller_origin())
 
 
 def decide() -> Decide:
+    """``decide``: evaluates a decidable proposition by kernel computation."""
     return Decide(origin=caller_origin())
 
 
 def constructor() -> Constructor:
+    """``constructor``: splits ``p ∧ q`` / ``p ↔ q`` into one goal per component."""
     return Constructor(origin=caller_origin())
 
 
 def assumption() -> Assumption:
+    """``assumption``: closes the goal with a hypothesis that matches it exactly."""
     return Assumption(origin=caller_origin())
 
 
 def linarith(*lemmas: TermLike) -> Linarith:
+    """``linarith [lemmas]``: linear arithmetic over ordered fields, using hypotheses and the given
+    facts.
+    """
     return Linarith(lemmas=_terms(lemmas), origin=caller_origin())
 
 
 def nlinarith(*lemmas: TermLike) -> Nlinarith:
+    """``nlinarith [lemmas]``: like ``linarith`` but also multiplies hypotheses; pass hints such as
+    ``pl.ref("sq_nonneg")(x - y)``.
+    """
     return Nlinarith(lemmas=_terms(lemmas), origin=caller_origin())
 
 
 def norm_num(*lemmas: TermLike) -> NormNum:
+    """``norm_num [lemmas]``: normalises numerals and closes numeric goals."""
     return NormNum(lemmas=_terms(lemmas), origin=caller_origin())
 
 
 def simp(*lemmas: TermLike, only: bool = False, at: str | Iterable[str] = ()) -> Simp:
+    """``simp [lemmas]`` (``only=True`` for ``simp only``; ``at="h"`` to simplify a hypothesis)."""
     at_names = _names([at] if isinstance(at, str) else at)
     return Simp(lemmas=_terms(lemmas), only=only, at=at_names, origin=caller_origin())
 
 
 def intro(*names: str) -> Intro:
+    """``intro names``: introduces ``∀``-bound variables or implication premises with the given
+    names.
+    """
     if not names:
         raise TacticError("intro needs at least one name (anonymous intro is not supported)")
     return Intro(names=_names(names), origin=caller_origin())
 
 
 def exact(term: TermLike) -> Exact:
+    """``exact term``: the term is a complete proof of the goal (a hypothesis, lemma or lemma
+    application).
+    """
     return Exact(term=_term(term), origin=caller_origin())
 
 
 def apply(term: TermLike) -> Apply:
+    """``apply term``: reduces the goal using a lemma's conclusion; its premises become new goals.
+    """
     return Apply(term=_term(term), origin=caller_origin())
 
 
@@ -444,6 +467,7 @@ def rev(rule: TermLike) -> tuple[Term, bool]:
 
 
 def use(*witnesses: object) -> Use:
+    """``use witnesses``: supplies witnesses for an ``∃`` goal."""
     from .expr import _lift
 
     if not witnesses:
@@ -452,6 +476,7 @@ def use(*witnesses: object) -> Use:
 
 
 def steps(*tactics: Tactic) -> Steps:
+    """Run tactics in sequence (also written ``t1 >> t2``)."""
     if not tactics:
         raise TacticError("steps() needs at least one tactic")
     for t in tactics:
@@ -461,6 +486,7 @@ def steps(*tactics: Tactic) -> Steps:
 
 
 def branches(*proofs: Tactic) -> Branches:
+    """One proof per remaining goal, in order (Lean's ``·`` focusing bullets)."""
     if len(proofs) < 1:
         raise TacticError("branches() needs at least one proof")
     for t in proofs:

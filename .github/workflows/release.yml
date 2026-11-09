@@ -1,0 +1,91 @@
+name: release
+
+# Publishes to PyPI when a version tag (v0.1.0, ...) is pushed. Uses PyPI trusted
+# publishing (no stored token); the `pypi` environment can require a manual approval.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Tag matches package version
+        run: |
+          version=$(python -c "import ast,pathlib;t=ast.parse(pathlib.Path('src/pyleanx/__init__.py').read_text());print([n.value.value for n in t.body if isinstance(n,ast.Assign) and n.targets[0].id=='__version__'][0])")
+          test "v$version" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != v$version"; exit 1; }
+      - run: pip install build twine
+      - run: python -m build
+      - run: twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  clean-install:
+    # Same gate as CI's package job, on the exact artifacts being published.
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Install elan
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Fresh install, init, verify an example, reject a bad one
+        run: |
+          python -m venv /tmp/fresh && /tmp/fresh/bin/pip install dist/*.whl
+          mkdir /tmp/user && cp examples/square_identity.py examples/bad_proof.py /tmp/user/
+          cd /tmp/user
+          /tmp/fresh/bin/pyleanx init
+          /tmp/fresh/bin/pyleanx check square_identity.py
+          if /tmp/fresh/bin/pyleanx check bad_proof.py; then echo "bad proof was accepted" && exit 1; fi
+
+  publish:
+    needs: clean-install
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/pyleanx/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Release notes from CHANGELOG.md
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" '$0 ~ "^## \[" v "\]" {f=1; next} f && /^## \[/ {exit} f' CHANGELOG.md > notes.md
+          test -s notes.md || echo "PyLeanX $v" > notes.md
+      - run: gh release create "$GITHUB_REF_NAME" dist/* --title "PyLeanX ${GITHUB_REF_NAME#v}" --notes-file notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}

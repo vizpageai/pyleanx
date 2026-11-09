@@ -142,6 +142,9 @@ class LeanProject:
 
 
 def find_project(project: LeanProject | str | os.PathLike[str] | None = None) -> LeanProject:
+    """The Lean workspace to use: the argument, ``$PYLEANX_PROJECT``, a ``lean-project/`` in the
+    current directory or its parents, or ``~/.pyleanx/lean-project``.
+    """
     if isinstance(project, LeanProject):
         return project
     if project is not None:

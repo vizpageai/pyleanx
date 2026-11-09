@@ -21,6 +21,8 @@ def default_cache_dir() -> Path:
 
 
 class ResultCache:
+    """On-disk cache of *verified* results only, keyed by the reproducibility fingerprint."""
+
     def __init__(self, directory: Path | None = None) -> None:
         self.directory = directory or default_cache_dir()
         self.path = self.directory / "results.sqlite"

@@ -1,0 +1,79 @@
+site_name: PyLeanX
+site_description: Write theorems in Python; have them checked by the Lean 4 kernel and Mathlib.
+site_url: https://vizpageai.github.io/pyleanx/
+repo_url: https://github.com/vizpageai/pyleanx
+repo_name: vizpageai/pyleanx
+edit_uri: edit/main/docs/
+copyright: MIT licensed. Lean 4 and Mathlib are Apache-2.0.
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.tabs.link
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle: {icon: material/weather-night, name: Dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle: {icon: material/weather-sunny, name: Light mode}
+
+nav:
+  - Home: index.md
+  - Installation: install.md
+  - Tutorials:
+      - Your first theorem: tutorials/first-theorem.md
+      - Using Mathlib: tutorials/mathlib.md
+      - Interactive proving: tutorials/interactive.md
+      - Checking derivations: tutorials/scientists.md
+      - Proof agents: tutorials/ai.md
+  - Reference:
+      - API guide: api.md
+      - Python reference: reference.md
+  - Background:
+      - Trust model: security.md
+      - Architecture: architecture.md
+      - Stability and versioning: stability.md
+      - Troubleshooting: troubleshooting.md
+      - Roadmap and test evidence: roadmap.md
+      - Releasing: releasing.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc: {permalink: true}
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed: {alternate_style: true}
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.arithmatex: {generic: true}
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            members_order: source
+            docstring_style: google
+            show_signature_annotations: true
+            separate_signature: true
+            filters: ["!^_"]

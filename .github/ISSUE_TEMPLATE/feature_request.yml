@@ -1,0 +1,15 @@
+name: Feature or mathematics request
+description: A missing feature, tactic, domain lemma or Mathlib area
+labels: [enhancement]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What do you want to state or prove?
+      description: The mathematics (informally is fine) and how you would like to write it in Python.
+    validations: {required: true}
+  - type: textarea
+    id: lean
+    attributes:
+      label: Lean / Mathlib pointers (optional)
+      description: Relevant Mathlib declarations, or the Lean you would write by hand.

@@ -1,0 +1,27 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Found a way to get `verified=True` for something Lean did not prove?** Please do not
+        file it here; report it privately (see SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: A minimal script, what you expected, and what you got (full error text).
+      render: python
+    validations: {required: true}
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`python -m pyleanx doctor --json` output"
+      render: json
+    validations: {required: true}
+  - type: input
+    id: version
+    attributes:
+      label: PyLeanX version
+      placeholder: "python -c 'import pyleanx; print(pyleanx.__version__)'"

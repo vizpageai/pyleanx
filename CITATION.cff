@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use PyLeanX in research, please cite it as below, and cite Lean 4 and Mathlib."
+title: "PyLeanX: a Python frontend for theorems checked by the Lean 4 kernel"
+type: software
+authors:
+  - name: "PyLeanX contributors"
+repository-code: "https://github.com/vizpageai/pyleanx"
+url: "https://vizpageai.github.io/pyleanx/"
+license: MIT
+version: "0.1.0"
+keywords:
+  - Lean 4
+  - Mathlib
+  - formal verification
+  - theorem proving
+  - AI for mathematics
+references:
+  - type: software
+    title: "Lean 4"
+    url: "https://lean-lang.org"
+  - type: software
+    title: "Mathlib"
+    authors:
+      - name: "The mathlib Community"
+    url: "https://github.com/leanprover-community/mathlib4"

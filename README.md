@@ -1,6 +1,15 @@
 # PyLeanX
 
+[![ci](https://github.com/vizpageai/pyleanx/actions/workflows/ci.yml/badge.svg)](https://github.com/vizpageai/pyleanx/actions/workflows/ci.yml)
+[![docs](https://github.com/vizpageai/pyleanx/actions/workflows/docs.yml/badge.svg)](https://vizpageai.github.io/pyleanx/)
+[![PyPI](https://img.shields.io/pypi/v/pyleanx.svg)](https://pypi.org/project/pyleanx/)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://pypi.org/project/pyleanx/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 **Write theorems in Python. Have them checked by the Lean 4 kernel.**
+
+📖 **Documentation: <https://vizpageai.github.io/pyleanx/>**: installation, tutorials for
+mathematicians, scientists and AI researchers, and the API reference.
 
 PyLeanX is a Python-first frontend for Lean 4 + Mathlib, built for mathematicians
 and for AI/ML pipelines. Think of the PyTorch experience: symbolic objects,
@@ -36,8 +45,10 @@ theorem square_identity (x y : Real) :
 #print axioms square_identity
 ```
 
-> **Status: 0.1.0.dev0, MVP (milestones M0–M4).** See [docs/roadmap.md](docs/roadmap.md)
-> for what is implemented and tested. The package name `pyleanx` is provisional.
+> **Status: alpha (0.1.0 in preparation).** Milestones M0–M8 are implemented and tested
+> against real Lean; release engineering (M9) is in progress. See [docs/roadmap.md](docs/roadmap.md) for test evidence
+> and known limitations. The API may still change in 0.x releases
+> ([stability policy](docs/stability.md)).
 
 ## What "verified" means
 
@@ -63,10 +74,13 @@ Requirements: Python ≥ 3.11 and [elan](https://lean-lang.org/install/manual/) 
 toolchain manager).
 
 ```bash
-pip install -e ".[dev]"          # from a checkout
+pip install pyleanx              # or "pyleanx[interactive]" for step-by-step proof sessions
 pyleanx init                     # pinned Lean/Mathlib workspace + `lake exe cache get`
 pyleanx doctor                   # check everything
 ```
+
+From a checkout: `pip install -e ".[dev,interactive,docs]"`. Full instructions, including
+managed Windows machines: [docs/install.md](docs/install.md).
 
 If a security policy blocks the generated `pyleanx.exe` launcher (as on some managed
 Windows machines), use `python -m pyleanx doctor`, `python -m pyleanx check ...` etc.
@@ -228,12 +242,25 @@ script was found, it is **verified only by the batch Lean run and axiom audit**.
 
 ## Documentation
 
-- [docs/api.md](docs/api.md): API reference
+The full documentation is at <https://vizpageai.github.io/pyleanx/>. In this repository:
+
+- Tutorials: [first theorem](docs/tutorials/first-theorem.md),
+  [using Mathlib](docs/tutorials/mathlib.md), [interactive proving](docs/tutorials/interactive.md),
+  [checking derivations](docs/tutorials/scientists.md), [proof agents](docs/tutorials/ai.md)
+- [docs/api.md](docs/api.md): API guide
 - [docs/architecture.md](docs/architecture.md): design and trust pipeline
 - [docs/security.md](docs/security.md): trust model, raw tactics, sandboxing
 - [docs/troubleshooting.md](docs/troubleshooting.md)
 - [docs/roadmap.md](docs/roadmap.md): milestones, test evidence, blockers
+- [docs/stability.md](docs/stability.md): versioning and deprecation policy
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md): the engineering specification
+
+## Contributing, security, citing
+
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[Code of Conduct](CODE_OF_CONDUCT.md). Report soundness problems privately as described in
+[SECURITY.md](SECURITY.md). If you use PyLeanX in research, please cite it
+([CITATION.cff](CITATION.cff)) together with Lean 4 and Mathlib.
 
 ## License
 
