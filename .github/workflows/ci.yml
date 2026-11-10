@@ -102,7 +102,7 @@ jobs:
           /tmp/fresh/bin/pyleanx doctor
           /tmp/fresh/bin/pyleanx check square_identity.py
           if /tmp/fresh/bin/pyleanx check bad_proof.py; then echo "bad proof was accepted" && exit 1; fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
