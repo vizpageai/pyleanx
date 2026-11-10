@@ -73,7 +73,32 @@ for r in results:
 assert all(r.verified for r in results)
 ```
 
-## Any Mathlib declaration
+## Every Mathlib name, no module paths
+
+`pl.mathlib` gives access to every declaration of Lean core, Batteries and the pinned
+Mathlib by its Lean name. PyLeanX finds the module that defines it and imports exactly
+that module:
+
+```python
+M = pl.mathlib
+y = pl.var("y", pl.Real)
+sqrt_ok = pl.Theorem("sqrt_nonneg_demo", [y], conclusion=pl.Le(0, M.Real.sqrt(y)),
+                     proof=pl.exact(M.Real.sqrt_nonneg(y)))
+print(sqrt_ok.to_lean().splitlines()[0])        # import Mathlib.Analysis.Real.Sqrt
+print(M.find("Finset.sum_range_succ"))          # ('Mathlib.Algebra.BigOperators…', 'theorem')
+print(M.search("sqrt le sqrt")[:3])
+assert sqrt_ok.verify().verified
+```
+
+- theorems are citable lemmas (`M.Real.sqrt_nonneg(y)`), definitions are functions
+  (`M.Real.sqrt(y)`), types are sorts (`pl.var("v", M.EuclideanSpace(pl.Real, pl.Fin(3)))`);
+- a mistyped name raises an error with suggestions;
+- from the shell: `pyleanx mathlib find NAME`, `pyleanx mathlib search WORDS`.
+
+The name index is built once per Mathlib revision from the local sources (about a minute,
+no Lean run) and cached. It records *where* names live; Lean checks every use.
+
+## Any Mathlib declaration by module path
 
 Outside the catalogs, cite a declaration by name and give the module it lives in:
 

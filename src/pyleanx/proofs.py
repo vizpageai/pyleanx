@@ -65,6 +65,9 @@ def _term(value: object) -> Term:
         return Name(value)
     if hasattr(value, "name") and type(value).__name__ == "Theorem":
         return Name(value.name)  # reuse a previously declared theorem as a lemma
+    hook = getattr(type(value), "__pyleanx_term__", None)  # e.g. pl.mathlib declarations
+    if hook is not None:
+        return hook(value)
     raise TacticError(f"expected a hypothesis name, pl.ref(...), or expression; got {value!r}")
 
 

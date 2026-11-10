@@ -325,6 +325,30 @@ def cmd_bindings(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_mathlib(args: argparse.Namespace) -> int:
+    from . import mathlib
+    from .mathlib_index import load_index
+
+    if args.action == "index":
+        d = load_index(args.project, refresh=True, progress=print)
+        print(f"indexed {len(d['names'])} declarations from {d['files']} files")
+        return 0
+    if not args.query:
+        print("error: give a name or search words", file=sys.stderr)
+        return 2
+    if args.action == "find":
+        hit = mathlib.find(args.query)
+        if hit is None:
+            print(f"{args.query}: not found")
+            return 1
+        print(f"{args.query}: {hit[1]} in {hit[0]}")
+        return 0
+    for n in mathlib.search(args.query, limit=args.limit):
+        hit = mathlib.find(n)
+        print(f"{n:60s} {hit[1] if hit else '':8s} {hit[0] if hit else ''}")
+    return 0
+
+
 # ------------------------------------------------------------------------------ infoview
 def cmd_infoview(args: argparse.Namespace) -> int:
     from .infoview import DeclViews, infoview
@@ -455,6 +479,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--project")
     s.add_argument("--timeout", type=float)
     s.set_defaults(func=cmd_bindings)
+
+    s = sub.add_parser("mathlib", help="find any Lean/Mathlib declaration by name")
+    s.add_argument("action", choices=["find", "search", "index"])
+    s.add_argument("query", nargs="?", help="a full name (find) or words (search)")
+    s.add_argument("--limit", type=int, default=30)
+    s.add_argument("--project")
+    s.set_defaults(func=cmd_mathlib)
 
     s = sub.add_parser("infoview", help="show Mathlib/core declarations as Lean states them")
     s.add_argument("names", nargs="+", help="declaration names, e.g. two_mul_le_add_sq")

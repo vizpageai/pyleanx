@@ -488,7 +488,29 @@ def _check_literal_fits(value: Fraction, sort: Sort) -> None:
 def _lift(value: object) -> Expr:
     if isinstance(value, Expr):
         return value
+    hook = getattr(type(value), "__pyleanx_expr__", None)  # e.g. pl.mathlib declarations
+    if hook is not None:
+        return hook(value)
     return Lit(_to_fraction(value))
+
+
+def as_sort(value: object) -> Sort:
+    """A sort from a sort, a Lean declaration (``pl.mathlib.Real``) or a type-valued term
+    (``pl.mathlib.EuclideanSpace(pl.Real, pl.Fin(3))``)."""
+    if isinstance(value, Sort):
+        return value
+    hook = getattr(type(value), "__pyleanx_sort__", None)
+    if hook is not None:
+        return hook(value)
+    if isinstance(value, Expr):
+        from .imports import expr_imports
+        from .render.lean import render_expr
+        from .types import lean_type
+
+        return lean_type(render_expr(value), tuple(dict.fromkeys(expr_imports(value))))
+    raise SortError(
+        f"sort must be a pl.Sort (pl.Nat, pl.Int, pl.Rat, pl.Real, pl.Prop, "
+        f"pl.EuclideanSpace(3), pl.mathlib.<Type>, ...), got {value!r}")
 
 
 def _with_sort(e: Expr, sort: Sort) -> Expr:
@@ -853,11 +875,7 @@ def max_(a: object, b: object) -> App:
 
 
 def make_var(name: str, sort: Sort, origin: Origin | None = None) -> Var:
-    if not isinstance(sort, Sort):
-        raise SortError(
-            f"sort must be a pl.Sort (pl.Nat, pl.Int, pl.Rat, pl.Real, pl.Prop, "
-            f"pl.geometry.Point, ...), got {sort!r}"
-        )
+    sort = as_sort(sort)
     validate_identifier(name, "variable name")
     return Var(name, sort, origin=origin or caller_origin())
 

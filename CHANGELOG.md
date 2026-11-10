@@ -18,6 +18,9 @@ see [docs/stability.md](docs/stability.md)).
 - External libraries: `pyleanx add/libs/build-lib/remove` (`pl.add_library`, …).
 - Generated bindings: `pl.lib.use(module)`, `pl.lib.search`, `pyleanx bindings`.
 - Faithfulness: `Theorem.same_statement_as(name)`.
+- `pl.mathlib.<any Lean name>`: all Lean core, Batteries and Mathlib declarations by name, with
+  the defining module found automatically (index of the pinned sources);
+  `pl.mathlib.find/search`, `pyleanx mathlib find|search|index`.
 
 ### Security
 - Raw tactic text nested inside structured proof steps is gated like top-level raw text.

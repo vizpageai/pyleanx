@@ -189,6 +189,17 @@ a b : R
 This is Lean's own `#check` output laid out like the editor's infoview (no restating, no
 proof). CLI: `python -m pyleanx infoview two_mul_le_add_sq --import Mathlib.Algebra.Order.Ring.Unbundled.Basic`.
 
+## Every Mathlib name, no module paths
+
+```python
+M = pl.mathlib                                 # 266k names: Lean core, Batteries, Mathlib
+thm = pl.Theorem("t", [x], conclusion=pl.Le(0, M.Real.sqrt(x)),
+                 proof=pl.exact(M.Real.sqrt_nonneg(x)))   # imports Mathlib.Analysis.Real.Sqrt
+M.search("sum range succ")                     # find names; `pyleanx mathlib search …`
+```
+
+`pl.ref("name", imports=["Mathlib.Module"])` still works when you want to name the module.
+
 ## Any Lean vocabulary, your own definitions, other libraries
 
 ```python

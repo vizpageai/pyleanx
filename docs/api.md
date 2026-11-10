@@ -220,6 +220,16 @@ a `DeclViews` tuple for several items) and renders as a Lean block in Jupyter. P
 splits the signature for layout (instances are shown as `inst✝`, numbering omitted); this is
 display, never verification. CLI: `pyleanx infoview NAME... [--import MODULE] [--json]`.
 
+## All of Mathlib by name: `pl.mathlib`
+
+`pl.mathlib.<Lean.Name>` resolves any Lean core / Batteries / Mathlib declaration and records
+the module that defines it (so the generated Lean imports exactly that module). Theorems are
+lemmas, definitions callable terms, types sorts; namespaces nest (`pl.mathlib.Real.sqrt`).
+`pl.mathlib.find(name)` -> `(module, kind)`, `pl.mathlib.search(words)`, CLI
+`pyleanx mathlib find|search|index`. The index is built from the pinned sources once per
+Mathlib revision. The hand-picked entries (`pl.mathlib.sq_nonneg`, …) and
+`pl.ref(name, imports=[module])` keep working.
+
 ## General Lean vocabulary (open types, terms)
 
 | Python | Lean |
