@@ -99,6 +99,18 @@ def _clean(message: str) -> str:
     return text or message
 
 
+def _pinned_lake(project: LeanProject) -> str:
+    """The pinned toolchain's own ``lake`` (next to its ``lean``).
+
+    LeanInteract runs ``lake`` in its cache directory, which has no ``lean-toolchain``;
+    through the elan proxy that fails when no default toolchain is configured, and would
+    otherwise use whatever the default is rather than the pinned version.
+    """
+    lean = Path(project.lake_env()["LEAN"])
+    lake = lean.with_name("lake.exe" if os.name == "nt" else "lake")
+    return str(lake) if lake.exists() else project.lake
+
+
 def _binary_blocked(repl_dir: Path) -> bool:
     """True if the OS refuses to execute the compiled REPL (e.g. AppLocker)."""
     exe = repl_dir / ".lake" / "build" / "bin" / ("repl.exe" if os.name == "nt" else "repl")
@@ -138,6 +150,7 @@ class LeanRepl:
             project=li.LocalProject(directory=str(project.path), auto_build=False),
             repl_rev=REPL_REV,
             cache_dir=str(cache_dir),
+            lake_path=_pinned_lake(project),
             verbose=verbose,
         )
         repl_dir = Path(self._config._cache_repl_dir)

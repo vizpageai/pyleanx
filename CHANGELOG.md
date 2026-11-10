@@ -22,6 +22,10 @@ see [docs/stability.md](docs/stability.md)).
   the defining module found automatically (index of the pinned sources);
   `pl.mathlib.find/search`, `pyleanx mathlib find|search|index`.
 
+### Fixed
+- Interactive sessions build and run the Lean REPL with the pinned toolchain's `lake`, so they
+  work when elan has no default toolchain (as on CI) and never use a different Lean version.
+
 ### Security
 - Raw tactic text nested inside structured proof steps is gated like top-level raw text.
 - Lean type text is validated so it cannot escape its binder or add commands.
