@@ -39,5 +39,5 @@ def lean_project():
         if os.environ.get("PYLEANX_REQUIRE_LEAN") == "1":
             pytest.fail(reason)
         pytest.skip(reason)
-    # Generous timeout: cold Mathlib loads on a busy laptop can exceed the 300 s default.
+    # Generous timeout: cold Mathlib loads on a busy laptop can exceed the default.
     return proj.with_(timeout=900)

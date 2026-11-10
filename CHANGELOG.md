@@ -26,6 +26,11 @@ see [docs/stability.md](docs/stability.md)).
 - Interactive sessions build and run the Lean REPL with the pinned toolchain's `lake`, so they
   work when elan has no default toolchain (as on CI) and never use a different Lean version.
 
+### Changed
+- The default time limit per Lean run is 900 s (was 300 s): a cold load of larger Mathlib
+  modules (e.g. trigonometry) can exceed 300 s on a slow or memory-starved machine. The
+  timeout diagnostic now says how to raise the limit.
+
 ### Security
 - Raw tactic text nested inside structured proof steps is gated like top-level raw text.
 - Lean type text is validated so it cannot escape its binder or add commands.

@@ -32,9 +32,18 @@ CASES: dict[str, tuple[list[str], int]] = {
     "vlasov_maxwell_kinematics": (RUN, 0),
 }
 
+# Examples deliberately not run here, with the reason (each must be run by hand).
+SKIPPED: dict[str, str] = {
+    "oai_vlasov_maxwell": "needs `pyleanx add` of openai/math (vendored library build, "
+                          "~12 min) and ~20 min per Lean check; see docs/roadmap.md",
+}
+
 
 def main(argv: list[str]) -> int:
-    missing = sorted(p.stem for p in EXAMPLES.glob("*.py") if p.stem not in CASES)
+    for name, why in SKIPPED.items():
+        print(f"skip {name}: {why}")
+    missing = sorted(p.stem for p in EXAMPLES.glob("*.py")
+                     if p.stem not in CASES and p.stem not in SKIPPED)
     if missing:
         print(f"examples without an expected outcome: {missing}")
         return 2

@@ -241,7 +241,11 @@ def classify(
     out: dict[str, tuple[Status, list[Diagnostic], tuple[str, ...] | None]] = {}
 
     if run.timed_out:
-        d = _pyleanx_diag(f"Lean did not finish within the timeout ({run.duration_ms:.0f} ms)")
+        d = _pyleanx_diag(
+            f"Lean did not finish within the timeout ({run.duration_ms / 1000:.0f} s). Most of "
+            "that time is usually spent loading Mathlib, which is slow on the first run after "
+            "a reboot or when memory is low; retry with a larger limit, e.g. "
+            "thm.verify(timeout=1800) or `pyleanx check --timeout 1800`.")
         return {n: (Status.TIMEOUT, [d], None) for n in names}
 
     header = next(s for s in sm.spans if s.kind == "header")

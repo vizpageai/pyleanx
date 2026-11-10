@@ -29,7 +29,9 @@ USER_PROJECT = Path.home() / ".pyleanx" / "lean-project"
 @dataclass(frozen=True)
 class LeanProject:
     path: Path
-    timeout: float = 300.0
+    # Seconds per Lean run, including loading the imported Mathlib modules: a cold load of
+    # e.g. the trigonometry modules takes several minutes on a slow or memory-starved laptop.
+    timeout: float = 900.0
     import_mode: str = "minimal"
     extra_imports: tuple[str, ...] = ()
     policy: AxiomPolicy = field(default=DEFAULT_POLICY)
