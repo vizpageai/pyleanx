@@ -31,6 +31,7 @@ CASES: dict[str, tuple[list[str], int]] = {
     "agent_search": (RUN, 0),
     "vlasov_maxwell_kinematics": (RUN, 0),
     "oai_ceil_residue": (RUN, 0),
+    "theorem_families": (RUN, 0),  # checks that the bad row is rejected
 }
 
 # Examples deliberately not run here, with the reason (each must be run by hand).
