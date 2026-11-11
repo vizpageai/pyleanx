@@ -91,7 +91,7 @@ def test_rendering():
     assert "uses: Complex.cosh_mul_I\n" in text and "→ no goals" in text
     assert "Lemmas in the proof term: Complex.cosh_sq_sub_sinh_sq\n" in text
     assert "Complex.cosh_mul_I : stmt of Complex.cosh_mul_I" in text
-    assert "Definitions and types involved:\n  Complex.cosh : ℂ → ℂ" in text
+    assert "Definitions, types and axioms involved:\n  Complex.cosh : ℂ → ℂ" in text
     assert e.used == ("Complex.cosh_sq_sub_sinh_sq", "Complex.cosh", "Complex.cosh_mul_I")
     assert "✅ exact" in e._repr_markdown_()
     assert e.to_json()["name"] == "Complex.sin_sq_add_cos_sq"

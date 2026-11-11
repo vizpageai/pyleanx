@@ -204,7 +204,7 @@ class Explanation:
             out += ["", "Lemmas in the proof term: " + (", ".join(self._theorems(self.cited))
                                                          or "none")]
         for title, want in (("Lemmas used, as Lean states them:", True),
-                            ("Definitions and types involved:", False)):
+                            ("Definitions, types and axioms involved:", False)):
             rows = [f"  {n} : {' '.join(i.statement.split())}" for n in self.used
                     if (i := self.lemmas.get(n)) is not None and (i.kind == "theorem") == want]
             if rows:
