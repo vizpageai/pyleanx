@@ -162,6 +162,10 @@ class Explanation:
     # ------------------------------------------------------------------ text
     def exactness(self) -> str:
         ev = self.evidence
+        if self.exact and ev.get("package") == "PyLeanX theorem":
+            return ("exact: this is the Lean source PyLeanX verifies for this theorem "
+                    f"[sha256 {str(ev.get('source_sha256'))[:12]}]; Lean accepted it in this run "
+                    f"with axioms {list(ev.get('axioms') or [])}")
         if self.exact:
             return ("exact: re-elaborating this source gives the same proof term (and "
                     f"statement) that Lean verified [hash {ev.get('value_hash')}]")
@@ -206,13 +210,25 @@ class Explanation:
         for title, want in (("Lemmas used, as Lean states them:", True),
                             ("Definitions, types and axioms involved:", False)):
             rows = [f"  {n} : {' '.join(i.statement.split())}" for n in self.used
-                    if (i := self.lemmas.get(n)) is not None and (i.kind == "theorem") == want]
+                    if (i := self.lemmas.get(n)) is not None and (i.kind == "theorem") == want
+                    and not is_automation(n)]
             if rows:
                 out += ["", title, *rows]
+        hidden = [n for n in self.used if is_automation(n)]
+        if hidden:
+            out += ["", f"(+ {len(hidden)} internal lemmas of automation tactics such as omega, "
+                    "ring, norm_num, linarith and positivity: their proof certificates; "
+                    "see e.automation)"]
         return "\n".join(out)
 
+    @property
+    def automation(self) -> tuple[str, ...]:
+        """Lemmas used only inside automation certificates (omega, ring, linarith, ...)."""
+        return tuple(n for n in self.used if is_automation(n))
+
     def _theorems(self, names: Iterable[str]) -> tuple[str, ...]:
-        return tuple(n for n in names if (i := self.lemmas.get(n)) is None or i.kind == "theorem")
+        return tuple(n for n in names if not is_automation(n)
+                     and ((i := self.lemmas.get(n)) is None or i.kind == "theorem"))
 
     def _repr_markdown_(self) -> str:  # Jupyter
         mark = "✅ exact" if self.exact else "⚠️ not shown to be exact"
@@ -222,6 +238,16 @@ class Explanation:
         d = asdict(self)
         d.pop("project", None)
         return d
+
+
+#: Namespaces of the lemmas automation tactics put in their proof certificates.
+AUTOMATION_PREFIXES = ("Lean.Omega.", "Mathlib.Tactic.", "Mathlib.Meta.", "Lean.Grind.",
+                       "Std.Tactic.", "Aesop.")
+
+
+def is_automation(name: str) -> bool:
+    """True for a lemma that is internal to an automation tactic's certificate."""
+    return name.startswith(AUTOMATION_PREFIXES)
 
 
 def _one_line(text: str, width: int) -> str:
@@ -358,7 +384,7 @@ def _lean_str(s: str) -> str:
 
 
 def explain(
-    item: Name | str,
+    item: Name | str | Any,
     *,
     imports: Iterable[str] = (),
     project: object = None,
@@ -367,14 +393,20 @@ def explain(
 ) -> Explanation:
     """Explain a Lean/Mathlib proof step by step, exactly as Lean verified it.
 
-    ``item`` is a name (``"Real.sin_sq_add_cos_sq"``), a catalog lemma or a ``pl.mathlib``
-    reference. Runs the pinned Lean REPL: import the compiled module, re-elaborate the
+    ``item`` is a name (``"Real.sin_sq_add_cos_sq"``), a catalog lemma, a ``pl.mathlib``
+    reference, or your own ``pl.Theorem`` (then the Lean source ``verify()`` checks is
+    replayed, and ``exact`` means Lean accepted it with an axiom audit passing the policy).
+    For a library name it runs the pinned Lean REPL: import the compiled module, re-elaborate the
     declaration's source file, compare the proof terms (see the module docstring). Slow the
     first time (the whole source file is re-checked); the result is cached.
     """
     from .backend.leaninteract import LeanRepl
     from .project import find_project
+    from .theorem import Theorem
 
+    if isinstance(item, Theorem):
+        return _explain_theorem(item, find_project(project),  # type: ignore[arg-type]
+                                timeout, refresh)
     name, mods = _target(item)
     modules = sorted({validate_qualified_name(m, "module") for m in (*mods, *imports)})
     proj = find_project(project)  # type: ignore[arg-type]
@@ -453,6 +485,87 @@ def explain(
     }
     cache.parent.mkdir(parents=True, exist_ok=True)
     cache.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+    return from_json(raw, proj)
+
+
+def _explain_theorem(thm: Any, proj: Any, timeout: float | None, refresh: bool) -> Explanation:
+    """Explain a PyLeanX theorem: replay exactly the Lean source ``verify()`` checks."""
+    import uuid
+
+    from .backend.audit import parse_axiom_report
+    from .backend.leaninteract import LeanRepl
+
+    proj.validate()
+    src = thm.to_lean(proj)
+    src_sha = hashlib.sha256(src.encode("utf-8")).hexdigest()
+    key = hashlib.sha256(json.dumps([EXPLAIN_VERSION, "theorem", src_sha, proj.config_hash(),
+                                     proj.libraries_hash()]).encode()).hexdigest()[:24]
+    cache = Path(proj.path) / ".pyleanx" / "explain" / f"{key}.json"
+    if cache.exists() and not refresh:
+        return from_json(json.loads(cache.read_text(encoding="utf-8")), proj)
+    lines = src.splitlines()
+    decl = next((k for k, line in enumerate(lines)
+                 if re.match(rf"(theorem|lemma) {re.escape(thm.name)}\b", line)), None)
+    end = next((k for k, line in enumerate(lines) if line.startswith("#print axioms")),
+               len(lines))
+    if decl is None:
+        raise PyLeanXError(f"theorem {thm.name} not found in its rendered Lean source")
+    while end > decl + 1 and not lines[end - 1].strip():
+        end -= 1
+    first, last = (decl + 1, 0), (end, len(lines[end - 1]))
+
+    limit = timeout or max(proj.timeout, 1800)
+    work = Path(proj.path) / ".pyleanx" / "build" / uuid.uuid4().hex
+    work.mkdir(parents=True, exist_ok=True)
+    path = work / "PyLeanXExplain.lean"
+    path.write_text(src, encoding="utf-8", newline="\n")
+    repl = LeanRepl(proj)
+    li = repl._li
+    lemma_data: dict[str, Any] = {}
+    statement = ""
+    try:
+        r = repl._run(li.FileCommand(path=str(path.resolve()), all_tactics=True,
+                                     infotree="original"), limit)
+        msgs = getattr(r, "messages", None) or []
+        errors = [m.data for m in msgs if m.severity == "error"]
+        reports = [rep for m in msgs if (rep := parse_axiom_report(m.data)) is not None
+                   and rep.theorem == thm.name]
+        axioms = reports[0].axioms if reports else None
+        steps = collect_steps(getattr(r, "infotree", None) or [], getattr(r, "tactics", []),
+                              lines, first, last)
+        if getattr(r, "env", None) is not None and not errors:
+            probe = _info_json(repl._run(li.Command(
+                cmd=_PROBE.replace("@@ROOT@@", _lean_str(thm.name)), env=r.env), limit))
+            statement = probe.get("type", "")
+            step_lists = "#[" + ", ".join(
+                "#[" + ", ".join(_lean_str(u) for u in s["uses"]) + "]" for s in steps) + "]"
+            lemma_data = _info_json(repl._run(li.Command(
+                cmd=_LEMMAS.replace("@@ROOT@@", _lean_str(thm.name))
+                .replace("@@STEPS@@", step_lists), env=r.env), limit))
+    finally:
+        repl.close()
+        shutil.rmtree(work, ignore_errors=True)
+
+    problems = proj.policy.check(axioms) if axioms is not None else ["no axiom report"]
+    exact = not errors and axioms is not None and not problems
+    reason = ("" if exact else "; ".join(errors)[:500] if errors else "; ".join(problems))
+    raw = {
+        "name": thm.name, "module": "", "file": "<PyLeanX theorem>",
+        "first_line": first[0], "last_line": last[0], "statement": statement,
+        "source": "\n".join(lines[first[0] - 1:last[0]]), "exact": exact,
+        "evidence": {"package": "PyLeanX theorem", "source_sha256": src_sha,
+                     "axioms": list(axioms or ()), "replay_errors": errors[:5],
+                     "reason": reason},
+        "steps": [{"text": s["text"], "line": s["start"][0], "column": s["start"][1],
+                   "depth": s["depth"], "goals_before": s["before"], "goals_after": s["after"],
+                   "uses": u} for s, u in zip(steps, lemma_data.get("steps")
+                                               or [s["uses"] for s in steps], strict=True)],
+        "cited": lemma_data.get("cited", []),
+        "lemmas": {d["name"]: d for d in lemma_data.get("lemmas", [])},
+    }
+    if exact:
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
     return from_json(raw, proj)
 
 

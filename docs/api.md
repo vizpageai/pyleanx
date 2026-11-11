@@ -249,7 +249,12 @@ closure statistics. CLI: `pyleanx proof-graph NAME [--depth N] [--all] [--statem
 ## Explaining a proof: `pl.explain`
 
 `pl.explain(item, *, imports=(), project=None, timeout=None, refresh=False)` returns an
-`Explanation` of a library declaration's proof, exactly as Lean verified it:
+`Explanation` of a proof, exactly as Lean verified it. `item` is either a library
+declaration (a name, catalog lemma or `pl.mathlib` reference) or one of your own
+`pl.Theorem`s. For your own theorem, Lean replays the exact source that `verify()` checks,
+and `exact` means it was accepted in that run with no errors and an axiom audit that passes
+the project policy. `e.automation` lists the internal certificate lemmas of tactics such as
+`omega`, `ring` and `linarith`; the printout collapses them into a one-line count.
 
 - `e.source`, `e.file`, `e.first_line`, `e.last_line`, `e.statement` (as printed by Lean).
 - `e.steps` holds `ProofStep`s: `text` (the exact source of the step), `line`, `column`,

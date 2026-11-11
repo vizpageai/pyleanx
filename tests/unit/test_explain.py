@@ -117,3 +117,35 @@ def test_exported():
     assert pl.explain is not None and "explain" in pl.__all__
     with pytest.raises(TypeError):
         pl.explain(3)  # type: ignore[arg-type]
+
+
+def test_automation_internals_are_collapsed():
+    r = raw()
+    r["cited"] = ["Lean.Omega.tidy_sat", "Complex.cosh_sq_sub_sinh_sq",
+                  "Mathlib.Tactic.Ring.of_eq"]
+    r["lemmas"]["Lean.Omega.tidy_sat"] = {"name": "Lean.Omega.tidy_sat", "kind": "theorem",
+                                          "module": "Init", "type": "certificate"}
+    e = from_json(r)
+    text = str(e)
+    assert "Lemmas in the proof term: Complex.cosh_sq_sub_sinh_sq\n" in text
+    assert "Lean.Omega.tidy_sat :" not in text
+    assert "(+ 2 internal lemmas of automation tactics" in text
+    assert e.automation == ("Lean.Omega.tidy_sat", "Mathlib.Tactic.Ring.of_eq")
+
+
+def test_a_pyleanx_theorem_is_explained_from_its_verified_source(monkeypatch):
+    import sys
+
+    ex = sys.modules["pyleanx.explain"]  # `pl.explain` is the function, not the module
+
+    seen = {}
+    monkeypatch.setattr(ex, "_explain_theorem",
+                        lambda thm, proj, timeout, refresh: seen.setdefault("thm", thm))
+    monkeypatch.setattr("pyleanx.project.find_project", lambda p=None: None)
+    x = pl.symbol("x", pl.Real)
+    t = pl.Theorem("t", [x], conclusion=0 <= x**2, proof=pl.positivity())
+    assert pl.explain(t) is t and seen["thm"] is t
+    r = raw()
+    r["evidence"] = {"package": "PyLeanX theorem", "source_sha256": "ab" * 32,
+                     "axioms": ["propext"], "reason": ""}
+    assert "this is the Lean source PyLeanX verifies" in str(from_json(r))

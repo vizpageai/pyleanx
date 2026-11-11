@@ -27,7 +27,8 @@ see [docs/stability.md](docs/stability.md)).
 - `pl.explain(...)` / `pyleanx explain NAME`: a library proof step by step: its exact
   source, the goal before and after each tactic and rewrite, the lemmas each step used, and
   their statements. Lean re-elaborates the pinned source. The result is marked `exact` only
-  if the proof term and statement match the compiled ones Lean verified.
+  if the proof term and statement match the compiled ones Lean verified. It also accepts
+  your own `pl.Theorem`; Lean then replays exactly the source `verify()` checks.
 
 ### Fixed
 - Interactive sessions build and run the Lean REPL with the pinned toolchain's `lake`, so they
