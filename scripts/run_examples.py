@@ -32,6 +32,7 @@ CASES: dict[str, tuple[list[str], int]] = {
     "vlasov_maxwell_kinematics": (RUN, 0),
     "oai_ceil_residue": (RUN, 0),
     "theorem_families": (RUN, 0),  # checks that the bad row is rejected
+    "side_splitter": (RUN, 0),
 }
 
 # Examples deliberately not run here, with the reason (each must be run by hand).
