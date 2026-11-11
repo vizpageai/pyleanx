@@ -246,6 +246,29 @@ Instances, classes and projections (`instHAdd`, `HAdd.hAdd`) are left out. With 
 closure statistics. CLI: `pyleanx proof-graph NAME [--depth N] [--all] [--statements]
 [--format text|mermaid|dot|json|html] [--out FILE]`.
 
+## Explaining a proof: `pl.explain`
+
+`pl.explain(item, *, imports=(), project=None, timeout=None, refresh=False)` returns an
+`Explanation` of a library declaration's proof, exactly as Lean verified it:
+
+- `e.source`, `e.file`, `e.first_line`, `e.last_line`, `e.statement` (as printed by Lean).
+- `e.steps` holds `ProofStep`s: `text` (the exact source of the step), `line`, `column`,
+  `depth` (a rewrite rule inside `rw [...]` has depth 1), `goals_before`, `goals_after`,
+  and `uses` (the lemmas Lean recorded for that step).
+- `e.cited` lists the drawn constants in the proof term, `e.used` lists everything used, and
+  `e.lemmas[name]` gives a `LemmaInfo` (`kind`, `module`, `statement`).
+- `e.exact`, `e.exactness()`, `e.evidence`: the compiled and re-elaborated proof-term and
+  statement hashes, package, pinned revision, file SHA-256 and replay errors.
+- `e.deeper(name)` explains a lemma the proof used. `print(e)` gives the walkthrough, and
+  Jupyter renders it too. `e.to_json()` returns the same data as a dictionary.
+
+Method: one private Lean REPL process, closed afterwards. It imports the compiled module and
+probes the declaration (module, source range, proof-term hash). It then re-elaborates the
+source file with `FileCommand(allTactics, infotree)`, probes the hash again, and collects
+the tactic steps inside the declaration's range. `exact` requires a clean replay, equal
+hashes and an unmodified pinned source. CLI: `pyleanx explain NAME [--json]`. The exit code
+is 3 when the explanation is not shown to be exact.
+
 ## All of Mathlib by name: `pl.mathlib`
 
 `pl.mathlib.<Lean.Name>` resolves any Lean core / Batteries / Mathlib declaration and records

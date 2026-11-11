@@ -392,6 +392,16 @@ def cmd_proof_graph(args: argparse.Namespace) -> int:
     return 0
 
 
+# ------------------------------------------------------------------------------ explain
+def cmd_explain(args: argparse.Namespace) -> int:
+    from .explain import explain
+
+    e = explain(args.name, imports=args.imports, project=args.project, timeout=args.timeout,
+                refresh=args.refresh)
+    print(json.dumps(e.to_json(), ensure_ascii=False, indent=2) if args.json else str(e))
+    return 0 if e.exact else 3
+
+
 # ------------------------------------------------------------------------------ agent
 def cmd_agent(args: argparse.Namespace) -> int:
     from . import agent
@@ -538,6 +548,16 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--timeout", type=float)
     s.add_argument("--refresh", action="store_true", help="ignore the cached graph")
     s.set_defaults(func=cmd_proof_graph)
+
+    s = sub.add_parser("explain",
+                       help="a library proof step by step, exactly as Lean verified it")
+    s.add_argument("name", help="declaration name, e.g. Complex.sin_sq_add_cos_sq")
+    s.add_argument("--import", dest="imports", action="append", default=[])
+    s.add_argument("--project")
+    s.add_argument("--timeout", type=float)
+    s.add_argument("--refresh", action="store_true", help="ignore the cached explanation")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_explain)
 
     s = sub.add_parser("agent", help="proof-agent tools: benchmark, export problems, serve")
     s.add_argument("action", choices=["bench", "export", "serve"])

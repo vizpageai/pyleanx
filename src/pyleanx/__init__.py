@@ -47,6 +47,7 @@ from .errors import (
     TacticError,
     UnsupportedConstructError,
 )
+from .explain import Explanation, explain  # noqa: E402
 from .expr import (
     FALSE,
     TRUE,
@@ -170,7 +171,7 @@ __all__ = [
     "TheoremBank", "BankEntry", "Formalization", "BankError", "VersionMismatchError",
     "CrossSystemError", "theorem_from_canonical",
     # library declarations, infoview-style
-    "infoview", "DeclView", "proof_graph", "ProofGraph",
+    "infoview", "DeclView", "proof_graph", "ProofGraph", "explain", "Explanation",
     # general Lean vocabulary
     "Type", "LeanType", "Fn", "Prod", "Fin", "EuclideanSpace", "UNKNOWN", "var", "const", "app",
     "fun", "sum", "prod", "integral", "pair", "field", "ascribe", "smul", "norm",

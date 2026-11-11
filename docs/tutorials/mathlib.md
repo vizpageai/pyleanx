@@ -193,6 +193,64 @@ Foundation of Real.sin_sq_add_cos_sq:
   `eq_self`, …), which is otherwise summarised as "foundation".
 - From the shell: `pyleanx proof-graph Real.sin_sq_add_cos_sq --depth 3 --format html --out g.html`.
 
+## Reading a proof step by step, exactly as verified
+
+`pl.explain` shows a library proof the way a mathematician reads it. You get the source as
+written, the goal before and after every step, the lemmas each step used, and the statement
+of each of those lemmas, all reported by Lean:
+
+```python
+e = pl.explain("Complex.sin_sq_add_cos_sq")
+print(e)
+assert e.exact
+```
+
+```text
+Complex.sin_sq_add_cos_sq
+  Mathlib/Analysis/Complex/Trigonometric.lean:464-467 · mathlib d13f23b723b8
+  statement (Lean): ∀ (x : ℂ), Complex.sin x ^ 2 + Complex.cos x ^ 2 = 1
+
+Proof, as written in the source:
+    465 │ theorem sin_sq_add_cos_sq : sin x ^ 2 + cos x ^ 2 = 1 :=
+    466 │   Eq.trans (by rw [cosh_mul_I, sinh_mul_I, mul_pow, I_sq, mul_neg_one, sub_neg_eq_add, add_comm])
+    467 │     (cosh_sq_sub_sinh_sq (x * I))
+
+exact: re-elaborating this source gives the same proof term (and statement) that Lean verified
+
+Steps (goal before → after):
+  1. rw [cosh_mul_I, sinh_mul_I, mul_pow, I_sq, mul_neg_one, sub_neg_eq_add, add_comm]
+       x : ℂ
+       ⊢ sin x ^ 2 + cos x ^ 2 = cosh (x * I) ^ 2 - sinh (x * I) ^ 2
+     2. cosh_mul_I       → ⊢ sin x ^ 2 + cos x ^ 2 = cos x ^ 2 - sinh (x * I) ^ 2
+     3. sinh_mul_I       → ⊢ sin x ^ 2 + cos x ^ 2 = cos x ^ 2 - (sin x * I) ^ 2
+     4. mul_pow          → ⊢ sin x ^ 2 + cos x ^ 2 = cos x ^ 2 - sin x ^ 2 * I ^ 2
+     5. I_sq             → ⊢ sin x ^ 2 + cos x ^ 2 = cos x ^ 2 - sin x ^ 2 * -1
+     …
+Lemmas used, as Lean states them:
+  Complex.cosh_mul_I : ∀ (x : ℂ), Complex.cosh (x * Complex.I) = Complex.cos x
+  Complex.I_sq : Complex.I ^ 2 = -1
+  Complex.cosh_sq_sub_sinh_sq : ∀ (x : ℂ), Complex.cosh x ^ 2 - Complex.sinh x ^ 2 = 1
+  …
+```
+
+Read top to bottom: on the imaginary axis cosh becomes cos and sinh becomes I·sin.
+Because I² = −1, the hyperbolic identity cosh² − sinh² = 1 then becomes cos² + sin² = 1.
+`e.deeper("Complex.cosh_sq_sub_sinh_sq")` explains the next lemma down.
+
+**Why this is the proof that was verified.** Lean imports the compiled library and records
+a structural hash of the declaration's proof term. That term is the one the kernel checked
+when the library was built. Lean then re-elaborates the declaration's source file, taken
+from the pinned checkout, in full and in its own context. Every goal shown comes from that
+run. `e.exact` is `True` only when the re-elaborated proof term and statement are identical
+to the compiled ones and the source file is unmodified at the pinned revision.
+`e.evidence` holds both hashes, the revision and the file's SHA-256. If any check fails, the
+explanation says "NOT shown to be exact" and gives the reason.
+
+A step that is a single automation call, such as `simp [...]`, has its "uses" line taken
+from Lean. That line lists the lemmas the call actually applied, which the source text does
+not show. Re-checking a whole source file takes a few minutes. The result is cached. From the
+shell: `pyleanx explain Complex.sin_sq_add_cos_sq`.
+
 ## Searching: the theorem bank
 
 The bank indexes the catalogs with the statements Lean reports, searches them, and stores

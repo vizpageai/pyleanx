@@ -39,10 +39,8 @@ __all__ = ["proof_graph", "ProofGraph", "GraphNode"]
 
 GRAPH_VERSION = "2"
 
-_GRAPHER = r"""import Lean
-@@IMPORTS@@
-
-open Lean Meta
+# Lean helpers shared with pyleanx.explain: what counts as a drawn declaration.
+LEAN_HELPERS = r"""open Lean Meta
 
 private def pgKind : ConstantInfo → String
   | .thmInfo _ => "theorem"
@@ -141,6 +139,9 @@ private def pgVisible (env : Environment) (modOf : Std.HashMap Name Name) (showA
         stack := stack.push t
   return out
 
+"""
+
+_GRAPHER = "import Lean\n@@IMPORTS@@\n\n" + LEAN_HELPERS + r"""
 #eval show MetaM Unit from do
   let env ← getEnv
   let root : Name := @@ROOT@@.toName
