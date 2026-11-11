@@ -21,6 +21,9 @@ see [docs/stability.md](docs/stability.md)).
 - `pl.mathlib.<any Lean name>`: all Lean core, Batteries and Mathlib declarations by name, with
   the defining module found automatically (index of the pinned sources);
   `pl.mathlib.find/search`, `pyleanx mathlib find|search|index`.
+- `pl.proof_graph(...)` / `pyleanx proof-graph NAME`: the lemmas, definitions and types a
+  theorem rests on, as computed by Lean, down to its axioms, with statistics of the full
+  dependency closure. Shown as a text tree, Mermaid (Jupyter), DOT, JSON or HTML.
 
 ### Fixed
 - Interactive sessions build and run the Lean REPL with the pinned toolchain's `lake`, so they

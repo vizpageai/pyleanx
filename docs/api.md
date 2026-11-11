@@ -220,6 +220,32 @@ a `DeclViews` tuple for several items) and renders as a Lean block in Jupyter. P
 splits the signature for layout (instances are shown as `inst✝`, numbering omitted); this is
 display, never verification. CLI: `pyleanx infoview NAME... [--import MODULE] [--json]`.
 
+## Proof graphs: what a theorem rests on
+
+`pl.proof_graph(item, depth=2, *, max_nodes=60, detail="lemmas", imports=(), project=None,
+timeout=None, refresh=False)` returns a `ProofGraph`. It shows the lemmas, definitions and
+types that the declaration's statement and proof use, down to `depth` levels, together with
+the axioms underneath and statistics of the full dependency closure. Lean computes the
+graph: a metaprogram run by the pinned toolchain reads each declaration's statement and its
+proof term or body. Nothing is parsed from source text.
+
+- `g.axioms`: every axiom the declaration depends on (the `#print axioms` set).
+- `g.nodes[name]` is a `GraphNode`: `kind`, `module`, `type` (the statement), `body_uses`,
+  `statement_uses`, and `axioms` for that node alone.
+- `g.uses(name)`, `g.used_by(name)`, `g.hidden(name)`, `g.edges()`.
+- `print(g)` shows a text tree plus the foundation summary. `g.tree(statements=True)`
+  includes each statement. In Jupyter, `g` renders as a Mermaid diagram.
+- `g.to_mermaid()`, `g.to_dot()`, `g.to_json()`, `g.to_html()`, `g.save_html(path)`.
+
+Lean's internal helpers (`foo.proof_1`, `match_1`) are looked through. Constructors,
+recursors and recursion helpers (`Nat.below`, `Nat.brecOn`) are drawn as their type.
+Instances, classes and projections (`instHAdd`, `HAdd.hAdd`) are left out. With the default
+`detail="lemmas"`, Lean's base logic (`Eq`, `True`, `rfl`, `congrArg`, `Eq.mpr`, simp's
+`eq_self`: everything in `Init.Prelude`, `Init.Core`, `Init.SimpLemmas` and
+`Init.PropLemmas`) is listed under "foundation" instead of drawn. All of these still count toward the axioms and the
+closure statistics. CLI: `pyleanx proof-graph NAME [--depth N] [--all] [--statements]
+[--format text|mermaid|dot|json|html] [--out FILE]`.
+
 ## All of Mathlib by name: `pl.mathlib`
 
 `pl.mathlib.<Lean.Name>` resolves any Lean core / Batteries / Mathlib declaration and records

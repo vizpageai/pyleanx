@@ -366,6 +366,32 @@ def cmd_infoview(args: argparse.Namespace) -> int:
     return 0
 
 
+# ------------------------------------------------------------------------------ proof graph
+def cmd_proof_graph(args: argparse.Namespace) -> int:
+    from .proofgraph import proof_graph
+
+    g = proof_graph(args.name, depth=args.depth, max_nodes=args.max_nodes,
+                    detail="all" if args.all else "lemmas", imports=args.imports,
+                    project=args.project, timeout=args.timeout, refresh=args.refresh)
+    fmt = args.format
+    if fmt == "json":
+        text = json.dumps(g.to_json(), ensure_ascii=False, indent=2)
+    elif fmt == "mermaid":
+        text = g.to_mermaid()
+    elif fmt == "dot":
+        text = g.to_dot()
+    elif fmt == "html":
+        text = g.to_html()
+    else:
+        text = g.tree(statements=args.statements) + "\n\n" + g.foundation()
+    if args.out:
+        Path(args.out).write_text(text, encoding="utf-8")
+        print(f"wrote {args.out}")
+    else:
+        print(text)
+    return 0
+
+
 # ------------------------------------------------------------------------------ agent
 def cmd_agent(args: argparse.Namespace) -> int:
     from . import agent
@@ -495,6 +521,23 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--timeout", type=float)
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_infoview)
+
+    s = sub.add_parser("proof-graph",
+                       help="what a theorem's proof rests on, down to Lean's axioms")
+    s.add_argument("name", help="declaration name, e.g. Real.sin_sq_add_cos_sq")
+    s.add_argument("--depth", type=int, default=2, help="levels to draw (default 2)")
+    s.add_argument("--max-nodes", type=int, default=60)
+    s.add_argument("--all", action="store_true",
+                   help="also expand Lean's base logic glue (rfl, congrArg, ...)")
+    s.add_argument("--statements", action="store_true", help="show each statement (text)")
+    s.add_argument("--format", choices=["text", "mermaid", "dot", "json", "html"],
+                   default="text")
+    s.add_argument("--out", help="write to a file instead of printing")
+    s.add_argument("--import", dest="imports", action="append", default=[])
+    s.add_argument("--project")
+    s.add_argument("--timeout", type=float)
+    s.add_argument("--refresh", action="store_true", help="ignore the cached graph")
+    s.set_defaults(func=cmd_proof_graph)
 
     s = sub.add_parser("agent", help="proof-agent tools: benchmark, export problems, serve")
     s.add_argument("action", choices=["bench", "export", "serve"])

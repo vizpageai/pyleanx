@@ -82,6 +82,7 @@ from .faithful import SameStatement, same_statement  # noqa: E402
 from .infoview import DeclView, infoview
 from .libs import add_library, build_library, list_libraries, remove_library  # noqa: E402
 from .project import LeanProject, find_project
+from .proofgraph import ProofGraph, proof_graph  # noqa: E402
 from .proofs import (  # noqa: E402
     apply,
     assumption,
@@ -169,7 +170,7 @@ __all__ = [
     "TheoremBank", "BankEntry", "Formalization", "BankError", "VersionMismatchError",
     "CrossSystemError", "theorem_from_canonical",
     # library declarations, infoview-style
-    "infoview", "DeclView",
+    "infoview", "DeclView", "proof_graph", "ProofGraph",
     # general Lean vocabulary
     "Type", "LeanType", "Fn", "Prod", "Fin", "EuclideanSpace", "UNKNOWN", "var", "const", "app",
     "fun", "sum", "prod", "integral", "pair", "field", "ascribe", "smul", "norm",

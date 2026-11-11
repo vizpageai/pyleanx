@@ -137,6 +137,62 @@ Mathlib states results in general structures (here any lattice-ordered additive 
 PyLeanX instantiates them at ℝ. From the shell:
 `pyleanx infoview abs_add_le --import Mathlib.Algebra.Order.Group.Unbundled.Abs`.
 
+## What a theorem rests on: proof graphs
+
+`pl.proof_graph` shows which lemmas, definitions and types a theorem's proof uses, level by
+level, down to the axioms of Lean's logic. Lean computes the graph from the compiled proof.
+PyLeanX does not read it from source text.
+
+```python
+g = pl.proof_graph("Nat.add_comm", depth=2)
+print(g)
+assert g.axioms == ()                      # a core lemma that needs no axioms at all
+assert "Nat.succ_add" in g.uses("Nat.add_comm")
+```
+
+```text
+Nat.add_comm  [theorem · Init.Data.Nat.Basic]
+├─ Nat.zero_add  [theorem · Init.Data.Nat.Basic]
+└─ Nat.succ_add  [theorem · Init.Data.Nat.Basic]
+
+Foundation of Nat.add_comm:
+  axioms: none
+  Lean's built-in types reached: Nat, Eq, PProd, PUnit
+  full closure: 39 declarations (Lean core 39); longest dependency chain: 5 steps
+```
+
+For a Mathlib theorem the graph shows the route the proof takes. Here the real identity is
+proved by passing to the complex numbers (abridged):
+
+```text
+>>> print(pl.proof_graph(an.sin_sq_add_cos_sq))
+Real.sin_sq_add_cos_sq  [theorem · Mathlib.Analysis.Complex.Trigonometric]
+├─ Complex.ofReal_sin  [theorem · …]
+│  └─ Real.sin  [def · …]
+│     └─ Complex.sin  [def · …]
+│        ├─ Complex.exp  [def · Mathlib.Analysis.Complex.Exponential]
+│        └─ Complex.I  [def · Mathlib.Basic.Complex.Basic]
+├─ Complex.ofReal_cos  [theorem · …]
+├─ Complex.sin_sq_add_cos_sq  [theorem · …]
+│  ├─ Complex.cosh_mul_I, Complex.sinh_mul_I, Complex.cosh_sq_sub_sinh_sq, Complex.I_sq, …
+…
+Foundation of Real.sin_sq_add_cos_sq:
+  axioms: Classical.choice, Quot.sound, propext
+  full closure: 9,110 declarations (Mathlib 5,468, Lean core 3,588, Batteries 54);
+  longest dependency chain: 32 steps
+```
+
+- In Jupyter, `g` draws a diagram. Solid arrows mean "used in the proof", dotted arrows mean
+  "mentioned in the statement", and thin links connect the drawn edge of the graph to the
+  axioms it rests on.
+- `depth=` and `max_nodes=` limit what is drawn. The axioms and the closure numbers always
+  cover everything.
+- `g.tree(statements=True)` adds each statement. `g.save_html("graph.html")` writes a
+  standalone page, and `g.to_dot()` / `g.to_json()` export the graph.
+- `detail="all"` also draws Lean's base logic (`Eq`, `rfl`, `congrArg`, simp's
+  `eq_self`, …), which is otherwise summarised as "foundation".
+- From the shell: `pyleanx proof-graph Real.sin_sq_add_cos_sq --depth 3 --format html --out g.html`.
+
 ## Searching: the theorem bank
 
 The bank indexes the catalogs with the statements Lean reports, searches them, and stores
