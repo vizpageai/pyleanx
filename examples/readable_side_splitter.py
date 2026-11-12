@@ -31,7 +31,7 @@ side_splitter = pl.Theorem(
     conclusion=geo.dist(A, D) / geo.dist(A, B) == geo.dist(A, E) / geo.dist(A, C),
     proof=pl.proof(
         pl.claim(geo.angle(A, B, C) == geo.angle(A, D, E), because=geo.corresponding_angles),
-        pl.claim(geo.angle(B, C, A) == geo.angle(D, E, A), because=geo.corresponding_angles_2),
+        pl.claim(geo.angle(B, C, A) == geo.angle(D, E, A), because=geo.corresponding_angles),
         pl.claim(geo.similar((A, B, C), (A, D, E)), because=geo.similar_AA),
         pl.conclude(because=geo.similar_sides),
     ),

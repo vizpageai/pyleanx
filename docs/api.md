@@ -328,21 +328,35 @@ See the tutorial [Writing proofs like a mathematician](tutorials/written-proofs.
 
 | Python | Lean |
 |---|---|
-| `pl.let(f, lambda t: …)` (`f` a symbol of sort `pl.Fn(…)`) | `set f : T := fun t => … with f_def` |
+| `pl.let(f, lambda t: …)` / `pl.let(N, expr)` | `set f : T := … with f_def` |
 | `pl.claim(P, because=[facts], note="…", name="", proof=None)` | `have stepN : P := by <gap filler>` |
 | `pl.conclude(because=[facts], note="…")` | the goal, closed by the gap filler |
+| `pl.fix(x, …, assume={"h": P})`, `pl.assume(P, name="h")` | `intro x (h : P)` |
+| `pl.take(w, …)` | `refine ⟨w, ?_⟩` |
+| `pl.choose(x, such_that=P, because=…, names="h")` | `obtain ⟨x, h⟩ : ∃ x, P := by <gap filler>` |
+| `pl.suppose_not(P=None, name="h")` | `by_contra h_neg; have h : P := …` |
+| `pl.cases_on(pl.case(P₁, *steps, name="h"), …, because=…)` | `have : P₁ ∨ …; rcases … with h \| h` |
+| `pl.induction_on(n, base=[…], step=[…], k=k, ih="ih")` | `induction n with \| zero => … \| succ k ih => …` |
+| `pl.chain(a, (rel, b[, because[, note]]), …, name="")` | `have : a R z := by calc …` (concludes when last) |
+| `pl.suffices(P, because=…, name="h")` | `suffices h : P by <gap filler>` |
+| `pl.type_param("G", "Group", label="group")` | binders `{G : Type*} [Group G]` |
 | `pl.Theorem(…, avoid=[lemmas])` | `simp [-lemma]` in gap fillers, plus a Lean check that fails if the proof term refers to them |
-| `thm.prose(result=None)`, `pl.prose(thm, result)` | the proof as numbered steps (text / Jupyter) |
+| `thm.prose(result=None)`, `pl.prose(thm, result)` | the proof as numbered, nested steps (text / Jupyter) |
 
-The gap filler applies cited facts (discharging side conditions from the context), and tries
-`simp`/`norm_num`/`linarith`/`nlinarith`/`field_simp`/`fun_prop`/`positivity` with them,
+The gap filler uses cited facts directly, applies them (discharging side conditions from the
+context), uses one half of a cited `∧`/`↔`, and tries `simp`/`norm_num`/`linarith`/
+`nlinarith`/`omega`/`ring`/`field_simp`/`push_cast`/`fun_prop`/`positivity`/splitting `∧`,
 also after unfolding `pl.let` definitions and introducing `∀` variables; each attempt must
-close the step. Vocabulary added for written proofs: `an.deriv(f, x)`,
-`an.differentiable(f)`, `an.constant_of_zero_derivative`, `an.deriv_sin`, `an.deriv_cos`,
-`an.sin_zero`, `an.cos_zero`, `an.sqrt_mul`; `geo.line`, `geo.parallel`, `geo.on_segment`,
-`geo.collinear`, `geo.triangle`, `geo.similar`, `geo.similar_AA`, and the shipped facts
-`geo.corresponding_angles`, `geo.corresponding_angles_2`, `geo.similar_sides` (Lean
-theorems with proofs, emitted into every file that cites them).
+close the step.
+
+Vocabulary: `pyleanx.numbers` (`divides`, `even`, `odd`, `prime`, `factorial`, `gcd` and
+parity/divisibility/prime facts); `an.tendsto`, `an.tendsto_iff` (ε–N, shipped),
+`an.triangle_inequality`, `an.deriv`, `an.differentiable` and calculus facts;
+`alg.group`/`abelian_group`/`ring`/`comm_ring`/`field`, `alg.inv` and group facts;
+`geo.line`, `geo.parallel`, `geo.on_segment`, `geo.collinear`, `geo.triangle`,
+`geo.similar`, `geo.similar_AA`, and the shipped facts `geo.corresponding_angles` (both
+pairs of angles) and `geo.similar_sides`. Shipped facts are Lean theorems with proofs,
+emitted into every file that cites them.
 
 ## Libraries and generated bindings
 

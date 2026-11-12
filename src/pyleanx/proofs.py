@@ -751,7 +751,8 @@ class Ext(Tactic):
 # Written proofs: claims with reasons (pl.claim / pl.conclude / pl.let)
 # =====================================================================================
 
-_JUSTIFY_IMPORTS = (*_AUTO_IMPORTS, "Aesop", "Mathlib.Tactic.FunProp")
+_JUSTIFY_IMPORTS = (*_AUTO_IMPORTS, "Aesop", "Mathlib.Tactic.FunProp",
+                    "Mathlib.Tactic.NormNum.Basic", "Mathlib.Tactic.Ring.RingNF")
 
 
 @dataclass(frozen=True)
@@ -777,14 +778,23 @@ class Justify(Tactic):
         h = (" [" + ", ".join(fs) + "]") if fs else ""
         simp_args = fs + [f"-{a}" for a in self.avoid]
         hs = (" [" + ", ".join(simp_args) + "]") if simp_args else ""
-        close = "first | assumption | rfl | fun_prop | positivity | linarith | (simp_all; done)"
-        alts = ["assumption"]
+        close = ("first | assumption | rfl | omega | fun_prop | positivity | linarith | "
+                 "(simp_all; done)")
+        alts = ["assumption", "contradiction"]
         alts += [f"exact {f}" for f in fs]
-        alts += [f"(apply {f}; all_goals ({close}))" for f, t in zip(fs, self.facts, strict=True)
-                 if not isinstance(t, Expr)]
-        alts += ["rfl", "ring1", "positivity", "fun_prop", f"linarith{h}",
+        lemmas = [f for f, t in zip(fs, self.facts, strict=True) if not isinstance(t, Expr)]
+        alts += [f"(apply {f}; all_goals ({close}))" for f in lemmas]
+        # One half of a conjunction / one direction of an equivalence. Matching is limited
+        # to reducible definitions and instances, so trying the wrong half fails at once
+        # instead of unfolding definitions (a timeout there would end the whole search).
+        alts += [f"(with_reducible_and_instances apply {half}; "
+                 f"with_reducible_and_instances apply {f}; all_goals ({close}))"
+                 for f in lemmas for half in ("And.left", "And.right", "Iff.mp", "Iff.mpr")]
+        alts += ["rfl", "ring1", "omega", "positivity", "fun_prop", f"linarith{h}",
+                 "(congr 1; ring1)", "(push_cast; ring1)",
                  f"(norm_num{hs}; done)", f"(simp{hs}; done)", f"(simp{hs}; ring1)",
-                 f"nlinarith{h}", "(field_simp; ring1)", f"(simp_all{hs}; done)"]
+                 f"nlinarith{h}", "(field_simp; ring1)", f"(simp_all{hs}; done)",
+                 f"(constructor; all_goals ({close}))"]
         if not self.avoid:  # aesop's simp set cannot be restricted here
             alts.append("(aesop; done)")
         return alts
@@ -884,18 +894,8 @@ class Let(Tactic):
 
 
 def with_avoid(t: Tactic, avoid: tuple[str, ...]) -> Tactic:
-    """Tell the gap-filling steps of a proof not to use the lemmas in ``avoid``."""
-    from dataclasses import replace
-
-    if not avoid:
-        return t
-    if isinstance(t, Steps):
-        return replace(t, tactics=tuple(with_avoid(x, avoid) for x in t.tactics))
-    if isinstance(t, Branches):
-        return replace(t, branches=tuple(with_avoid(x, avoid) for x in t.branches))
-    if isinstance(t, (Claim, Conclude, Justify)):
-        return replace(t, avoid=avoid)
-    return t
+    """Prepare a proof (see :func:`prepare`) whose gap-filling must not use ``avoid``."""
+    return prepare(t, avoid)
 
 
 def _proof_arg(p: Tactic | None, what: str) -> Tactic | None:
@@ -993,23 +993,18 @@ def ext(*names: str) -> Ext:
 def proof(*steps_: Tactic) -> Tactic:
     """A proof as a sequence of steps (``pl.proof(pl.claim(...), pl.conclude(...))``).
 
-    Unnamed claims are named ``step1``, ``step2``, … by position, and claims after a
-    ``pl.let`` may see through that definition.
+    Steps are named ``step1``, ``step2``, … by position when the theorem is proved
+    (nested blocks: ``step3_1``, …), and steps after a ``pl.let`` may see through that
+    definition. A block ending in a :func:`chain` concludes with it.
     """
-    from dataclasses import replace
-
-    out: list[Tactic] = []
-    lets: list[str] = []
-    n = 0
-    for s in steps_:
-        if isinstance(s, Let):
-            lets.append(s.eq_name)
-        elif isinstance(s, Claim):
-            n += 1
-            s = replace(s, name=s.name or f"step{n}", unfold=tuple(lets))
-        elif isinstance(s, Conclude):
-            s = replace(s, unfold=tuple(lets))
-        out.append(s)
+    out = list(steps_)
+    for x in out:
+        if not isinstance(x, Tactic):
+            raise TacticError(f"pl.proof takes proof steps (pl.claim, …), got {x!r}")
+    if not out:
+        raise TacticError("pl.proof needs at least one step")
+    if isinstance(out[-1], Chain):
+        out.append(Conclude(origin=out[-1].origin))
     return steps(*out) if len(out) != 1 else out[0]
 
 
@@ -1081,6 +1076,444 @@ def let(var: object, value: object, *, note: str = "") -> Let:
 
 
 # =====================================================================================
+# More written-proof moves: let x be arbitrary, take, choose, contradiction, cases,
+# induction, chains of (in)equalities, "it suffices to show"
+# =====================================================================================
+
+_CONTRA_IMPORTS = ("Mathlib.Tactic.ByContra",)
+
+
+@dataclass(frozen=True)
+class _Justified(Tactic):
+    """A step whose statement is closed by :class:`Justify` from cited facts."""
+
+    facts: tuple[Term, ...] = ()
+    note: str = ""
+    unfold: tuple[str, ...] = ()
+    avoid: tuple[str, ...] = field(default=(), compare=False)
+
+    def justification(self) -> Tactic:
+        return Justify(self.facts, self.unfold, self.avoid)
+
+    def imports(self) -> tuple[str, ...]:
+        return self.justification().imports()
+
+
+@dataclass(frozen=True)
+class Fix(Tactic):
+    """*Let x be arbitrary* / *assume P*: ``intro x (h : P)`` on a ∀ or ⇒ goal."""
+
+    vars: tuple[Var, ...] = ()
+    hyps: tuple[tuple[str, Expr], ...] = ()
+    note: str = ""
+
+    def imports(self) -> tuple[str, ...]:
+        from .imports import expr_imports
+
+        return tuple(i for _, p in self.hyps for i in expr_imports(p))
+
+    def canonical(self) -> Any:
+        return ["fix", [v.canonical() for v in self.vars],
+                [[n, p.canonical()] for n, p in self.hyps], self.note]
+
+
+@dataclass(frozen=True)
+class Take(Tactic):
+    """*Take x = w*: provide the witness of an ∃ goal (``refine ⟨w, ?_⟩``)."""
+
+    witnesses: tuple[Expr, ...] = ()
+    note: str = ""
+
+    def imports(self) -> tuple[str, ...]:
+        from .imports import expr_imports
+
+        return tuple(i for w in self.witnesses for i in expr_imports(w))
+
+    def canonical(self) -> Any:
+        return ["take", [w.canonical() for w in self.witnesses], self.note]
+
+
+@dataclass(frozen=True)
+class Choose(_Justified):
+    """*Choose x with P(x)*: ``obtain ⟨x, h⟩ : ∃ x, P x := by …`` from the cited facts."""
+
+    vars: tuple[Var, ...] = ()
+    prop: Expr = None  # type: ignore[assignment]
+    names: tuple[str, ...] = ()
+
+    def statement(self) -> Expr:
+        from .expr import Exists
+
+        return Exists(list(self.vars), self.prop)
+
+    def canonical(self) -> Any:
+        return ["choose", [v.canonical() for v in self.vars], self.prop.canonical(),
+                list(self.names), [_canon_term(t) for t in self.facts], self.note,
+                list(self.unfold)]
+
+
+@dataclass(frozen=True)
+class SupposeNot(Tactic):
+    """*Suppose, for contradiction, that P*: ``by_contra``; the goal becomes ``False``.
+
+    ``prop`` is the assumption as the mathematician states it (``p ≤ n`` for the goal
+    ``n < p``); Lean checks it follows from the negated goal. ``None`` means "¬ goal".
+    """
+
+    prop: Expr | None = None
+    name: str = "h"
+    note: str = ""
+    IMPORTS = _CONTRA_IMPORTS
+
+    def canonical(self) -> Any:
+        return ["suppose_not", self.prop.canonical() if self.prop is not None else None,
+                self.name, self.note]
+
+
+@dataclass(frozen=True)
+class Case:
+    """One case of a case split: its assumption and the proof in that case."""
+
+    prop: Expr
+    body: Tactic
+    name: str = "h"
+    note: str = ""
+
+    def canonical(self) -> Any:
+        return [self.prop.canonical(), self.body.canonical(), self.name, self.note]
+
+
+@dataclass(frozen=True)
+class CaseSplit(_Justified):
+    """*Either P₁ or P₂ (or …)*: prove the disjunction from the facts, then each case."""
+
+    cases: tuple[Case, ...] = ()
+    name: str = ""
+
+    def disjunction(self) -> Expr:
+        from .expr import Or
+
+        return Or(*(c.prop for c in self.cases))
+
+    def sub_tactics(self) -> tuple[Tactic, ...]:
+        return tuple(c.body for c in self.cases)
+
+    def imports(self) -> tuple[str, ...]:
+        return (*super().imports(), *(i for c in self.cases for i in c.body.imports()))
+
+    def canonical(self) -> Any:
+        return ["case_split", [c.canonical() for c in self.cases],
+                [_canon_term(t) for t in self.facts], self.note, self.name, list(self.unfold)]
+
+
+@dataclass(frozen=True)
+class InductionOn(Tactic):
+    """Induction on a natural number: base case 0, then from ``k`` to ``k + 1``."""
+
+    var: Var = None  # type: ignore[assignment]
+    base: Tactic = None  # type: ignore[assignment]
+    step: Tactic = None  # type: ignore[assignment]
+    k: Var = None  # type: ignore[assignment]
+    ih: str = "ih"
+    note: str = ""
+
+    def sub_tactics(self) -> tuple[Tactic, ...]:
+        return (self.base, self.step)
+
+    def imports(self) -> tuple[str, ...]:
+        return (*self.base.imports(), *self.step.imports())
+
+    def canonical(self) -> Any:
+        return ["induction_on", self.var.canonical(), self.base.canonical(),
+                self.step.canonical(), self.k.canonical(), self.ih, self.note]
+
+
+_REL_OPS = {"=": "eq", "≤": "le", "<": "lt", "≥": "ge", ">": "gt"}
+
+
+def chain_relation(rels: Iterable[str]) -> str:
+    """The relation a chain proves: ``=`` and ``≤`` give ``≤``, any ``<`` gives ``<``."""
+    rs = set(rels)
+    if rs <= {"="}:
+        return "="
+    if rs <= {"=", "≤", "<"}:
+        return "<" if "<" in rs else "≤"
+    if rs <= {"=", "≥", ">"}:
+        return ">" if ">" in rs else "≥"
+    raise TacticError(f"a chain cannot mix the relations {sorted(rs)}")
+
+
+@dataclass(frozen=True)
+class Chain(Tactic):
+    """``a = b ≤ c < d``, each link with its own reason (Lean: a ``calc`` block)."""
+
+    first: Expr = None  # type: ignore[assignment]
+    links: tuple[tuple[str, Expr, tuple[Term, ...], str], ...] = ()
+    name: str = ""
+    unfold: tuple[str, ...] = ()
+    avoid: tuple[str, ...] = field(default=(), compare=False)
+
+    def relation(self) -> str:
+        return chain_relation(r for r, _, _, _ in self.links)
+
+    def statement(self) -> Expr:
+        from .expr import _compare
+
+        return _compare(_REL_OPS[self.relation()], self.first, self.links[-1][1])
+
+    def as_calc(self) -> Calc:
+        return Calc(first=self.first, links=tuple(
+            (r, e, Justify(f, self.unfold, self.avoid)) for r, e, f, _ in self.links))
+
+    def imports(self) -> tuple[str, ...]:
+        return self.as_calc().imports()
+
+    def sub_tactics(self) -> tuple[Tactic, ...]:
+        return ()
+
+    def canonical(self) -> Any:
+        return ["chain", self.name, self.first.canonical(),
+                [[r, e.canonical(), [_canon_term(t) for t in f], n]
+                 for r, e, f, n in self.links], list(self.unfold)]
+
+
+@dataclass(frozen=True)
+class Suffices(_Justified):
+    """*It suffices to show P*: the goal follows from P (by the facts); then prove P."""
+
+    prop: Expr = None  # type: ignore[assignment]
+    name: str = "h"
+
+    def canonical(self) -> Any:
+        return ["suffices", self.prop.canonical(), self.name,
+                [_canon_term(t) for t in self.facts], self.note, list(self.unfold)]
+
+
+def _block_arg(body: object, what: str) -> Tactic:
+    if isinstance(body, Tactic):
+        return body
+    if isinstance(body, (list, tuple)) and body and all(isinstance(b, Tactic) for b in body):
+        return proof(*body)
+    raise TacticError(f"{what}: give the proof steps (a list of pl.claim(...), …)")
+
+
+def _vars(vs: object, what: str) -> tuple[Var, ...]:
+    items = list(vs) if isinstance(vs, (list, tuple)) else [vs]
+    if not items or not all(isinstance(v, Var) for v in items):
+        raise TacticError(f"{what} takes symbols (pl.symbol / pl.symbols)")
+    return tuple(items)  # type: ignore[arg-type]
+
+
+def _named_props(given: object, default: str, what: str) -> tuple[tuple[str, Expr], ...]:
+    from .expr import _as_prop
+
+    if given is None:
+        return ()
+    if isinstance(given, dict):
+        out = []
+        for k, v in given.items():
+            validate_identifier(k, f"{what} hypothesis name")
+            out.append((k, _as_prop(v, what)))
+        return tuple(out)
+    items = list(given) if isinstance(given, (list, tuple)) else [given]
+    names = [default] if len(items) == 1 else [f"{default}{i}" for i in range(1, len(items) + 1)]
+    return tuple((n, _as_prop(v, what)) for n, v in zip(names, items, strict=True))
+
+
+def fix(*variables: Var, assume: object = None, note: str = "") -> Fix:
+    """*Let x be arbitrary* (and *assume P*): introduces the ∀-variables of the goal and,
+    with ``assume``, its hypotheses. ``assume`` is a proposition (named ``h``) or a dict
+    ``{"hε": eps > 0}``; Lean checks each one is exactly what the goal provides.
+
+        pl.fix(eps, assume={"hε": eps > 0})        # Let ε > 0.
+    """
+    vs = _vars(list(variables), "pl.fix") if variables else ()
+    hyps = _named_props(assume, "h", "pl.fix")
+    if not vs and not hyps:
+        raise TacticError("pl.fix needs variables or assume=")
+    return Fix(vars=vs, hyps=hyps, note=note, origin=caller_origin())
+
+
+def assume(prop: object, *, name: str = "h", note: str = "") -> Fix:
+    """*Assume P* (on a goal ``P → Q``): introduce the hypothesis ``name : P``."""
+    validate_identifier(name, "assumption name")
+    return Fix(hyps=_named_props({name: prop}, name, "pl.assume"), note=note,
+               origin=caller_origin())
+
+
+def take(*witnesses: object, note: str = "") -> Take:
+    """*Take x = w*: the witness(es) for an ∃ goal (``pl.take(eps / 2)``)."""
+    from .expr import _lift
+
+    if not witnesses:
+        raise TacticError("pl.take needs a witness")
+    return Take(witnesses=tuple(_lift(w) for w in witnesses), note=note,
+                origin=caller_origin())
+
+
+def choose(variables: object, such_that: object, because: object = None, *,
+           names: str | Iterable[str] = "h", note: str = "") -> Choose:
+    """*Choose x with P(x)* (by the cited facts): ``P`` may use the new variables, and
+    ``names`` names its parts (``"hp hdiv"`` splits ``A ∧ B`` into two hypotheses)."""
+    from .expr import _as_prop
+
+    vs = _vars(variables, "pl.choose")
+    ns = names.split() if isinstance(names, str) else list(names)
+    if not ns:
+        raise TacticError("pl.choose needs a name for the chosen property")
+    for n in ns:
+        validate_identifier(n, "pl.choose name")
+    return Choose(vars=vs, prop=_as_prop(such_that, "pl.choose"), names=tuple(ns),
+                  facts=_facts(because), note=note, origin=caller_origin())
+
+
+def suppose_not(prop: object = None, *, name: str = "h", note: str = "") -> SupposeNot:
+    """*Suppose, for contradiction, that P*. ``prop`` is the assumption in your words
+    (``p <= n`` when proving ``n < p``); omit it for "suppose the claim is false".
+    The rest of the block must reach a contradiction (``pl.conclude(because=…)``)."""
+    from .expr import _as_prop
+
+    validate_identifier(name, "pl.suppose_not name")
+    return SupposeNot(prop=_as_prop(prop, "pl.suppose_not") if prop is not None else None,
+                      name=name, note=note, origin=caller_origin())
+
+
+def case(prop: object, *body: Tactic, name: str = "h", note: str = "") -> Case:
+    """One case for :func:`cases_on`: ``pl.case(n_even, step, step, …)``."""
+    from .expr import _as_prop
+
+    validate_identifier(name, "case name")
+    return Case(prop=_as_prop(prop, "pl.case"), body=_block_arg(list(body), "pl.case"),
+                name=name, note=note)
+
+
+def cases_on(*cases_: Case, because: object = None, note: str = "") -> CaseSplit:
+    """*Either P₁ or P₂*: split into cases. ``because`` proves ``P₁ ∨ P₂ ∨ …``
+    (e.g. ``nt.even_or_odd``); two cases ``P``, ``¬P`` need no reason."""
+    from .expr import NotP
+
+    if len(cases_) < 2 or not all(isinstance(c, Case) for c in cases_):
+        raise TacticError("pl.cases_on needs at least two pl.case(...)")
+    facts = _facts(because)
+    second = cases_[1].prop
+    if not facts and len(cases_) == 2 and isinstance(second, NotP) \
+            and second.arg._key() == cases_[0].prop._key():
+        facts = (Name("Classical.em", label="either P or not P"),)
+    return CaseSplit(cases=tuple(cases_), facts=facts, note=note, origin=caller_origin())
+
+
+def induction_on(n: Var, *, base: object, step: object, k: Var | None = None,
+                 ih: str = "ih", note: str = "") -> InductionOn:
+    """Induction on the natural number ``n``: ``base`` proves the claim for 0, ``step``
+    proves it for ``k + 1`` assuming it for ``k`` (hypothesis ``ih``)."""
+    from .expr import make_var
+
+    if not isinstance(n, Var):
+        raise TacticError("pl.induction_on needs the variable to induct on")
+    validate_identifier(ih, "induction hypothesis name")
+    kv = k if k is not None else make_var("k", n.sort)
+    return InductionOn(var=n, base=_block_arg(base, "base case"),
+                       step=_block_arg(step, "inductive step"), k=kv, ih=ih, note=note,
+                       origin=caller_origin())
+
+
+def chain(first: object, *links: object, name: str = "") -> Chain:
+    """``a = b ≤ c``, each link ``(relation, term)``, ``(relation, term, because)`` or
+    ``(relation, term, because, note)``. Relations: = ≤ < ≥ > (or ASCII). As the last step
+    of a block it proves the goal; otherwise it is a claim (``first`` R ``last``)."""
+    from .expr import _lift
+
+    out = []
+    for link in links:
+        if not isinstance(link, tuple) or len(link) not in (2, 3, 4):
+            raise TacticError("chain links are (relation, term[, because[, note]])")
+        rel = CALC_RELATIONS.get(link[0])
+        if rel is None or rel == "≠":
+            raise TacticError(f"unknown chain relation {link[0]!r}")
+        because = link[2] if len(link) > 2 else None
+        note = link[3] if len(link) > 3 else ""
+        if not isinstance(note, str):
+            raise TacticError("a chain link's note must be a string")
+        out.append((rel, _lift(link[1]), _facts(because), note))
+    if not out:
+        raise TacticError("pl.chain needs at least one link")
+    chain_relation(r for r, _, _, _ in out)
+    if name:
+        validate_identifier(name, "chain name")
+    return Chain(first=_lift(first), links=tuple(out), name=name, origin=caller_origin())
+
+
+def suffices(prop: object, because: object = None, *, name: str = "h",
+             note: str = "") -> Suffices:
+    """*It suffices to show P*: the goal follows from ``P`` and ``because``; the rest of
+    the block proves ``P``."""
+    from .expr import _as_prop
+
+    validate_identifier(name, "pl.suffices name")
+    return Suffices(prop=_as_prop(prop, "pl.suffices"), name=name, facts=_facts(because),
+                    note=note, origin=caller_origin())
+
+
+# =====================================================================================
+# Preparing a written proof: step names, visible definitions, avoided lemmas
+# =====================================================================================
+
+
+def _flatten(t: Tactic) -> list[Tactic]:
+    if isinstance(t, Steps):
+        return [x for s in t.tactics for x in _flatten(s)]
+    return [t]
+
+
+def prepare(t: Tactic, avoid: tuple[str, ...] = (), *, prefix: str = "step",
+            lets: tuple[str, ...] = ()) -> Tactic:
+    """Name unnamed steps by position (``step2``; nested blocks ``step2_1``), let later
+    steps see through ``pl.let`` definitions, and pass ``avoid`` to every gap-filling
+    step. Idempotent; run by ``Theorem.prove``."""
+    from dataclasses import replace
+
+    out: list[Tactic] = []
+    pos = 0
+    seen = tuple(lets)
+    for s in _flatten(t):
+        if not isinstance(s, Conclude):
+            pos += 1
+        here = f"{prefix}{pos}"
+        if isinstance(s, Let):
+            seen = (*seen, s.eq_name)
+        elif isinstance(s, Claim):
+            name = s.name or here
+            sub = prepare(s.proof, avoid, prefix=f"{name}_", lets=seen) if s.proof else None
+            s = replace(s, name=name, unfold=seen, avoid=avoid, proof=sub)
+        elif isinstance(s, Conclude):
+            sub = (prepare(s.proof, avoid, prefix=f"{prefix}end_", lets=seen)
+                   if s.proof else None)
+            s = replace(s, unfold=seen, avoid=avoid, proof=sub)
+        elif isinstance(s, Chain):
+            s = replace(s, name=s.name or here, unfold=seen, avoid=avoid)
+        elif isinstance(s, CaseSplit):
+            cs = tuple(replace(c, body=prepare(c.body, avoid, prefix=f"{here}c{i}_",
+                                               lets=seen))
+                       for i, c in enumerate(s.cases, start=1))
+            s = replace(s, cases=cs, name=s.name or here, unfold=seen, avoid=avoid)
+        elif isinstance(s, InductionOn):
+            s = replace(s, base=prepare(s.base, avoid, prefix=f"{here}b_", lets=seen),
+                        step=prepare(s.step, avoid, prefix=f"{here}i_", lets=seen))
+        elif isinstance(s, (Choose, Suffices)):
+            s = replace(s, unfold=seen, avoid=avoid)
+        elif isinstance(s, Justify):
+            s = replace(s, avoid=avoid)
+        elif isinstance(s, Branches):
+            s = replace(s, branches=tuple(
+                prepare(b, avoid, prefix=f"{here}_{i}_", lets=seen)
+                for i, b in enumerate(s.branches, start=1)))
+        out.append(s)
+    if len(out) == 1 and not isinstance(t, Steps):
+        return out[0]
+    return Steps(tactics=tuple(out), origin=t.origin)
+
+
+# =====================================================================================
 # Walking the terms a proof cites
 # =====================================================================================
 
@@ -1100,8 +1533,10 @@ def iter_terms(t: Tactic | None) -> Iterable[Term]:
         direct.append(t.source)
     elif isinstance(t, Auto):
         direct += list(t.hints)
-    elif isinstance(t, (Claim, Conclude, Justify)):
+    elif isinstance(t, (Claim, Conclude, Justify, _Justified)):
         direct += list(t.facts)
+    elif isinstance(t, Chain):
+        direct += [f for _, _, fs, _ in t.links for f in fs]
     for term in direct:
         yield from _subterms(term)
     for s in t.sub_tactics():

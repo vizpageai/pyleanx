@@ -342,6 +342,9 @@ def _structured_lines(t: Tactic) -> list[str]:
         sort = t.var.sort.lean_name() if t.var.sort is not None else None
         typ = f" : {sort}" if sort else ""
         return [f"set {t.var.name}{typ} := {render_expr(t.value)} with {t.eq_name}"]
+    written = _written_lines(t)
+    if written is not None:
+        return written
     if isinstance(t, Have):
         return _attach(f"have {t.name} : {render_expr(t.prop)} :=", _by(t.proof))
     if isinstance(t, Show):
@@ -369,6 +372,56 @@ def _structured_lines(t: Tactic) -> list[str]:
     raise UnsupportedConstructError(f"cannot render tactic {type(t).__name__}")
 
 
+def _bullet(lines: list[str]) -> list[str]:
+    return ["· " + lines[0], *("  " + ln for ln in lines[1:])]
+
+
+def _written_lines(t: Tactic) -> list[str] | None:
+    """Lean for the written-proof moves (fix, take, choose, cases, induction, …)."""
+    from ..proofs import CaseSplit, Chain, Choose, Fix, InductionOn, Suffices, SupposeNot, Take
+
+    if isinstance(t, Fix):
+        parts = [v.name for v in t.vars] + [f"({n} : {render_expr(p)})" for n, p in t.hyps]
+        return ["intro " + " ".join(parts)]
+    if isinstance(t, Take):
+        return ["refine ⟨" + ", ".join(render_expr(w) for w in t.witnesses) + ", ?_⟩"]
+    if isinstance(t, Choose):
+        pat = ", ".join([*(v.name for v in t.vars), *t.names])
+        return _attach(f"obtain ⟨{pat}⟩ : {render_expr(t.statement())} :=",
+                       _by(t.justification()))
+    if isinstance(t, SupposeNot):
+        if t.prop is None:
+            return [f"by_contra {t.name}"]
+        neg = f"{t.name}_neg"
+        get = f"first | exact {neg} | linarith | omega"
+        return [f"by_contra {neg}",
+                f"have {t.name} : {render_expr(t.prop)} := by",
+                "  first",
+                f"    | exact {neg}",
+                f"    | (push Not at {neg}; {get})",
+                f"    | (simp only [not_lt, not_le, not_not, ne_eq] at {neg}; {get})",
+                "    | omega",
+                "    | linarith",
+                "    | (simp_all; done)"]
+    if isinstance(t, CaseSplit):
+        out = _attach(f"have {t.name} : {render_expr(t.disjunction())} :=",
+                      _by(t.justification()))
+        out.append(f"rcases {t.name} with " + " | ".join(c.name for c in t.cases))
+        for c in t.cases:
+            out.extend(_bullet(render_tactic_lines(c.body)))
+        return out
+    if isinstance(t, InductionOn):
+        return [f"induction {t.var.name} with",
+                *_alternative("| zero =>", t.base),
+                *_alternative(f"| succ {t.k.name} {t.ih} =>", t.step)]
+    if isinstance(t, Chain):
+        return _attach(f"have {t.name or 'this'} : {render_expr(t.statement())} :=",
+                       _by(t.as_calc()))
+    if isinstance(t, Suffices):
+        return _attach(f"suffices {t.name} : {render_expr(t.prop)}", _by(t.justification()))
+    return None
+
+
 def _alternative(head: str, t: Tactic | None) -> list[str]:
     """``| case => tac`` (one line) or the block on its own, deeper-indented lines."""
     from ..proofs import Auto
@@ -384,9 +437,36 @@ def _alternative(head: str, t: Tactic | None) -> list[str]:
 # =====================================================================================
 
 
+def theorem_type_params(thm: Theorem) -> list:
+    """Type parameters (``pl.type_param``) used anywhere in the statement or proof."""
+    from ..defs import proof_exprs
+    from ..expr import iter_subexprs
+    from ..types import type_params
+
+    sorts: list = [v.sort for v in thm.variables]
+    exprs = [thm.conclusion, *(h.prop for h in thm.assumptions)]
+    if thm.proof is not None:
+        exprs.extend(proof_exprs(thm.proof))
+    for e in exprs:
+        for sub in iter_subexprs(e):
+            sorts.append(sub.sort)
+            for v in getattr(sub, "vars", ()):
+                sorts.append(v.sort)
+    return type_params([s for s in sorts if s is not None])
+
+
+def type_param_binders(thm: Theorem) -> str:
+    """``{G : Type*} [Group G]`` for each type parameter."""
+    out = []
+    for t in theorem_type_params(thm):
+        out.append(f"{{{t.lean} : Type*}}")
+        out.extend(f"[{c} {t.lean}]" for c in t.classes)
+    return " ".join(out)
+
+
 def _statement_parts(thm: Theorem, r: _ExprRenderer) -> tuple[str, str]:
     """(``theorem name binders :``, rendered conclusion)."""
-    binders = []
+    binders = [type_param_binders(thm)] if theorem_type_params(thm) else []
     if thm.variables:
         binders.append(binder_groups(thm.variables, r.unicode_types))
     for h in thm.assumptions:
@@ -451,6 +531,8 @@ def _auto_default(t: Tactic) -> bool:
         return True
     if name in ("Claim", "Conclude"):
         return getattr(t, "proof", None) is None
+    if name in ("Choose", "Suffices", "CaseSplit", "Chain"):
+        return True
     if name == "Have":
         return getattr(t, "proof", None) is None
     if name == "Calc":
@@ -514,7 +596,8 @@ def render_module(
     if any(_uses_auto(t.proof) for t in theorems):
         # `first | …` alternatives that are never tried would each produce linter warnings.
         header_lines += ["set_option linter.unusedTactic false",
-                         "set_option linter.unreachableTactic false"]
+                         "set_option linter.unreachableTactic false",
+                         "set_option linter.unusedSimpArgs false"]
     s, e = b.add(*header_lines)
     b.spans.append(SourceSpan(s, e, "header", None, "imports and options"))
     from ..defs import module_definitions

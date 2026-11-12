@@ -37,6 +37,11 @@ CASES: dict[str, tuple[list[str], int]] = {
     "readable_trig": (RUN, 0),
     "readable_side_splitter": (RUN, 0),
     "readable_am_gm": (RUN, 0),
+    "readable_infinite_primes": (RUN, 0),
+    "readable_consecutive_even": (RUN, 0),
+    "readable_limit_sum": (RUN, 0),
+    "readable_group_abelian": (RUN, 0),
+    "readable_bernoulli": (RUN, 0),
 }
 
 # Examples deliberately not run here, with the reason (each must be run by hand).

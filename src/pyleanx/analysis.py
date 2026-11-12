@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from ._domain import CATALOG_VERSION, VERIFIED_MATHLIB, collect_lemmas, lemma
 from .expr import App, Expr, Func, abs_, exp, log, sqrt
+from .proofs import library_fact
 from .types import Fn, Prop, Real
 
 _TRIG = "Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic"
@@ -100,8 +101,41 @@ constant_of_zero_derivative = lemma(
 deriv_sin = lemma("Real.deriv_sin", _TRIG_DERIV, label="sin′ = cos")
 deriv_cos = lemma("Real.deriv_cos'", _TRIG_DERIV, label="cos′ = −sin")
 
+# ---------------------------------------------------------------------------------------
+# Sequences and limits (ε–N)
+# ---------------------------------------------------------------------------------------
+
+_TOPO = "Mathlib.Topology.MetricSpace.Pseudo.Defs"
+_ORDER_TOPO = "Mathlib.Topology.Instances.Real.Lemmas"
+
+
+def tendsto(a: object, limit: object) -> Expr:
+    """``aₙ → L`` as n → ∞ for a sequence ``a : ℕ → ℝ`` (``Tendsto a atTop (𝓝 L)``)."""
+    from .expr import Var
+    from .terms import apply, const
+
+    seq = "{0}_n" if isinstance(a, Var) else "{0}"
+    t = const("Filter.Tendsto", imports=(_TOPO, _ORDER_TOPO),
+              latex=seq + r" \to {2}")
+    at_top = const("Filter.atTop", imports=(_TOPO,), latex=r"\infty")
+    nhds = const("nhds", imports=(_TOPO,), latex="{0}")
+    return apply(t, a, at_top, apply(nhds, limit))
+
+
+#: aₙ → L  ⟺  ∀ ε > 0, ∃ N, ∀ n ≥ N, |aₙ − L| < ε (the textbook definition).
+tendsto_iff = library_fact(
+    "PyLeanX.Analysis.tendsto_iff_eps_N", """
+    theorem PyLeanX.Analysis.tendsto_iff_eps_N (a : ℕ → ℝ) (L : ℝ) :
+        Filter.Tendsto a Filter.atTop (nhds L) ↔
+          ∀ ε : ℝ, ε > 0 → ∃ N : ℕ, ∀ n : ℕ, n ≥ N → |a n - L| < ε := by
+      simp only [Metric.tendsto_atTop, Real.dist_eq, gt_iff_lt, ge_iff_le]
+    """, _TOPO, _ORDER_TOPO, label="definition of a limit (ε–N)")
+triangle_inequality = lemma("abs_add_le", "Mathlib.Algebra.Order.Group.Unbundled.Abs",
+                            label="triangle inequality")
+
 LEMMAS = collect_lemmas(globals())
 
 __all__ = ["sin", "cos", "pi", "sqrt", "exp", "log", "abs_", "deriv", "differentiable",
+           "tendsto",
            "LEMMAS", "VERIFIED_MATHLIB",
            "CATALOG_VERSION", *LEMMAS]

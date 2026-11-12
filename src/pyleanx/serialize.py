@@ -106,6 +106,10 @@ def _sort(name: Any, defs: Mapping[str, Any] | None = None) -> Sort:
             return Fn(*(_sort(p, defs) for p in name[1]))
         if tag == "prod":
             return Prod(*(_sort(p, defs) for p in name[1]))
+        if tag == "param":
+            from .types import type_param
+
+            return type_param(name[1], *name[2], imports=tuple(name[3][1:]), label=name[4])
         if tag == "type":
             if len(name) == 4:
                 for dname in name[3]:
@@ -353,6 +357,50 @@ class _Decoder:
             var = Var(name, self.sort(sort))
             self.scope[name] = var
             return P.Let(var=var, value=value, note=d[3])
+        return self.written(kw, d)
+
+    def facts(self, d: Any) -> tuple[Term, ...]:
+        return tuple(self.term(t) for t in d)
+
+    def var_ref(self, d: Any) -> Var:
+        """A variable already in scope (theorem variable or introduced earlier)."""
+        v = self.expr(d)
+        if not isinstance(v, Var):
+            raise SerializationError(f"expected a variable, got {d!r}")
+        return v
+
+    def written(self, kw: str, d: Any) -> Tactic:
+        from . import proofs as P
+
+        if kw == "fix":
+            vs = self.bound(d[1])
+            return P.Fix(vars=tuple(vs), hyps=tuple((n, self.expr(e)) for n, e in d[2]),
+                         note=d[3])
+        if kw == "take":
+            return P.Take(witnesses=tuple(self.expr(w) for w in d[1]), note=d[2])
+        if kw == "choose":
+            vs = self.bound(d[1])
+            return P.Choose(vars=tuple(vs), prop=self.expr(d[2]), names=tuple(d[3]),
+                            facts=self.facts(d[4]), note=d[5], unfold=tuple(d[6]))
+        if kw == "suppose_not":
+            return P.SupposeNot(prop=self.expr(d[1]) if d[1] is not None else None,
+                                name=d[2], note=d[3])
+        if kw == "case_split":
+            cases = tuple(P.Case(prop=self.expr(c[0]), body=self.tactic(c[1]), name=c[2],
+                                 note=c[3]) for c in d[1])
+            return P.CaseSplit(cases=cases, facts=self.facts(d[2]), note=d[3], name=d[4],
+                               unfold=tuple(d[5]))
+        if kw == "induction_on":
+            var = self.var_ref(d[1])
+            (k,) = self.bound([d[4]])
+            return P.InductionOn(var=var, base=self.tactic(d[2]), step=self.tactic(d[3]),
+                                 k=k, ih=d[5], note=d[6])
+        if kw == "chain":
+            links = tuple((r, self.expr(e), self.facts(f), n) for r, e, f, n in d[3])
+            return P.Chain(name=d[1], first=self.expr(d[2]), links=links, unfold=tuple(d[4]))
+        if kw == "suffices":
+            return P.Suffices(prop=self.expr(d[1]), name=d[2], facts=self.facts(d[3]),
+                              note=d[4], unfold=tuple(d[5]))
         raise SerializationError(f"unknown tactic {kw!r}")
 
 

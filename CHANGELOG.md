@@ -41,6 +41,19 @@ see [docs/stability.md](docs/stability.md)).
   `geo.similar`, `geo.similar_AA`. Facts Mathlib lacks in citable form
   (`geo.corresponding_angles`, `geo.similar_sides`) ship as Lean theorems with proofs,
   checked in every file that cites them.
+- Written proofs across mathematics: `pl.fix`/`pl.assume` (let x be arbitrary, assume P),
+  `pl.take` (witness), `pl.choose` (obtain from an existence fact), `pl.suppose_not`
+  (contradiction), `pl.cases_on`/`pl.case`, `pl.induction_on`, `pl.chain` (a = b ≤ c with a
+  reason per link) and `pl.suffices`; nested blocks print as numbered sub-steps (6.1, 6.2)
+  that match the Lean step names (`step6_1`). The gap filler also uses one half of a cited
+  `∧`/`↔`, `omega`, `push_cast` and splitting `∧`.
+- `pl.type_param("G", "Group", label="group")` and `alg.group`/`ring`/`field`/…: theorems
+  about every group (Lean `{G : Type*} [Group G]`).
+- `pyleanx.numbers`: divisibility, parity, primes, factorials. `an.tendsto` with the ε–N
+  definition `an.tendsto_iff` (shipped with its proof), `an.triangle_inequality`.
+- Examples: Euclid's infinitely many primes, n(n+1) even by cases, limit of a sum (ε–N),
+  groups with x² = 1 are abelian, Bernoulli's inequality by induction.
+
 - Examples `readable_trig.py` (sin²+cos²=1 by derivatives), `readable_side_splitter.py`
   (similar triangles), `readable_am_gm.py`; `side_splitter.py`, `side_splitter_vectors.py`.
 
@@ -49,6 +62,9 @@ see [docs/stability.md](docs/stability.md)).
   work when elan has no default toolchain (as on CI) and never use a different Lean version.
 
 ### Changed
+- `geo.corresponding_angles` now states both pairs of equal angles; cite it for either one
+  (`geo.corresponding_angles_2` is removed). Written-proof steps are named by position among
+  all steps (`step2` is printed step 2), not among claims only.
 - The default time limit per Lean run is 900 s (was 300 s): a cold load of larger Mathlib
   modules (e.g. trigonometry) can exceed 300 s on a slow or memory-starved machine. The
   timeout diagnostic now says how to raise the limit.

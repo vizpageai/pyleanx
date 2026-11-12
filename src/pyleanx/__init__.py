@@ -14,7 +14,7 @@ only after Lean accepted the exact generated source and the axiom audit passed.
 
 from __future__ import annotations
 
-from . import algebra, analysis, geometry, mathlib
+from . import algebra, analysis, geometry, mathlib, numbers
 
 # ---- libraries and generated bindings (M10-M11)
 from . import bindings as lib  # noqa: E402
@@ -86,20 +86,27 @@ from .project import LeanProject, find_project
 from .proofgraph import ProofGraph, proof_graph  # noqa: E402
 from .proofs import (  # noqa: E402
     apply,
+    assume,
     assumption,
     auto,
     branches,
     calc,
+    case,
     cases,
+    cases_on,
+    chain,
+    choose,
     claim,
     conclude,
     constructor,
     decide,
     exact,
     ext,
+    fix,
     have,
     hyp,
     induction,
+    induction_on,
     intro,
     let,
     linarith,
@@ -119,6 +126,9 @@ from .proofs import (  # noqa: E402
     show,
     simp,
     steps,
+    suffices,
+    suppose_not,
+    take,
     unfold,
     use,
 )
@@ -141,7 +151,21 @@ from .terms import (  # noqa: E402
 from .terms import prod as prod  # noqa: E402
 from .terms import sum as sum  # noqa: E402, A004
 from .theorem import Hypothesis, Theorem, theorem
-from .types import UNKNOWN, EuclideanSpace, Fin, Fn, Int, LeanType, Nat, Prod, Prop, Rat, Real, Sort  # noqa: E402
+from .types import (  # noqa: E402
+    UNKNOWN,
+    EuclideanSpace,
+    Fin,
+    Fn,
+    Int,
+    LeanType,
+    Nat,
+    Prod,
+    Prop,
+    Rat,
+    Real,
+    Sort,
+    type_param,  # noqa: E402
+)
 from .types import lean_type as Type  # noqa: E402, N812
 
 __version__ = "0.1.0.dev0"
@@ -162,7 +186,7 @@ __all__ = [
     "cast", "nat", "integer", "rat", "real", "sqrt", "exp", "log", "abs", "min", "max",
     "sin", "cos", "pi",
     # domain modules
-    "algebra", "analysis", "geometry",
+    "algebra", "analysis", "geometry", "numbers",
     # theorems & proofs
     "Theorem", "Hypothesis", "theorem", "latex", "ring", "omega", "positivity", "rfl", "decide",
     "constructor", "assumption", "linarith", "nlinarith", "norm_num", "simp", "intro", "exact",
@@ -182,7 +206,9 @@ __all__ = [
     "define", "define_type", "structure", "mk",
     # structured proofs
     "auto", "have", "calc", "show", "obtain", "cases", "induction", "unfold", "ext", "proof",
-    "claim", "conclude", "let", "prose", "Prose",
+    "claim", "conclude", "let", "prose", "Prose", "fix", "assume", "take", "choose",
+    "suppose_not", "case", "cases_on", "induction_on", "chain", "suffices",
+    "type_param",
     # libraries, bindings, faithfulness
     "lib", "add_library", "build_library", "list_libraries", "remove_library",
     "same_statement", "SameStatement",

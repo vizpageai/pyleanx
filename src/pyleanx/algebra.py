@@ -9,8 +9,8 @@
 
 Abstractions and limitations
 ----------------------------
-* Statements use the concrete sorts ``pl.Nat/Int/Rat/Real``; nothing here is stated for
-  an arbitrary ring or ordered field (no typeclass binders yet).
+* ``identity``/``inequality`` use the concrete sorts ``pl.Nat/Int/Rat/Real``. Abstract
+  structures are type parameters: ``G = alg.group("G")`` states a theorem for every group.
 * ``LEMMAS`` are *references* to Mathlib declarations at :data:`VERIFIED_MATHLIB`. A
   reference asserts nothing; Lean checks every use.
 * Helper constructors only build :class:`~pyleanx.Theorem` objects with a suggested
@@ -25,8 +25,10 @@ from ._domain import CATALOG_VERSION, VERIFIED_MATHLIB, collect_lemmas, lemma
 from .binders import free_vars
 from .errors import SortError
 from .expr import Expr, Var, _as_prop, _compare
-from .proofs import Tactic, nlinarith, positivity, ring
+from .proofs import Tactic, nlinarith, positivity
+from .proofs import ring as _ring_tactic
 from .theorem import Theorem
+from .types import LeanType, type_param
 
 _ORDER_RING = "Mathlib.Algebra.Order.Ring.Unbundled.Basic"
 _COMMUTE = "Mathlib.Algebra.Ring.Commute"
@@ -57,9 +59,65 @@ sub_nonneg = lemma("sub_nonneg", _ABS)
 mul_pos = lemma("mul_pos", _ORDER_RING)
 div_pos = lemma("div_pos", _FIELD)
 
+#: The triangle inequality |a + b| ≤ |a| + |b|, cited by name.
+triangle_inequality = lemma("abs_add_le", _GROUP_ABS, label="triangle inequality")
+
+# ---------------------------------------------------------------------------------------
+# Abstract structures: "let G be a group"
+# ---------------------------------------------------------------------------------------
+
+_GROUP = "Mathlib.Algebra.Group.Defs"
+_DIVINV = "Mathlib.Algebra.Group.DivInvMonoid"
+
+
+def group(name: str = "G") -> LeanType:
+    """*Let G be a group* (multiplicative): elements are ``pl.symbols("a b", G)``."""
+    return type_param(name, "Group", imports=[_GROUP], label="group")
+
+
+def abelian_group(name: str = "G") -> LeanType:
+    """*Let G be an abelian group* (multiplicative, ``CommGroup``)."""
+    return type_param(name, "CommGroup", imports=[_GROUP], label="abelian group")
+
+
+def ring(name: str = "R") -> LeanType:
+    """*Let R be a ring* (not necessarily commutative)."""
+    return type_param(name, "Ring", imports=["Mathlib.Algebra.Ring.Defs"], label="ring")
+
+
+def comm_ring(name: str = "R") -> LeanType:
+    """*Let R be a commutative ring*."""
+    return type_param(name, "CommRing", imports=["Mathlib.Algebra.Ring.Defs"],
+                      label="commutative ring")
+
+
+def field(name: str = "F") -> LeanType:
+    """*Let F be a field*."""
+    return type_param(name, "Field", imports=["Mathlib.Algebra.Field.Defs"], label="field")
+
+
+def inv(x: object) -> Expr:
+    """``x⁻¹``, the inverse in a group (``Inv.inv x``)."""
+    from .terms import apply, const
+
+    tex = "{0}^{{-1}}" if isinstance(x, Var) else r"\left({0}\right)^{{-1}}"
+    return apply(const("Inv.inv", imports=(_GROUP,), latex=tex), x)
+
+
+mul_assoc = lemma("mul_assoc", _GROUP, label="associativity")
+one_mul = lemma("one_mul", _GROUP, label="1·a = a")
+mul_one = lemma("mul_one", _GROUP, label="a·1 = a")
+mul_inv_cancel = lemma("mul_inv_cancel", _GROUP, label="a·a⁻¹ = 1")
+inv_mul_cancel = lemma("inv_mul_cancel", _GROUP, label="a⁻¹·a = 1")
+mul_left_cancel = lemma("mul_left_cancel", _GROUP, label="cancellation: ab = ac gives b = c")
+mul_inv_rev = lemma("mul_inv_rev", _DIVINV, label="(ab)⁻¹ = b⁻¹a⁻¹")
+inv_eq_of_mul_eq_one = lemma("inv_eq_of_mul_eq_one_right", _DIVINV,
+                             label="if ab = 1 then a⁻¹ = b")
+
 LEMMAS = collect_lemmas(globals())
 
-__all__ = ["identity", "inequality", "nonneg", "am_gm_two", "LEMMAS", "VERIFIED_MATHLIB",
+__all__ = ["identity", "inequality", "nonneg", "am_gm_two", "group", "abelian_group",
+           "ring", "comm_ring", "field", "inv", "LEMMAS", "VERIFIED_MATHLIB",
            "CATALOG_VERSION", *LEMMAS]
 
 
@@ -79,7 +137,7 @@ def identity(name: str, lhs: object, rhs: object, *, variables: Iterable[Var] | 
     """``∀ vars, lhs = rhs``, proved by ``ring`` unless another proof is given."""
     concl = _compare("eq", lhs, rhs)
     return Theorem(name, _variables([concl], variables), None, concl,
-                   proof=proof if proof is not None else ring())
+                   proof=proof if proof is not None else _ring_tactic())
 
 
 def inequality(name: str, lhs: object, op: str, rhs: object, *, assumptions: object = None,

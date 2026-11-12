@@ -9,13 +9,14 @@ the rendered Lean text always means exactly what the IR means.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
 
 from ._origin import caller_origin
 from .errors import ScopeError
 from .expr import Expr, Quant, Var, make_var
 from .types import Prop, Sort
 
-__all__ = ["symbol", "symbols", "prop_symbol", "free_vars", "check_scope"]
+__all__ = ["symbol", "symbols", "prop_symbol", "free_vars", "check_scope", "substitute"]
 
 
 def symbol(name: str, sort: Sort) -> Var:
@@ -141,3 +142,38 @@ def contains_untyped_literal(e: Expr) -> bool:
         return any(walk(c, here) for c in node.children())
 
     return walk(e, False)
+
+
+def substitute(e: Expr, mapping: dict[int, Expr]) -> Expr:
+    """``e`` with free variables replaced (``mapping``: variable uid -> expression).
+
+    Display helper (used to print P(0), P(k + 1) in written proofs); binders that rebind a
+    mapped variable stop the replacement below them. Lean never sees the result.
+    """
+    import dataclasses
+
+    if not mapping:
+        return e
+
+    def walk(node: Any, m: dict[int, Expr]) -> Any:
+        if isinstance(node, Var):
+            return m.get(node.uid, node)
+        if isinstance(node, tuple):
+            return tuple(walk(x, m) for x in node)
+        if not isinstance(node, Expr) or not dataclasses.is_dataclass(node):
+            return node
+        binder = _binder(node)
+        inner = m
+        if binder is not None:
+            inner = {k: v for k, v in m.items() if k not in {x.uid for x in binder[0]}}
+        changes = {}
+        for f in dataclasses.fields(node):
+            if f.name in ("vars", "var", "sort", "origin"):
+                continue
+            old = getattr(node, f.name)
+            new = walk(old, inner if f.name == "body" else m)
+            if new is not old:
+                changes[f.name] = new
+        return dataclasses.replace(node, **changes) if changes else node
+
+    return walk(e, mapping)

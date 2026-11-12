@@ -37,8 +37,8 @@ def _body(src: str) -> str:
 def test_claims_are_named_by_position_and_render_as_have() -> None:
     src = trig().to_lean()
     assert "set f : Real → Real := fun (t : Real) => " in src and "with f_def" in src
-    assert "have step1 : Differentiable Real f := by" in src
-    assert "have step3 : f x = f 0 := by" in src
+    assert "have step2 : Differentiable Real f := by" in src  # named by position
+    assert "have step4 : f x = f 0 := by" in src
     assert "have at_zero : f 0 = 1 := by" in src  # explicit names are kept
     assert "(apply is_const_of_deriv_eq_zero; all_goals (" in src
     assert "(intros; simp only [f_def] at *; first |" in src
@@ -109,16 +109,16 @@ def test_library_facts_are_emitted_once_with_their_requirements() -> None:
             pl.claim(geo.angle(A, B, C) == geo.angle(A, D, E),
                      because=geo.corresponding_angles),
             pl.claim(geo.angle(B, C, A) == geo.angle(D, E, A),
-                     because=geo.corresponding_angles_2),
+                     because=geo.corresponding_angles),
             pl.claim(geo.similar((A, B, C), (A, D, E)), because=geo.similar_AA),
             pl.conclude(because=geo.similar_sides)))
     names = [f.name for f in library_facts([thm])]
-    assert names == ["PyLeanX.Geometry.corresponding_angles_core",
-                     "PyLeanX.Geometry.corresponding_angles",
-                     "PyLeanX.Geometry.corresponding_angles_2",
+    assert names == ["PyLeanX.Geometry.corresponding_angles",
                      "PyLeanX.Geometry.similar_sides"]
     src = thm.to_lean()
-    assert src.count("theorem PyLeanX.Geometry.corresponding_angles_core") == 1
+    assert src.count("theorem PyLeanX.Geometry.corresponding_angles") == 1
+    # one fact for both pairs of angles: the gap filler takes the half each claim needs
+    assert "apply And.right; with_reducible_and_instances apply PyLeanX.Geometry.corresponding_angles;" in src
     assert "sorry" not in src
     assert src.index("theorem PyLeanX.Geometry.similar_sides") < src.index("theorem ss ")
     assert "import Mathlib.Geometry.Euclidean.Similarity" in src

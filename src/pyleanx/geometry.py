@@ -172,9 +172,11 @@ similar_AA = lemma("EuclideanGeometry.similar_of_angle_angle", _SIMILAR,
                    label="AA similarity")
 
 _GEO_FACT_IMPORTS = (_SIMILAR, _ANGLE, _BETWEEN, _AFFINE, _COLLINEAR)
-_corresponding_core = library_fact(
-    "PyLeanX.Geometry.corresponding_angles_core", """
-    theorem PyLeanX.Geometry.corresponding_angles_core {V P : Type*} [NormedAddCommGroup V]
+#: D on AB, E on AC, DE ∥ BC  ⟹  ∠ABC = ∠ADE and ∠BCA = ∠DEA (corresponding angles).
+#: Cite it for either equality; the gap filler uses the half the claim needs.
+corresponding_angles = library_fact(
+    "PyLeanX.Geometry.corresponding_angles", """
+    theorem PyLeanX.Geometry.corresponding_angles {V P : Type*} [NormedAddCommGroup V]
         [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {A B C D E : P}
         (hABC : ¬ Collinear ℝ {A, B, C}) (hD : Wbtw ℝ A D B) (hE : Wbtw ℝ A E C)
         (hP : (line[ℝ, D, E]).Parallel line[ℝ, B, C]) :
@@ -202,31 +204,7 @@ _corresponding_core = library_fact(
           rw [← neg_vsub_eq_vsub_rev E D, h1, ← smul_neg, neg_vsub_eq_vsub_rev]
         simp only [EuclideanGeometry.angle]
         rw [hDE, h2, InnerProductGeometry.angle_smul_smul hr]
-    """, *_GEO_FACT_IMPORTS, label="corresponding angles at parallel lines are equal")
-
-#: D on AB, E on AC, DE ∥ BC  ⟹  ∠ABC = ∠ADE (corresponding angles).
-corresponding_angles = library_fact(
-    "PyLeanX.Geometry.corresponding_angles", """
-    theorem PyLeanX.Geometry.corresponding_angles {V P : Type*} [NormedAddCommGroup V]
-        [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {A B C D E : P}
-        (hABC : ¬ Collinear ℝ {A, B, C}) (hD : Wbtw ℝ A D B) (hE : Wbtw ℝ A E C)
-        (hP : (line[ℝ, D, E]).Parallel line[ℝ, B, C]) :
-        EuclideanGeometry.angle A B C = EuclideanGeometry.angle A D E :=
-      (PyLeanX.Geometry.corresponding_angles_core hABC hD hE hP).1
-    """, *_GEO_FACT_IMPORTS, label="corresponding angles (DE ∥ BC)",
-    requires=[_corresponding_core])
-
-#: D on AB, E on AC, DE ∥ BC  ⟹  ∠BCA = ∠DEA (corresponding angles).
-corresponding_angles_2 = library_fact(
-    "PyLeanX.Geometry.corresponding_angles_2", """
-    theorem PyLeanX.Geometry.corresponding_angles_2 {V P : Type*} [NormedAddCommGroup V]
-        [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {A B C D E : P}
-        (hABC : ¬ Collinear ℝ {A, B, C}) (hD : Wbtw ℝ A D B) (hE : Wbtw ℝ A E C)
-        (hP : (line[ℝ, D, E]).Parallel line[ℝ, B, C]) :
-        EuclideanGeometry.angle B C A = EuclideanGeometry.angle D E A :=
-      (PyLeanX.Geometry.corresponding_angles_core hABC hD hE hP).2
-    """, *_GEO_FACT_IMPORTS, label="corresponding angles (DE ∥ BC)",
-    requires=[_corresponding_core])
+    """, *_GEO_FACT_IMPORTS, label="corresponding angles (DE ∥ BC)")
 
 #: △abc ∼ △a'b'c' (abc a triangle)  ⟹  a'b'/ab = a'c'/ac.
 similar_sides = library_fact(

@@ -10,7 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 __all__ = ["Sort", "Nat", "Int", "Rat", "Real", "Prop", "NUMERIC_SORTS", "can_cast", "LeanType",
-           "lean_type", "Fn", "Prod", "Fin", "EuclideanSpace", "UNKNOWN", "TYPE"]
+           "lean_type", "Fn", "Prod", "Fin", "EuclideanSpace", "UNKNOWN", "TYPE",
+           "type_param"]
 
 
 @dataclass(frozen=True)
@@ -125,6 +126,8 @@ class LeanType(Sort):
     parts: tuple[Sort, ...] = ()  # fn: domains..., codomain; prod: components
     fields: tuple[tuple[str, Sort], ...] = ()  # struct fields (name, sort)
     definitions: tuple[object, ...] = ()  # PyLeanX definitions this type depends on
+    classes: tuple[str, ...] = ()  # param: the structure it carries (``Group``)
+    label: str = ""  # param: the structure in words ("group")
 
     def lean_name(self, unicode: bool = False) -> str:
         if self.kind == "fn":
@@ -140,6 +143,8 @@ class LeanType(Sort):
             return ["fn", [p.canonical() for p in self.parts]]
         if self.kind == "prod":
             return ["prod", [p.canonical() for p in self.parts]]
+        if self.kind == "param":
+            return ["param", self.lean, list(self.classes), list(self.imports), self.label]
         if self.definitions:
             return ["type", self.lean, list(self.imports),
                     [getattr(d, "name", "?") for d in self.definitions]]
@@ -161,7 +166,8 @@ _INTERN: dict[tuple, LeanType] = {}
 
 
 def _intern(t: LeanType) -> LeanType:
-    key = (t.name, t.kind, t.parts, t.imports, t.latex, t.fields, t.definitions)
+    key = (t.name, t.kind, t.parts, t.imports, t.latex, t.fields, t.definitions,
+           t.classes, t.label)
     return _INTERN.setdefault(key, t)
 
 
@@ -218,6 +224,42 @@ def EuclideanSpace(n: int) -> LeanType:  # noqa: N802
         raise TypeError("pl.EuclideanSpace needs a positive int")
     return lean_type(f"EuclideanSpace ℝ (Fin {n})",
                      ("Mathlib.Analysis.InnerProductSpace.PiL2",), latex=rf"\mathbb{{R}}^{{{n}}}")
+
+
+def type_param(name: str, *classes: str, imports: tuple[str, ...] | list[str] = (),
+               label: str = "", latex: str = "") -> LeanType:
+    """An arbitrary type carrying a structure: *let G be a group*.
+
+    ``G = pl.type_param("G", "Group", label="group")``; a theorem whose variables live in
+    ``G`` is stated for every group (Lean: ``{G : Type*} [Group G]``). ``classes`` are
+    Lean type classes applied to the type (``"Group"``, ``"Field"``, ``"Module ℝ"``).
+    """
+    from .names import validate_identifier, validate_qualified_name
+
+    validate_identifier(name, "type parameter name")
+    for c in classes:
+        validate_type_text(f"{c} {name}")
+    imps = ("Mathlib.Tactic.TypeStar",
+            *(validate_qualified_name(i, "import module") for i in imports))
+    return _intern(LeanType(name, name, numeric=False, rank=-2, imports=imps,
+                            latex=latex or name, opaque=True, kind="param",
+                            classes=tuple(classes), label=label))
+
+
+def type_params(sorts: object) -> list[LeanType]:
+    """The type parameters (:func:`type_param`) the given sorts mention, in order."""
+    out: list[LeanType] = []
+
+    def visit(s: object) -> None:
+        if isinstance(s, LeanType):
+            if s.kind == "param" and s not in out:
+                out.append(s)
+            for q in s.parts:
+                visit(q)
+
+    for s in sorts:  # type: ignore[attr-defined]
+        visit(s)
+    return out
 
 
 #: The sort of terms whose type PyLeanX does not know (e.g. results of library functions).
