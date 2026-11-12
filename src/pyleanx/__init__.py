@@ -96,6 +96,7 @@ from .proofs import (  # noqa: E402
     cases_on,
     chain,
     choose,
+    cite,
     claim,
     conclude,
     constructor,
@@ -208,7 +209,7 @@ __all__ = [
     "auto", "have", "calc", "show", "obtain", "cases", "induction", "unfold", "ext", "proof",
     "claim", "conclude", "let", "prose", "Prose", "fix", "assume", "take", "choose",
     "suppose_not", "case", "cases_on", "induction_on", "chain", "suffices",
-    "type_param",
+    "type_param", "cite",
     # libraries, bindings, faithfulness
     "lib", "add_library", "build_library", "list_libraries", "remove_library",
     "same_statement", "SameStatement",

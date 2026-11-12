@@ -57,7 +57,12 @@ see [docs/stability.md](docs/stability.md)).
   theorem for a disc and the integral ∮ dz/(z − w) = 2πi. Example
   `readable_cauchy_integral.py`: Cauchy's integral formula from Cauchy's theorem, avoiding
   Mathlib's own formula.
-- `avoid=` also checks inside cited PyLeanX facts, and imports avoided lemmas' modules. The gap
+- Citing proved theorems: `because=thm` / `pl.cite(thm)` carries the theorem with its proof;
+  it is emitted before the citing theorem and re-checked by Lean in every run. Citing a
+  theorem without a proof is an error, and a failed cited proof rejects exactly the theorems
+  that cite it. The bank records citations as dependencies and makes loaded theorems
+  citable. Example `using_cauchy_integral.py`: ∮_{|z|=2} z²/(z − 1) dz = 2πi.
+- `avoid=` also checks inside cited PyLeanX facts and theorems, and imports avoided lemmas' modules. The gap
   filler also applies a cited lemma to a cited fact and rewrites with cited equations.
 
 - Examples `readable_trig.py` (sin²+cos²=1 by derivatives), `readable_side_splitter.py`

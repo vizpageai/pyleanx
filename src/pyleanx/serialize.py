@@ -269,6 +269,15 @@ class _Decoder:
         raise SerializationError(f"unknown expression tag {tag!r}")
 
     def term(self, d: Any) -> Term:
+        if isinstance(d, list) and len(d) == 2 and d[0] == "theorem_ref":
+            from .proofs import CITED_THEOREMS, cite
+
+            cited = CITED_THEOREMS.get(d[1])
+            if cited is None:
+                raise SerializationError(
+                    f"the proof cites theorem {d[1]!r}, which is not loaded; load it first "
+                    "(TheoremBank.load_with_dependencies does this)")
+            return cite(cited)
         if isinstance(d, list) and d and d[0] == "name":
             from .proofs import LIBRARY_FACTS
 

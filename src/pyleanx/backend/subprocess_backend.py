@@ -278,6 +278,11 @@ def classify(
         assert span is not None
         # The theorem, its `avoid=` check (an error there rejects it) and its axiom audit.
         checks = [s for s in sm.spans if s.kind == "avoid_check" and s.theorem == name]
+        # theorems this proof cites (emitted above it): their errors reject this theorem
+        cited = [s for s in sm.spans if s.kind == "cited_theorem" and s.theorem == name]
+        cited_errors = [s for s in cited if any(
+            m.severity == "error" and m.line is not None and s.contains(m.line)
+            for m in run.messages)]
         mine = [
             m for m in run.messages
             if m.line is not None and (span.contains(m.line) or m.line == audit_line
@@ -285,7 +290,13 @@ def classify(
         ]
         diags = header_notes + [_diag(m, module) for m in mine]
         errors = [m for m in mine if m.severity == "error"]
-        if errors:
+        for span in cited_errors:
+            diags.extend(_diag(m, module) for m in run.messages
+                         if m.severity == "error" and m.line is not None
+                         and span.contains(m.line))
+            diags.append(_pyleanx_diag(f"the {span.label}, which this proof cites, was not "
+                                       "accepted by Lean"))
+        if errors or cited_errors:
             out[name] = (Status.REJECTED, diags, None)
             continue
         reports = []

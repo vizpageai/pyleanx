@@ -175,7 +175,7 @@ def test_cauchy_integral_formula_from_cauchys_theorem() -> None:
     # the forbidden lemmas' modules are imported, so `simp [-lemma]` can name them
     assert "import Mathlib.Analysis.Complex.RemovableSingularity" in src
     # the avoid check also looks inside the PyLeanX facts the proof cites
-    assert "(`PyLeanX).isPrefixOf u" in src
+    assert "(env.getModuleIdxFor? u).isNone" in src
     assert "exact Metric.pos_of_mem_ball hw" in src
     text = str(thm.prose())
     assert "5. ∮_(|z - c| = R)g(z) dz = 0.  (Cauchy's theorem" in text
@@ -187,3 +187,114 @@ def test_gap_filler_rewrites_and_applies_to_hypotheses() -> None:
 
     alts = Justify((Name("L"), Name("h"))).alternatives()
     assert "exact L h" in alts and "(rw [L]; done)" in alts
+
+
+# --------------------------------------------------------------------------- citing theorems
+
+
+def _lemma_and_user() -> tuple[pl.Theorem, pl.Theorem]:
+    a = pl.symbol("a", pl.Real)
+    lemma_ = pl.Theorem("sq_nonneg_lemma", [a], conclusion=a**2 >= 0, proof=pl.positivity())
+    b = pl.symbol("b", pl.Real)
+    user = pl.Theorem("uses_lemma", [b], conclusion=b**2 + 1 > 0,
+                      proof=pl.proof(pl.claim(b**2 >= 0, because=lemma_), pl.conclude()))
+    return lemma_, user
+
+
+def test_citing_a_theorem_emits_its_proof_first() -> None:
+    lemma_, user = _lemma_and_user()
+    src = user.to_lean()
+    assert "-- PyLeanX: theorem sq_nonneg_lemma, cited by a proof below" in src
+    assert src.index("theorem sq_nonneg_lemma") < src.index("theorem uses_lemma")
+    assert "#print axioms sq_nonneg_lemma" in src  # the cited proof is audited too
+    # in one batch the cited theorem is emitted once, before its citer, whatever the order
+    from pyleanx.render.lean import render_module
+
+    mod = render_module([user, lemma_])
+    assert mod.source.count("theorem sq_nonneg_lemma") == 1
+    assert mod.source.index("theorem sq_nonneg_lemma") < mod.source.index("theorem uses_lemma")
+    assert mod.theorem_names == ("uses_lemma", "sq_nonneg_lemma")
+    kinds = {s.kind for s in render_module([user]).source_map.spans}
+    assert "cited_theorem" in kinds
+
+
+def test_only_proved_theorems_can_be_cited() -> None:
+    draft = pl.Theorem("draft", [], conclusion=pl.TRUE)
+    user = pl.Theorem("uses_draft", [], conclusion=pl.TRUE,
+                      proof=pl.proof(pl.conclude(because=draft)))
+    with pytest.raises(TacticError, match="has no proof"):
+        user.to_lean()
+    draft.prove(pl.rfl())
+    assert "theorem draft" in user.to_lean()  # proved now: cited with its proof
+
+
+def test_citation_cycles_are_rejected() -> None:
+    p_ = pl.Theorem("p_thm", [], conclusion=pl.TRUE, proof=pl.rfl())
+    q_ = pl.Theorem("q_thm", [], conclusion=pl.TRUE, proof=pl.proof(pl.conclude(because=p_)))
+    p_.prove(pl.proof(pl.conclude(because=q_)))
+    with pytest.raises(TacticError, match="cycle"):
+        q_.to_lean()
+
+
+def test_citations_round_trip_and_bank_records_them(tmp_path) -> None:
+    from pyleanx.backend.interface import Status, VerificationResult
+    from pyleanx.proofs import CITED_THEOREMS
+    from pyleanx.render.lean import render_statement
+
+    lemma_, user = _lemma_and_user()
+    data = user.canonical()
+    assert ["theorem_ref", "sq_nonneg_lemma"] in data["proof"][1][0][3]
+    assert _body(theorem_from_canonical(data).to_lean()) == _body(user.to_lean())
+    saved = CITED_THEOREMS.pop("sq_nonneg_lemma")
+    try:
+        with pytest.raises(Exception, match="not loaded"):
+            theorem_from_canonical(data)
+    finally:
+        CITED_THEOREMS["sq_nonneg_lemma"] = saved
+
+    proj = pl.find_project(None)
+
+    def ok(t: pl.Theorem) -> VerificationResult:
+        return VerificationResult(theorem=t.name, status=Status.VERIFIED,
+                                  lean_source=render_statement(t), axioms=("propext",),
+                                  toolchain=proj.toolchain,
+                                  mathlib_revision=proj.mathlib_revision)
+
+    bank = pl.TheoremBank(tmp_path / "bank.json")
+    bank.add_theorem(lemma_, ok(lemma_), id="lemma")
+    entry = bank.add_theorem(user, ok(user), id="user")
+    assert entry.dependencies == ("lemma",)  # recorded from the citation
+    names = [t.name for t in bank.load_with_dependencies("user")]
+    assert names == ["sq_nonneg_lemma", "uses_lemma"]
+
+
+def test_a_broken_cited_theorem_rejects_only_its_citers() -> None:
+    import json
+
+    from pyleanx.backend.interface import Status
+    from pyleanx.backend.subprocess_backend import LeanRun, classify, parse_json_messages
+    from pyleanx.project import LeanProject
+    from pyleanx.render.lean import render_module
+
+    _, user = _lemma_and_user()
+    c = pl.symbol("c", pl.Real)
+    other = pl.Theorem("unrelated", [c], conclusion=c**2 >= 0, proof=pl.positivity())
+    mod = render_module([user, other])
+    sm = mod.source_map
+    dep = next(s for s in sm.spans if s.kind == "cited_theorem")
+    assert dep.theorem == "uses_lemma"
+
+    def msg(sev: str, line: int, data: str) -> str:
+        return json.dumps({"severity": sev, "pos": {"line": line, "column": 0},
+                           "endPos": None, "data": data, "fileName": "f.lean"})
+
+    ax = "depends on axioms: [propext]"
+    out = "\n".join([msg("error", dep.start_line + 1, "positivity failed"),
+                     msg("information", sm.audit_line("uses_lemma"), f"'uses_lemma' {ax}"),
+                     msg("information", sm.audit_line("unrelated"), f"'unrelated' {ax}")])
+    msgs, _ = parse_json_messages(out)
+    run = LeanRun(returncode=1, messages=msgs, other_output="", timed_out=False, duration_ms=1)
+    v = classify(run, mod, LeanProject.at("."))
+    assert v["unrelated"][0] is Status.VERIFIED
+    assert v["uses_lemma"][0] is Status.REJECTED
+    assert any("cited theorem sq_nonneg_lemma" in d.message for d in v["uses_lemma"][1])

@@ -567,12 +567,34 @@ def avoid_check_lines(name: str, avoid: Sequence[str]) -> list[str]:
         "      | _ => #[]",
         "    for u in used do",
         "      if avoid.contains u && !hit.contains u then hit := hit.push u",
-        "      -- look inside auxiliary declarations and the PyLeanX facts the proof cites",
-        "      if root.isPrefixOf u || u.isInternal || (`PyLeanX).isPrefixOf u then",
+        "      -- look inside auxiliary declarations and everything declared in this file",
+        "      if root.isPrefixOf u || u.isInternal || (env.getModuleIdxFor? u).isNone then",
         "        todo := u :: todo",
         "  unless hit.isEmpty do",
         '    throwError m!"the proof of {root} uses {hit}, which it was asked not to use"',
     ]
+
+
+def _citation_order(theorems: Sequence[Theorem]) -> list[Theorem]:
+    """The batch in the given order, except that a cited theorem comes before its citers."""
+    from ..proofs import TheoremRef, iter_terms
+
+    by_name = {t.name: t for t in theorems}
+    out: list[Theorem] = []
+    placed: set[str] = set()
+
+    def place(t: Theorem) -> None:
+        if t.name in placed:
+            return
+        placed.add(t.name)
+        for term in iter_terms(t.proof):
+            if isinstance(term, TheoremRef) and term.name in by_name:
+                place(by_name[term.name])
+        out.append(t)
+
+    for t in theorems:
+        place(t)
+    return out
 
 
 def render_module(
@@ -589,13 +611,18 @@ def render_module(
         from ..errors import ScopeError
 
         raise ScopeError(f"duplicate theorem names in one module: {names}")
-    imports = resolve_imports(theorems, extra_imports, import_mode, unicode_types)
+    from ..proofs import cited_theorems
+
+    # Theorems the proofs cite are emitted first, with their proofs (Lean re-checks them).
+    deps = [t for t in cited_theorems(theorems) if t.name not in names]
+    emitted = [*deps, *_citation_order(theorems)]
+    imports = resolve_imports(emitted, extra_imports, import_mode, unicode_types)
     b = _Builder()
     header_lines = [f"import {m}" for m in imports]
     if header_lines:
         header_lines.append("")
     header_lines.append("set_option autoImplicit false")
-    if any(_uses_auto(t.proof) for t in theorems):
+    if any(_uses_auto(t.proof) for t in emitted):
         # `first | …` alternatives that are never tried would each produce linter warnings.
         header_lines += ["set_option linter.unusedTactic false",
                          "set_option linter.unreachableTactic false",
@@ -604,20 +631,23 @@ def render_module(
     b.spans.append(SourceSpan(s, e, "header", None, "imports and options"))
     from ..defs import module_definitions
 
-    for d in module_definitions(theorems):
+    for d in module_definitions(emitted):
         b.add("")
         s, e = b.add(*d.render(unicode_types))
         b.spans.append(SourceSpan(s, e, "definition", None, f"definition {d.name}", d.origin))
     from ..proofs import library_facts
 
-    for fact in library_facts(theorems):
+    for fact in library_facts(emitted):
         b.add("")
         s, e = b.add(f"-- PyLeanX library fact: {fact.label or fact.name}",
                      *fact.lean.splitlines())
         b.spans.append(SourceSpan(s, e, "library_fact", None, f"library fact {fact.name}"))
     r = _ExprRenderer(unicode_types)
-    for thm in theorems:
+    dep_lines: dict[str, tuple[int, int]] = {}
+    for thm in emitted:
         b.add("")
+        if thm in deps:
+            b.add(f"-- PyLeanX: theorem {thm.name}, cited by a proof below (re-checked here)")
         thm_start = b.next_line
         head, concl = _statement_parts(thm, r)
         s, e = b.add(head)
@@ -652,5 +682,14 @@ def render_module(
             b.add("")
             s, e = b.add(f"#print axioms {thm.name}")
             b.spans.append(SourceSpan(s, e, "axiom_audit", thm.name, "axiom audit"))
+        if thm in deps:
+            dep_lines[thm.name] = (thm_start, b.next_line - 1)
+    # An error anywhere in a cited theorem rejects exactly the theorems that cite it.
+    for thm in theorems:
+        for dep in cited_theorems([thm]):
+            if dep.name in dep_lines:
+                s, e = dep_lines[dep.name]
+                b.spans.append(SourceSpan(s, e, "cited_theorem", thm.name,
+                                          f"cited theorem {dep.name}", dep.origin))
     source = "\n".join(b.lines) + "\n"
     return RenderedModule(source, SourceMap(b.spans), imports, tuple(names))

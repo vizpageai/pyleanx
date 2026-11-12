@@ -208,6 +208,59 @@ Lean theorems **with their proofs** (`geo.corresponding_angles`, `geo.similar_si
 `an.tendsto_iff`). A Lean file that cites one contains its full proof, so Lean checks it on
 every run and its axioms are part of your theorem's audit. Nothing is taken on trust.
 
+## Using a proved theorem
+
+Once a theorem is proved, cite the theorem **object** in later proofs, exactly like a library
+fact. From `examples/using_cauchy_integral.py`:
+
+```python
+from readable_cauchy_integral import cauchy_integral_formula   # the proved theorem
+
+zero, one, two = pl.ascribe(0, ca.C), pl.ascribe(1, ca.C), pl.real(2)
+
+contour_integral = pl.Theorem(
+    "contour_integral_z_sq", [],
+    conclusion=ca.circle_integral(lambda z: pl.smul(ca.inv(z - one), z**2), zero, two)
+    == ca.two_pi_i(),
+    proof=pl.proof(
+        pl.claim(ca.holomorphic_on(pl.fun(lambda z: z**2, ca.C), ca.closed_ball(zero, two)),
+                 name="hf", note="z ↦ z² is a polynomial"),
+        pl.claim(ca.mem(one, ca.ball(zero, two)), name="hw", note="|1 − 0| = 1 < 2"),
+        pl.chain(ca.circle_integral(lambda z: pl.smul(ca.inv(z - one), z**2), zero, two),
+                 ("=", pl.smul(ca.two_pi_i(), one**2), cauchy_integral_formula),
+                 ("=", ca.two_pi_i(), None, "1² = 1")),
+    ),
+)
+```
+
+```text
+3. ∮_(|z - 0| = 2)(z - 1)⁻¹ z² dz = (2 · π · i) 1² (theorem cauchy_integral_formula)
+                                   = 2 · π · i (1² = 1).
+✔ Checked by Lean (axioms: propext, Classical.choice, Quot.sound).
+```
+
+The gap filler instantiates the theorem (f = z ↦ z², c = 0, w = 1, R = 2) and discharges its
+hypotheses with steps 1 and 2.
+
+### Citing the proved theorem, never an unproved one
+
+* **Cite the object, not a string.** `because=cauchy_integral_formula` (or
+  `pl.cite(cauchy_integral_formula)`) carries the theorem *with its proof*. The Lean file for
+  the citing theorem contains the cited theorem and its proof first, so Lean re-checks it on
+  every run. A string `"cauchy_integral_formula"` is only a name: it is not re-checked and
+  could even resolve to a different Lean declaration.
+* **An unproved theorem cannot be cited.** If the cited theorem has no proof, PyLeanX refuses
+  to build the Lean file (`… cites theorem draft, which has no proof; prove it first`).
+* **A wrong proof cannot hide behind a citation.** If the cited proof fails, every theorem
+  that cites it is rejected (*the cited theorem … was not accepted by Lean*); theorems in the
+  same run that do not cite it are unaffected. Its axioms are part of the citing theorem's
+  audit, and `avoid=` checks look inside it too.
+* **Banked theorems.** `bank.add_theorem(thm, result, id=…)` stores only *verified*
+  theorems, with their evidence (axioms, toolchain, Mathlib revision) and the theorems they
+  cite as dependencies. `bank.load(id)` rebuilds the theorem exactly (hash-checked) and makes
+  it citable; `bank.load_with_dependencies(id)` loads what it cites first. A loaded theorem is
+  cited like any other, so its proof is re-checked again where it is used.
+
 ## Reading a proof back
 
 `thm.prose(result)` (or `pl.prose(thm, result)`) returns the proof as numbered steps:

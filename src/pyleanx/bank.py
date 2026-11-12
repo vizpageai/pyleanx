@@ -366,7 +366,13 @@ class TheoremBank:
                 render_statement(theorem, unicode_types=True) not in result.lean_source:
             raise BankError(f"{theorem.name}: the verification result is for a different "
                             "statement")
+        from .proofs import cited_theorems
+
         deps = tuple(dependencies)
+        for cited in cited_theorems([theorem]):  # theorems its proof cites, if banked
+            for e in self._entries.values():
+                if e.kind == "theorem" and e.lean_name == cited.name and e.id not in deps:
+                    deps = (*deps, e.id)
         imports = resolve_imports([theorem])
         for d in deps:
             dep = self.get(d)
@@ -473,6 +479,9 @@ class TheoremBank:
         thm = theorem_from_canonical(e.theorem, imports=e.imports)
         if statement_hash(render_statement(thm)) != e.statement_sha256:
             raise BankError(f"{e.id}: rebuilt statement does not match the recorded hash")
+        from .proofs import CITED_THEOREMS
+
+        CITED_THEOREMS[thm.name] = thm  # later loads may cite it
         return thm
 
     def load_with_dependencies(self, key: str,

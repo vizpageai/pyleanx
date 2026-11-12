@@ -91,7 +91,7 @@ def _term(value: object) -> Term:
     if isinstance(value, str):
         return Name(value)
     if hasattr(value, "name") and type(value).__name__ == "Theorem":
-        return Name(value.name)  # reuse a previously declared theorem as a lemma
+        return cite(value)  # its proof travels with the citation and is re-checked
     hook = getattr(type(value), "__pyleanx_term__", None)  # e.g. pl.mathlib declarations
     if hook is not None:
         return hook(value)
@@ -102,10 +102,39 @@ def _canon_term(t: Term) -> Any:
     return t.canonical()
 
 
+@dataclass(frozen=True)
+class TheoremRef(Name):
+    """A citation of a PyLeanX :class:`~pyleanx.Theorem` (the object, not just its name).
+
+    The cited theorem, with its proof, is emitted into every Lean file whose proof cites it,
+    before the citing theorem, so Lean re-checks it each time: a citing theorem can only be
+    verified if the cited proof is accepted too. Citing a theorem without a proof is an error.
+    """
+
+    theorem: Any = field(default=None, compare=False)
+
+    def canonical(self) -> Any:
+        return ["theorem_ref", self.name]
+
+
+#: Theorems cited in this process, by Lean name (to rebuild serialized proofs that cite them;
+#: ``TheoremBank.load_with_dependencies`` registers banked dependencies here).
+CITED_THEOREMS: dict[str, Any] = {}
+
+
+def cite(theorem: Any) -> TheoremRef:
+    """Cite a proved :class:`~pyleanx.Theorem` in another proof (``because=`` does this when
+    given the theorem object). Its proof is re-checked together with the citing theorem."""
+    if type(theorem).__name__ != "Theorem":
+        raise TacticError(f"pl.cite expects a pl.Theorem, got {theorem!r}")
+    CITED_THEOREMS[theorem.name] = theorem
+    return TheoremRef(theorem.name, label=f"theorem {theorem.name}", theorem=theorem)
+
+
 def ref(name: object, imports: Iterable[str] = ()) -> Name:
     """Reference a Mathlib/core declaration (``pl.ref("sq_nonneg")``) or a Theorem."""
     if type(name).__name__ == "Theorem":
-        return Name(name.name)  # type: ignore[attr-defined]
+        return cite(name)
     return Name(name, tuple(imports))  # type: ignore[arg-type]
 
 
@@ -1554,6 +1583,33 @@ def _subterms(t: Term) -> Iterable[Term]:
         yield t.fn
         for a in t.args:
             yield from _subterms(a)
+
+
+def cited_theorems(theorems: Iterable[Any]) -> list[Any]:
+    """PyLeanX theorems cited (transitively) by the proofs of ``theorems``, dependencies
+    first, each once. Raises if a cited theorem has no proof or citations form a cycle."""
+    order: list[Any] = []
+    seen: set[str] = set()
+
+    def visit(thm: Any, stack: tuple[str, ...]) -> None:
+        for term in iter_terms(thm.proof):
+            if not isinstance(term, TheoremRef):
+                continue
+            dep = term.theorem
+            if dep.name in stack:
+                raise TacticError(f"citation cycle: {' → '.join((*stack, dep.name))}")
+            if dep.proof is None:
+                raise TacticError(
+                    f"{thm.name} cites theorem {dep.name}, which has no proof; prove it first "
+                    "(only a proved theorem can be cited, and its proof is re-checked)")
+            if dep.name not in seen:
+                visit(dep, (*stack, dep.name))
+                seen.add(dep.name)
+                order.append(dep)
+
+    for thm in theorems:
+        visit(thm, (thm.name,))
+    return order
 
 
 def library_facts(theorems: Iterable[Any]) -> list[LibraryFact]:

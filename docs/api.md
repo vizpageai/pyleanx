@@ -340,6 +340,7 @@ See the tutorial [Writing proofs like a mathematician](tutorials/written-proofs.
 | `pl.chain(a, (rel, b[, because[, note]]), …, name="")` | `have : a R z := by calc …` (concludes when last) |
 | `pl.suffices(P, because=…, name="h")` | `suffices h : P by <gap filler>` |
 | `pl.type_param("G", "Group", label="group")` | binders `{G : Type*} [Group G]` |
+| `because=thm` / `pl.cite(thm)` (a proved `pl.Theorem`) | the cited theorem and its proof are emitted first and re-checked; unproved → error; a failed cited proof rejects its citers |
 | `pl.Theorem(…, avoid=[lemmas])` | `simp [-lemma]` in gap fillers, plus a Lean check that fails if the proof term refers to them |
 | `thm.prose(result=None)`, `pl.prose(thm, result)` | the proof as numbered, nested steps (text / Jupyter) |
 
