@@ -6,6 +6,7 @@ part in verification; ``to_lean()`` remains the authoritative statement.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
@@ -175,7 +176,7 @@ class _Latex:
         if isinstance(e, Apply):
             fn = e.fn
             args = [self.render(a)[0] for a in e.args]
-            if isinstance(fn, Const) and fn.latex and "{0}" in fn.latex:
+            if isinstance(fn, Const) and fn.latex and re.search(r"\{\d+\}", fn.latex):
                 try:
                     return fn.latex.format(*args), MAX
                 except IndexError:

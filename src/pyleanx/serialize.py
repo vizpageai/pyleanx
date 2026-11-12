@@ -83,7 +83,7 @@ def _builtin_funcs() -> None:
     from . import analysis, expr, geometry
 
     for f in (expr._SQRT, expr._EXP, expr._LOG, analysis._SIN, analysis._COS, analysis._PI,
-              geometry._DIST, geometry._ANGLE_F):
+              analysis._DERIV, geometry._DIST, geometry._ANGLE_F):
         register_func(f)
 
 
@@ -266,7 +266,9 @@ class _Decoder:
 
     def term(self, d: Any) -> Term:
         if isinstance(d, list) and d and d[0] == "name":
-            return Name(d[1])
+            from .proofs import LIBRARY_FACTS
+
+            return LIBRARY_FACTS.get(d[1]) or Name(d[1])
         if isinstance(d, list) and len(d) == 3 and d[0] == "app" and isinstance(d[1], list):
             fn = self.term(d[1])
             if not isinstance(fn, Name):
@@ -336,6 +338,21 @@ class _Decoder:
             return P.Unfold(names=tuple(d[1]))
         if kw == "ext":
             return P.Ext(names=tuple(d[1]))
+        if kw == "justify":
+            return P.Justify(facts=tuple(self.term(t) for t in d[1]), unfold=tuple(d[2]))
+        if kw == "claim":
+            return P.Claim(name=d[1], prop=self.expr(d[2]),
+                           facts=tuple(self.term(t) for t in d[3]), note=d[4],
+                           proof=self.opt_tactic(d[5]), unfold=tuple(d[6]))
+        if kw == "conclude":
+            return P.Conclude(facts=tuple(self.term(t) for t in d[1]), note=d[2],
+                              proof=self.opt_tactic(d[3]), unfold=tuple(d[4]))
+        if kw == "let":
+            value = self.expr(d[2])
+            tag, name, sort = d[1]
+            var = Var(name, self.sort(sort))
+            self.scope[name] = var
+            return P.Let(var=var, value=value, note=d[3])
         raise SerializationError(f"unknown tactic {kw!r}")
 
 
@@ -360,7 +377,8 @@ def theorem_from_canonical(data: Mapping[str, Any], *, imports: Iterable[str] = 
         dec.in_proof = True
         proof =dec.tactic(data["proof"]) if data.get("proof") is not None else None
         thm_imports = list(dict.fromkeys([*data.get("imports", []), *imports]))
-        thm = Theorem(data["name"], variables, hyps, concl, imports=thm_imports, proof=proof)
+        thm = Theorem(data["name"], variables, hyps, concl, imports=thm_imports, proof=proof,
+                      avoid=data.get("avoid", ()))
     except SerializationError:
         raise
     except (KeyError, TypeError, ValueError, IndexError) as exc:

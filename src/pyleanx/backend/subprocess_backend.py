@@ -260,13 +260,14 @@ def classify(
             "are the requested modules part of the pinned Mathlib?"))
         return {n: (Status.ENVIRONMENT_ERROR, diags, None) for n in names}
 
-    def_spans = [s for s in sm.spans if s.kind == "definition"]
+    def_spans = [s for s in sm.spans if s.kind in ("definition", "library_fact")]
     def_errors = [m for m in run.messages if m.severity == "error" and m.line is not None
                   and any(s.contains(m.line) for s in def_spans)]
     if def_errors:
-        # A broken definition invalidates every theorem in the file (fail closed).
+        # A broken definition or shipped fact invalidates every theorem (fail closed).
         diags = [_diag(m, module) for m in def_errors]
-        diags.append(_pyleanx_diag("a definition in this Lean file failed to elaborate"))
+        diags.append(_pyleanx_diag(
+            "a definition or library fact in this Lean file failed to elaborate"))
         return {n: (Status.REJECTED, diags, None) for n in names}
 
     header_notes = [_diag(m, module) for m in run.messages
@@ -275,9 +276,12 @@ def classify(
         span = sm.theorem_span(name)
         audit_line = sm.audit_line(name)
         assert span is not None
+        # The theorem, its `avoid=` check (an error there rejects it) and its axiom audit.
+        checks = [s for s in sm.spans if s.kind == "avoid_check" and s.theorem == name]
         mine = [
             m for m in run.messages
-            if m.line is not None and (span.contains(m.line) or m.line == audit_line)
+            if m.line is not None and (span.contains(m.line) or m.line == audit_line
+                                       or any(c.contains(m.line) for c in checks))
         ]
         diags = header_notes + [_diag(m, module) for m in mine]
         errors = [m for m in mine if m.severity == "error"]

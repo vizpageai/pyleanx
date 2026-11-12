@@ -34,6 +34,9 @@ CASES: dict[str, tuple[list[str], int]] = {
     "theorem_families": (RUN, 0),  # checks that the bad row is rejected
     "side_splitter": (RUN, 0),
     "side_splitter_vectors": (RUN, 0),
+    "readable_trig": (RUN, 0),
+    "readable_side_splitter": (RUN, 0),
+    "readable_am_gm": (RUN, 0),
 }
 
 # Examples deliberately not run here, with the reason (each must be run by hand).

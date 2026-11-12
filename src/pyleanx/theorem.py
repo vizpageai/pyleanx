@@ -55,6 +55,22 @@ def _normalize_assumptions(assumptions: Any) -> tuple[Hypothesis, ...]:
     return tuple(items)
 
 
+def _avoid_names(avoid: Iterable[Any]) -> tuple[str, ...]:
+    """Lemma names a proof must not use (``Theorem(avoid=[an.sin_sq_add_cos_sq])``)."""
+    from .proofs import Name, _term
+
+    if isinstance(avoid, (str, Name)) or hasattr(type(avoid), "__pyleanx_term__"):
+        avoid = [avoid]
+    out: list[str] = []
+    for a in avoid:
+        t = _term(a)
+        if not isinstance(t, Name):
+            raise TacticError(f"avoid= takes lemma names, got {a!r}")
+        if t.name not in out:
+            out.append(t.name)
+    return tuple(out)
+
+
 class Theorem:
     """A theorem statement plus (optionally) a proof.
 
@@ -73,6 +89,7 @@ class Theorem:
         *,
         imports: Iterable[str] = (),
         proof: Tactic | None = None,
+        avoid: Iterable[Any] = (),
     ) -> None:
         self.name = validate_identifier(name, "theorem name")
         self.variables: tuple[Var, ...] = tuple(variables)
@@ -84,6 +101,7 @@ class Theorem:
             validate_qualified_name(i, "import module") for i in imports
         )
         self.origin = caller_origin()
+        self.avoid: tuple[str, ...] = _avoid_names(avoid)
         self.proof: Tactic | None = None
         self.validate_statement()
         if proof is not None:
@@ -120,7 +138,9 @@ class Theorem:
             raise TacticError(
                 f"prove() expects a tactic such as pl.ring() or pl.steps(...), got {tactic!r}"
             )
-        self.proof = tactic
+        from .proofs import with_avoid
+
+        self.proof = with_avoid(tactic, self.avoid)
         return self
 
     # ------------------------------------------------------------------ rendering
@@ -143,6 +163,8 @@ class Theorem:
             "proof": self.proof.canonical() if self.proof is not None else None,
             "imports": list(self.imports),
         }
+        if self.avoid:  # absent when unused (keeps older canonical forms stable)
+            data["avoid"] = list(self.avoid)
         from .defs import theorem_definitions
 
         defs = theorem_definitions(self)
@@ -162,6 +184,12 @@ class Theorem:
         from .backend.subprocess_backend import verify_all
 
         return verify_all([self], project=project, use_cache=use_cache, timeout=timeout)[0]
+
+    def prose(self, result: VerificationResult | None = None) -> Any:
+        """The proof as readable steps (see :func:`pyleanx.prose`)."""
+        from .prose import prose
+
+        return prose(self, result)
 
     def __repr__(self) -> str:
         state = "proved-script" if self.proof is not None else "no proof"

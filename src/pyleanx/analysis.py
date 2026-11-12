@@ -10,16 +10,17 @@ Abstractions and limitations
 * Functions are Mathlib's total real functions: ``Real.sqrt x = 0`` for ``x < 0``,
   ``Real.log 0 = 0``, ``Real.log (-x) = Real.log x``. Statements mean exactly that;
   add hypotheses (``pl.Le(0, x)``) where the informal statement assumes a domain.
-* No limits, derivatives or integrals yet (they need function-valued sorts and
-  filters; planned with typeclass binder support).
+* Derivatives of real functions: ``deriv(f, x)`` is Mathlib's ``deriv f x`` (which is 0
+  where ``f`` is not differentiable), ``differentiable(f)`` is ``Differentiable ℝ f``.
+  Functions are symbols of sort ``pl.Fn(pl.Real, pl.Real)`` or ``pl.fun(lambda t: …)``.
 * ``LEMMAS`` reference declarations at :data:`VERIFIED_MATHLIB`; Lean checks every use.
 """
 
 from __future__ import annotations
 
 from ._domain import CATALOG_VERSION, VERIFIED_MATHLIB, collect_lemmas, lemma
-from .expr import App, Func, abs_, exp, log, sqrt
-from .types import Real
+from .expr import App, Expr, Func, abs_, exp, log, sqrt
+from .types import Fn, Prop, Real
 
 _TRIG = "Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic"
 _SQRT = "Mathlib.Analysis.Real.Sqrt"
@@ -46,8 +47,35 @@ def pi() -> App:
     return _PI()
 
 
+_DERIV_MOD = "Mathlib.Analysis.Calculus.Deriv.Basic"
+_MVT = "Mathlib.Analysis.Calculus.MeanValue"
+_TRIG_DERIV = "Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv"
+_RR = Fn(Real, Real)
+_DERIV = Func("deriv", (_RR, Real), Real, (_DERIV_MOD,), latex="{0}'({1})")
+_DERIV_LAM = Func("deriv", (_RR, Real), Real, (_DERIV_MOD,),
+                  latex=r"\left({0}\right)'({1})")
+
+
+def deriv(f: object, x: object) -> App:
+    """``f′(x)``: the derivative of ``f : ℝ → ℝ`` at ``x`` (Mathlib's ``deriv f x``)."""
+    from .terms import Lam
+
+    return (_DERIV_LAM if isinstance(f, Lam) else _DERIV)(f, x)
+
+
+def differentiable(f: object) -> Expr:
+    """``f`` is differentiable on all of ℝ (``Differentiable ℝ f``)."""
+    from .terms import apply, const
+    from .types import lean_type
+
+    c = const("Differentiable", Fn(lean_type("Type"), _RR, Prop), [_DERIV_MOD],
+              latex=r"{1} \text{{ is differentiable}}")
+    return apply(c, Real, f)
+
+
 sqrt_nonneg = lemma("Real.sqrt_nonneg", _SQRT)
-sq_sqrt = lemma("Real.sq_sqrt", _SQRT)          # 0 ≤ a → √a ^ 2 = a
+sq_sqrt = lemma("Real.sq_sqrt", _SQRT, label="(√a)² = a for a ≥ 0")  # 0 ≤ a → √a ^ 2 = a
+sqrt_mul = lemma("Real.sqrt_mul", _SQRT, label="√(ab) = √a·√b for a ≥ 0")
 sqrt_sq = lemma("Real.sqrt_sq", _SQRT)          # 0 ≤ a → √(a ^ 2) = a
 sqrt_mul_self = lemma("Real.sqrt_mul_self", _SQRT)
 exp_pos = lemma("Real.exp_pos", _EXP)
@@ -62,8 +90,18 @@ sin_le_one = lemma("Real.sin_le_one", _TRIG)
 neg_one_le_sin = lemma("Real.neg_one_le_sin", _TRIG)
 cos_le_one = lemma("Real.cos_le_one", _TRIG)
 pi_pos = lemma("Real.pi_pos", _TRIG)
+sin_zero = lemma("Real.sin_zero", _TRIG, label="sin 0 = 0")
+cos_zero = lemma("Real.cos_zero", _TRIG, label="cos 0 = 1")
+
+# Calculus facts, named as a textbook would cite them.
+constant_of_zero_derivative = lemma(
+    "is_const_of_deriv_eq_zero", _MVT,
+    label="a differentiable function with derivative 0 everywhere is constant")
+deriv_sin = lemma("Real.deriv_sin", _TRIG_DERIV, label="sin′ = cos")
+deriv_cos = lemma("Real.deriv_cos'", _TRIG_DERIV, label="cos′ = −sin")
 
 LEMMAS = collect_lemmas(globals())
 
-__all__ = ["sin", "cos", "pi", "sqrt", "exp", "log", "abs_", "LEMMAS", "VERIFIED_MATHLIB",
+__all__ = ["sin", "cos", "pi", "sqrt", "exp", "log", "abs_", "deriv", "differentiable",
+           "LEMMAS", "VERIFIED_MATHLIB",
            "CATALOG_VERSION", *LEMMAS]

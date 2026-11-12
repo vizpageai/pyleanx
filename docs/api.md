@@ -159,7 +159,7 @@ The module docstrings list the abstractions and limitations.
 |---|---|---|
 | `pl.algebra` | (core arithmetic) | `identity(name, lhs, rhs)` (ring), `nonneg(name, e)` (positivity), `inequality(name, lhs, "<=", rhs, assumptions=…)` (nlinarith), `am_gm_two(name, a, b)`; `sq_nonneg`, `add_sq`, `sub_sq`, `abs_add_le`, `two_mul_le_add_sq`, … |
 | `pl.analysis` | `sin`, `cos`, `pi()`, plus `sqrt`, `exp`, `log`, `abs_` | `sin_sq_add_cos_sq`, `sq_sqrt`, `exp_pos`, `add_one_le_exp`, `log_le_sub_one_of_pos`, `pi_pos`, … |
-| `pl.geometry` | `Point` (= `EuclideanSpace ℝ (Fin 2)`), `point`, `points`, `dist`, `angle` | `dist_triangle`, `dist_comm`, `angle_comm`, `angle_add_angle_add_angle_eq_pi`, `pythagoras_iff`, … |
+| `pl.geometry` | `Point` (= `EuclideanSpace ℝ (Fin 2)`), `point`, `points`, `dist`, `angle`, `line`, `parallel`, `on_segment`, `collinear`, `triangle`, `similar` | `dist_triangle`, `dist_comm`, `angle_comm`, `angle_add_angle_add_angle_eq_pi`, `pythagoras_iff`, … |
 
 ```python
 A, B, C = geo.points("A B C")
@@ -321,6 +321,28 @@ definition that fails to elaborate rejects every theorem in the file.
 
 Missing step proofs default to `pl.auto()`. `thm.auto_prove(*hints)` tries the strategies as
 separate candidates and attaches the first one Lean verifies.
+
+## Written proofs: claims with reasons
+
+See the tutorial [Writing proofs like a mathematician](tutorials/written-proofs.md).
+
+| Python | Lean |
+|---|---|
+| `pl.let(f, lambda t: …)` (`f` a symbol of sort `pl.Fn(…)`) | `set f : T := fun t => … with f_def` |
+| `pl.claim(P, because=[facts], note="…", name="", proof=None)` | `have stepN : P := by <gap filler>` |
+| `pl.conclude(because=[facts], note="…")` | the goal, closed by the gap filler |
+| `pl.Theorem(…, avoid=[lemmas])` | `simp [-lemma]` in gap fillers, plus a Lean check that fails if the proof term refers to them |
+| `thm.prose(result=None)`, `pl.prose(thm, result)` | the proof as numbered steps (text / Jupyter) |
+
+The gap filler applies cited facts (discharging side conditions from the context), and tries
+`simp`/`norm_num`/`linarith`/`nlinarith`/`field_simp`/`fun_prop`/`positivity` with them,
+also after unfolding `pl.let` definitions and introducing `∀` variables; each attempt must
+close the step. Vocabulary added for written proofs: `an.deriv(f, x)`,
+`an.differentiable(f)`, `an.constant_of_zero_derivative`, `an.deriv_sin`, `an.deriv_cos`,
+`an.sin_zero`, `an.cos_zero`, `an.sqrt_mul`; `geo.line`, `geo.parallel`, `geo.on_segment`,
+`geo.collinear`, `geo.triangle`, `geo.similar`, `geo.similar_AA`, and the shipped facts
+`geo.corresponding_angles`, `geo.corresponding_angles_2`, `geo.similar_sides` (Lean
+theorems with proofs, emitted into every file that cites them).
 
 ## Libraries and generated bindings
 

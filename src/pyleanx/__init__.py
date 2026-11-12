@@ -91,6 +91,8 @@ from .proofs import (  # noqa: E402
     branches,
     calc,
     cases,
+    claim,
+    conclude,
     constructor,
     decide,
     exact,
@@ -99,6 +101,7 @@ from .proofs import (  # noqa: E402
     hyp,
     induction,
     intro,
+    let,
     linarith,
     nlinarith,
     norm_num,
@@ -119,6 +122,7 @@ from .proofs import (  # noqa: E402
     unfold,
     use,
 )
+from .prose import Prose, prose  # noqa: E402
 from .render.lean import render_module
 from .serialize import theorem_from_canonical
 from .session import Goals, ProofSession, StepResult
@@ -178,6 +182,7 @@ __all__ = [
     "define", "define_type", "structure", "mk",
     # structured proofs
     "auto", "have", "calc", "show", "obtain", "cases", "induction", "unfold", "ext", "proof",
+    "claim", "conclude", "let", "prose", "Prose",
     # libraries, bindings, faithfulness
     "lib", "add_library", "build_library", "list_libraries", "remove_library",
     "same_statement", "SameStatement",

@@ -29,6 +29,20 @@ see [docs/stability.md](docs/stability.md)).
   their statements. Lean re-elaborates the pinned source. The result is marked `exact` only
   if the proof term and statement match the compiled ones Lean verified. It also accepts
   your own `pl.Theorem`; Lean then replays exactly the source `verify()` checks.
+- Written proofs: `pl.claim(P, because=…, note=…)`, `pl.conclude(…)` and `pl.let(f, …)`
+  write a proof as statements with reasons; Lean fills routine gaps with standard
+  automation and checks every step. `thm.prose(result)` prints the proof as numbered
+  steps (text or typeset in Jupyter).
+- `Theorem(…, avoid=[lemmas])`: the proof must not use these lemmas. Gap-filling
+  automation excludes them and a Lean check fails verification if the proof term refers to
+  them (catches circular proofs, e.g. `simp` proving sin²+cos²=1 with that very lemma).
+- Vocabulary for written proofs: `an.deriv`, `an.differentiable` and calculus facts;
+  `geo.line`, `geo.parallel`, `geo.on_segment`, `geo.collinear`, `geo.triangle`,
+  `geo.similar`, `geo.similar_AA`. Facts Mathlib lacks in citable form
+  (`geo.corresponding_angles`, `geo.similar_sides`) ship as Lean theorems with proofs,
+  checked in every file that cites them.
+- Examples `readable_trig.py` (sin²+cos²=1 by derivatives), `readable_side_splitter.py`
+  (similar triangles), `readable_am_gm.py`; `side_splitter.py`, `side_splitter_vectors.py`.
 
 ### Fixed
 - Interactive sessions build and run the Lean REPL with the pinned toolchain's `lake`, so they

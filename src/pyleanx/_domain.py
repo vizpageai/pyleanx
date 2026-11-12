@@ -18,8 +18,9 @@ VERIFIED_TOOLCHAIN = "leanprover/lean4:v4.34.1"
 CATALOG_VERSION = "1"
 
 
-def lemma(name: str, *imports: str) -> Name:
-    return Name(name, tuple(imports))
+def lemma(name: str, *imports: str, label: str = "") -> Name:
+    """A library fact; ``label`` says in words what it states (used in printed proofs)."""
+    return Name(name, tuple(imports), label=label)
 
 
 def collect_lemmas(namespace: Mapping[str, object]) -> dict[str, Name]:

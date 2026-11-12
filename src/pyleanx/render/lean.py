@@ -315,10 +315,33 @@ def _attach(head: str, block: list[str], indent: str = "  ") -> list[str]:
 
 
 def _structured_lines(t: Tactic) -> list[str]:
-    from ..proofs import Auto, Calc, Cases, Ext, Have, Induction, Obtain, Show, Unfold
+    from ..proofs import (
+        Auto,
+        Calc,
+        Cases,
+        Claim,
+        Conclude,
+        Ext,
+        Have,
+        Induction,
+        Justify,
+        Let,
+        Obtain,
+        Show,
+        Unfold,
+    )
 
-    if isinstance(t, Auto):
+    if isinstance(t, (Auto, Justify)):
         return ["first", *("  | " + alt for alt in t.alternatives())]
+    if isinstance(t, Claim):
+        return _attach(f"have {t.name or 'this'} : {render_expr(t.prop)} :=",
+                       _by(t.justification()))
+    if isinstance(t, Conclude):
+        return render_tactic_lines(t.justification())
+    if isinstance(t, Let):
+        sort = t.var.sort.lean_name() if t.var.sort is not None else None
+        typ = f" : {sort}" if sort else ""
+        return [f"set {t.var.name}{typ} := {render_expr(t.value)} with {t.eq_name}"]
     if isinstance(t, Have):
         return _attach(f"have {t.name} : {render_expr(t.prop)} :=", _by(t.proof))
     if isinstance(t, Show):
@@ -424,6 +447,10 @@ def _uses_auto(t: Tactic | None) -> bool:
 def _auto_default(t: Tactic) -> bool:
     """Structured steps without an explicit proof are closed by ``auto``."""
     name = type(t).__name__
+    if name == "Justify":
+        return True
+    if name in ("Claim", "Conclude"):
+        return getattr(t, "proof", None) is None
     if name == "Have":
         return getattr(t, "proof", None) is None
     if name == "Calc":
@@ -431,6 +458,37 @@ def _auto_default(t: Tactic) -> bool:
     if name == "Induction":
         return getattr(t, "zero", None) is None or getattr(t, "succ", None) is None
     return False
+
+
+def avoid_check_lines(name: str, avoid: Sequence[str]) -> list[str]:
+    """A Lean command that fails if the proof of ``name`` (with its auxiliary
+    declarations) refers to any of ``avoid``. Silent when the check passes."""
+    names = ", ".join(f"`{a}" for a in avoid)
+    return [
+        "open Lean in",
+        "#eval show MetaM Unit from do  -- PyLeanX: lemmas this proof must not use",
+        "  let env ← getEnv",
+        f"  let root := `{name}",
+        f"  let avoid : Array Name := #[{names}]",
+        "  let mut seen : NameSet := {}",
+        "  let mut todo : List Name := [root]",
+        "  let mut hit : Array Name := #[]",
+        "  while !todo.isEmpty do",
+        "    let c := todo.head!",
+        "    todo := todo.tail!",
+        "    if seen.contains c then continue",
+        "    seen := seen.insert c",
+        "    let some ci := env.find? c | continue",
+        "    let used := match ci with",
+        "      | .thmInfo v => v.value.getUsedConstants",
+        "      | .defnInfo v => v.value.getUsedConstants",
+        "      | _ => #[]",
+        "    for u in used do",
+        "      if avoid.contains u && !hit.contains u then hit := hit.push u",
+        "      if root.isPrefixOf u || u.isInternal then todo := u :: todo",
+        "  unless hit.isEmpty do",
+        '    throwError m!"the proof of {root} uses {hit}, which it was asked not to use"',
+    ]
 
 
 def render_module(
@@ -465,6 +523,13 @@ def render_module(
         b.add("")
         s, e = b.add(*d.render(unicode_types))
         b.spans.append(SourceSpan(s, e, "definition", None, f"definition {d.name}", d.origin))
+    from ..proofs import library_facts
+
+    for fact in library_facts(theorems):
+        b.add("")
+        s, e = b.add(f"-- PyLeanX library fact: {fact.label or fact.name}",
+                     *fact.lean.splitlines())
+        b.spans.append(SourceSpan(s, e, "library_fact", None, f"library fact {fact.name}"))
     r = _ExprRenderer(unicode_types)
     for thm in theorems:
         b.add("")
@@ -492,6 +557,12 @@ def render_module(
                 b.spans.append(SourceSpan(s, e, "tactic", thm.name, label, step.origin))
         thm_end = b.next_line - 1
         b.spans.append(SourceSpan(thm_start, thm_end, "theorem", thm.name, thm.name, thm.origin))
+        if getattr(thm, "avoid", ()) and thm.proof is not None:
+            b.add("")
+            s, e = b.add(*avoid_check_lines(thm.name, thm.avoid))
+            b.spans.append(SourceSpan(s, e, "avoid_check", thm.name,
+                                      "check: the proof does not use " + ", ".join(thm.avoid),
+                                      thm.origin))
         if audit:
             b.add("")
             s, e = b.add(f"#print axioms {thm.name}")

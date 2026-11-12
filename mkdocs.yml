@@ -31,6 +31,7 @@ nav:
   - Tutorials:
       - Your first theorem: tutorials/first-theorem.md
       - Using Mathlib: tutorials/mathlib.md
+      - Writing proofs like a mathematician: tutorials/written-proofs.md
       - Any Lean vocabulary: tutorials/general.md
       - Libraries beyond Mathlib: tutorials/libraries.md
       - Interactive proving: tutorials/interactive.md

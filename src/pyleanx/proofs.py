@@ -16,7 +16,7 @@ from typing import Any, ClassVar
 
 from ._origin import Origin, caller_origin
 from .errors import TacticError
-from .expr import Expr
+from .expr import Expr, Var
 from .names import validate_identifier, validate_qualified_name
 
 # =====================================================================================
@@ -30,6 +30,8 @@ class Name:
 
     name: str
     imports: tuple[str, ...] = ()
+    #: What the fact says, in words (shown when a written proof is printed).
+    label: str = field(default="", compare=False)
 
     def __post_init__(self) -> None:
         validate_qualified_name(self.name, "lemma/hypothesis name")
@@ -41,6 +43,31 @@ class Name:
 
     def canonical(self) -> Any:
         return ["name", self.name]
+
+
+@dataclass(frozen=True)
+class LibraryFact(Name):
+    """A textbook fact PyLeanX ships as a Lean theorem *with its proof*, for results that
+    Mathlib does not state in the form a proof cites (e.g. corresponding angles).
+
+    The declaration is emitted into every Lean file that cites it, so Lean checks its
+    proof each time and its axioms are part of the citing theorem's audit.
+    """
+
+    lean: str = field(default="", compare=False)
+    requires: tuple[LibraryFact, ...] = field(default=(), compare=False)
+
+
+#: Shipped facts by Lean name (so serialized proofs that cite them can be rebuilt).
+LIBRARY_FACTS: dict[str, LibraryFact] = {}
+
+
+def library_fact(name: str, lean: str, *imports: str, label: str = "",
+                 requires: Iterable[LibraryFact] = ()) -> LibraryFact:
+    fact = LibraryFact(name, tuple(imports), label=label, lean=textwrap.dedent(lean).strip(),
+                       requires=tuple(requires))
+    LIBRARY_FACTS[name] = fact
+    return fact
 
 
 @dataclass(frozen=True)
@@ -89,6 +116,8 @@ def hyp(name: str) -> Name:
 
 
 def term_imports(t: Term) -> tuple[str, ...]:
+    if isinstance(t, LibraryFact):
+        return (*t.imports, *(i for r in t.requires for i in term_imports(r)))
     if isinstance(t, Name):
         return t.imports
     if isinstance(t, TermApp):
@@ -718,6 +747,157 @@ class Ext(Tactic):
         return ["ext", list(self.names)]
 
 
+# =====================================================================================
+# Written proofs: claims with reasons (pl.claim / pl.conclude / pl.let)
+# =====================================================================================
+
+_JUSTIFY_IMPORTS = (*_AUTO_IMPORTS, "Aesop", "Mathlib.Tactic.FunProp")
+
+
+@dataclass(frozen=True)
+class Justify(Tactic):
+    """Close one step of a written proof from the cited facts and everything proved so far.
+
+    Standard automation is tried in order (each alternative must close the goal), first
+    as stated, then with the proof's local definitions unfolded, then after introducing
+    ∀-variables. Lean checks whatever succeeds; nothing is assumed.
+    """
+
+    facts: tuple[Term, ...] = ()
+    unfold: tuple[str, ...] = ()  # names of local definitions (pl.let) in scope
+    avoid: tuple[str, ...] = field(default=(), compare=False)  # set from Theorem(avoid=…)
+
+    def imports(self) -> tuple[str, ...]:
+        return (*_JUSTIFY_IMPORTS, *(i for t in self.facts for i in term_imports(t)))
+
+    def _core(self) -> list[str]:
+        from .render.lean import render_term
+
+        fs = [render_term(t) for t in self.facts]
+        h = (" [" + ", ".join(fs) + "]") if fs else ""
+        simp_args = fs + [f"-{a}" for a in self.avoid]
+        hs = (" [" + ", ".join(simp_args) + "]") if simp_args else ""
+        close = "first | assumption | rfl | fun_prop | positivity | linarith | (simp_all; done)"
+        alts = ["assumption"]
+        alts += [f"exact {f}" for f in fs]
+        alts += [f"(apply {f}; all_goals ({close}))" for f, t in zip(fs, self.facts, strict=True)
+                 if not isinstance(t, Expr)]
+        alts += ["rfl", "ring1", "positivity", "fun_prop", f"linarith{h}",
+                 f"(norm_num{hs}; done)", f"(simp{hs}; done)", f"(simp{hs}; ring1)",
+                 f"nlinarith{h}", "(field_simp; ring1)", f"(simp_all{hs}; done)"]
+        if not self.avoid:  # aesop's simp set cannot be restricted here
+            alts.append("(aesop; done)")
+        return alts
+
+    def alternatives(self) -> list[str]:
+        core = self._core()
+        one = "first | " + " | ".join(core)
+        alts = [*core, f"(intros; {one})"]
+        if self.unfold:
+            alts.append(f"(intros; simp only [{', '.join(self.unfold)}] at *; {one})")
+        return alts
+
+    def canonical(self) -> Any:
+        return ["justify", [_canon_term(t) for t in self.facts], list(self.unfold)]
+
+
+@dataclass(frozen=True)
+class Claim(Tactic):
+    """A step of a written proof: a statement, the facts it follows from, and a remark.
+
+    Rendered as ``have name : prop := by …``; without an explicit ``proof`` the step is
+    closed by :class:`Justify` from ``facts`` and the earlier steps.
+    """
+
+    prop: Expr = None  # type: ignore[assignment]
+    facts: tuple[Term, ...] = ()
+    name: str = ""
+    note: str = ""
+    proof: Tactic | None = None
+    unfold: tuple[str, ...] = ()
+    avoid: tuple[str, ...] = field(default=(), compare=False)
+
+    def justification(self) -> Tactic:
+        if self.proof is not None:
+            return self.proof
+        return Justify(self.facts, self.unfold, self.avoid)
+
+    def imports(self) -> tuple[str, ...]:
+        return self.justification().imports()
+
+    def sub_tactics(self) -> tuple[Tactic, ...]:
+        return (self.proof,) if self.proof is not None else ()
+
+    def canonical(self) -> Any:
+        return ["claim", self.name, self.prop.canonical(), [_canon_term(t) for t in self.facts],
+                self.note, self.proof.canonical() if self.proof is not None else None,
+                list(self.unfold)]
+
+
+@dataclass(frozen=True)
+class Conclude(Tactic):
+    """The last step of a written proof: the goal follows from ``facts`` and the claims."""
+
+    facts: tuple[Term, ...] = ()
+    note: str = ""
+    proof: Tactic | None = None
+    unfold: tuple[str, ...] = ()
+    avoid: tuple[str, ...] = field(default=(), compare=False)
+
+    def justification(self) -> Tactic:
+        if self.proof is not None:
+            return self.proof
+        return Justify(self.facts, self.unfold, self.avoid)
+
+    def imports(self) -> tuple[str, ...]:
+        return self.justification().imports()
+
+    def sub_tactics(self) -> tuple[Tactic, ...]:
+        return (self.proof,) if self.proof is not None else ()
+
+    def canonical(self) -> Any:
+        return ["conclude", [_canon_term(t) for t in self.facts], self.note,
+                self.proof.canonical() if self.proof is not None else None,
+                list(self.unfold)]
+
+
+@dataclass(frozen=True)
+class Let(Tactic):
+    """``set f : T := value with f_def``: name an expression for the rest of the proof."""
+
+    var: Var = None  # type: ignore[assignment]
+    value: Expr = None  # type: ignore[assignment]
+    note: str = ""
+    IMPORTS = ("Mathlib.Tactic.Set",)
+
+    @property
+    def eq_name(self) -> str:
+        return f"{self.var.name}_def"
+
+    def imports(self) -> tuple[str, ...]:
+        from .imports import expr_imports
+
+        return (*self.IMPORTS, *expr_imports(self.value))
+
+    def canonical(self) -> Any:
+        return ["let", self.var.canonical(), self.value.canonical(), self.note]
+
+
+def with_avoid(t: Tactic, avoid: tuple[str, ...]) -> Tactic:
+    """Tell the gap-filling steps of a proof not to use the lemmas in ``avoid``."""
+    from dataclasses import replace
+
+    if not avoid:
+        return t
+    if isinstance(t, Steps):
+        return replace(t, tactics=tuple(with_avoid(x, avoid) for x in t.tactics))
+    if isinstance(t, Branches):
+        return replace(t, branches=tuple(with_avoid(x, avoid) for x in t.branches))
+    if isinstance(t, (Claim, Conclude, Justify)):
+        return replace(t, avoid=avoid)
+    return t
+
+
 def _proof_arg(p: Tactic | None, what: str) -> Tactic | None:
     if p is not None and not isinstance(p, Tactic):
         raise TacticError(f"{what}: proof must be a tactic, got {p!r}")
@@ -811,5 +991,146 @@ def ext(*names: str) -> Ext:
 
 
 def proof(*steps_: Tactic) -> Tactic:
-    """A proof as a sequence of steps (``pl.proof(pl.have(...), pl.calc(...))``)."""
-    return steps(*steps_) if len(steps_) != 1 else steps_[0]
+    """A proof as a sequence of steps (``pl.proof(pl.claim(...), pl.conclude(...))``).
+
+    Unnamed claims are named ``step1``, ``step2``, … by position, and claims after a
+    ``pl.let`` may see through that definition.
+    """
+    from dataclasses import replace
+
+    out: list[Tactic] = []
+    lets: list[str] = []
+    n = 0
+    for s in steps_:
+        if isinstance(s, Let):
+            lets.append(s.eq_name)
+        elif isinstance(s, Claim):
+            n += 1
+            s = replace(s, name=s.name or f"step{n}", unfold=tuple(lets))
+        elif isinstance(s, Conclude):
+            s = replace(s, unfold=tuple(lets))
+        out.append(s)
+    return steps(*out) if len(out) != 1 else out[0]
+
+
+def _facts(because: object) -> tuple[Term, ...]:
+    if because is None:
+        return ()
+    items = list(because) if isinstance(because, (list, tuple)) else [because]
+    out: list[Term] = []
+    for f in items:
+        if isinstance(f, Claim):
+            if not f.name:
+                raise TacticError("to cite a claim, give it a name: pl.claim(..., name='h')")
+            out.append(Name(f.name))
+        elif isinstance(f, Let):
+            out.append(Name(f.eq_name))
+        else:
+            out.append(_term(f))
+    return tuple(out)
+
+
+def claim(prop: object, because: object = None, *, name: str = "", note: str = "",
+          proof: Tactic | None = None) -> Claim:
+    """One step of a written proof: ``prop`` holds ``because`` of the cited facts.
+
+    ``because`` is a fact or a list of facts: library lemmas (``an.chain_rule``,
+    ``pl.mathlib.…``), hypotheses (``"h"`` or ``pl.hyp("h")``), earlier named claims,
+    or other theorems. Earlier claims are always available and need not be cited.
+    ``note`` is the human reason shown when the proof is printed (``"by AA"``).
+    Lean fills the routine gap between the cited facts and ``prop`` with standard
+    automation; give ``proof=`` to close the step with an explicit tactic instead.
+    """
+    from .expr import _as_prop
+
+    if name:
+        validate_identifier(name, "claim name")
+    if not isinstance(note, str):
+        raise TacticError("claim note must be a string")
+    return Claim(prop=_as_prop(prop, "claim"), facts=_facts(because), name=name, note=note,
+                 proof=_proof_arg(proof, "claim"), origin=caller_origin())
+
+
+def conclude(because: object = None, *, note: str = "",
+             proof: Tactic | None = None) -> Conclude:
+    """The final step of a written proof: the theorem's goal follows from ``because``
+    and the claims so far (Lean fills the routine gap)."""
+    if not isinstance(note, str):
+        raise TacticError("conclude note must be a string")
+    return Conclude(facts=_facts(because), note=note, proof=_proof_arg(proof, "conclude"),
+                    origin=caller_origin())
+
+
+def let(var: object, value: object, *, note: str = "") -> Let:
+    """``Let f = value`` inside a proof. ``var`` is a symbol (``pl.symbol("f",
+    pl.Fn(pl.Real, pl.Real))``); ``value`` an expression or a Python function
+    (``lambda t: sin(t)**2 + cos(t)**2``) of the symbol's argument sorts."""
+    from .expr import _lift
+    from .types import LeanType
+
+    if not isinstance(var, Var):
+        raise TacticError("pl.let needs a symbol to name, e.g. pl.symbol('f', pl.Fn(...))")
+    if callable(value) and not isinstance(value, Expr):
+        from .terms import fun
+
+        sort = var.sort
+        if not (isinstance(sort, LeanType) and sort.kind == "fn"):
+            raise TacticError(f"pl.let({var.name}, lambda …) needs a function-sorted symbol")
+        value = fun(value, list(sort.parts[:-1]))
+    return Let(var=var, value=_lift(value), note=note, origin=caller_origin())
+
+
+# =====================================================================================
+# Walking the terms a proof cites
+# =====================================================================================
+
+
+def iter_terms(t: Tactic | None) -> Iterable[Term]:
+    """Every lemma/hypothesis/expression term a tactic tree refers to."""
+    if t is None:
+        return
+    direct: list[Term] = []
+    if isinstance(t, _WithLemmas):
+        direct += list(t.lemmas)
+    elif isinstance(t, (Exact, Apply)):
+        direct.append(t.term)
+    elif isinstance(t, Rewrite):
+        direct += [r for r, _ in t.rules]
+    elif isinstance(t, (Obtain, Cases)):
+        direct.append(t.source)
+    elif isinstance(t, Auto):
+        direct += list(t.hints)
+    elif isinstance(t, (Claim, Conclude, Justify)):
+        direct += list(t.facts)
+    for term in direct:
+        yield from _subterms(term)
+    for s in t.sub_tactics():
+        yield from iter_terms(s)
+
+
+def _subterms(t: Term) -> Iterable[Term]:
+    yield t
+    if isinstance(t, TermApp):
+        yield t.fn
+        for a in t.args:
+            yield from _subterms(a)
+
+
+def library_facts(theorems: Iterable[Any]) -> list[LibraryFact]:
+    """Shipped facts cited by ``theorems``, each once, dependencies first."""
+    order: list[LibraryFact] = []
+    seen: set[str] = set()
+
+    def visit(f: LibraryFact) -> None:
+        if f.name in seen:
+            return
+        seen.add(f.name)
+        for r in f.requires:
+            visit(r)
+        order.append(f)
+
+    for thm in theorems:
+        for term in iter_terms(thm.proof):
+            if isinstance(term, LibraryFact):
+                visit(term)
+    return order

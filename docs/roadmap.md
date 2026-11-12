@@ -222,6 +222,14 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [ ] Benchmark re-run with the upgraded baseline proposer.
 - Unit tests: 248 passed; ruff and mypy clean.
 
+### Written proofs for mathematicians (2026-11-12)
+- [x] `pl.claim(P, because=…, note=…)`, `pl.conclude`, `pl.let`: proofs as statements with reasons; a gap filler (`Justify`) closes each step with standard automation, also after unfolding `pl.let` definitions and introducing `∀` variables.
+- [x] `Theorem(avoid=[…])`: excluded from gap-filling `simp`, plus a generated Lean check that fails verification if the proof term (with auxiliary declarations) refers to an avoided lemma. Found the motivating bug with real Lean: without it, `simp` proves "f(0) = 1" in the derivative proof of sin²+cos²=1 *using* `Real.sin_sq_add_cos_sq`.
+- [x] Shipped library facts (`LibraryFact`): Lean theorems with proofs emitted into each file that cites them: `geo.corresponding_angles(_2)` (via Mathlib's `exists_eq_smul_of_parallel`), `geo.similar_sides`. Geometry vocabulary `line/parallel/on_segment/collinear/triangle/similar`, `geo.similar_AA`; calculus `an.deriv/differentiable/constant_of_zero_derivative`.
+- [x] `thm.prose(result)`: numbered-step text and Jupyter Markdown, from the LaTeX display.
+- [x] Real Lean (warm REPL, pinned Mathlib): sin²+cos²=1 by derivatives (8 s), side-splitter by similar triangles (2 s), AM–GM (1.4 s) all accepted with propext/Classical.choice/Quot.sound; the `avoid` check rejects `simp` proving sin²+cos²=1. Cold `verify_all` of the three plus a circular `simp` proof (693 s, one Lean run): **3 verified, circular one rejected** by the avoid check (`span_kind=avoid_check`). First cold run exposed an attribution bug (an avoid-check error is outside the theorem's lines, so the batch was marked `environment_error`); fixed, with a unit test. `tests/integration/test_written_proofs_lean.py` encodes the same run (written; its content was run via a script, not via pytest).
+- Unit tests: 284 passed (14 new in `tests/unit/test_written_proofs.py`); ruff and mypy clean.
+
 ### Case study: OpenAI relativistic Vlasov–Maxwell (2026-11-09)
 - [x] `examples/vlasov_maxwell_kinematics.py`: coordinate restatements of 9 OAI lemmas (+3 helpers): **12/12 verified** with real Lean (41 s). See `docs/case-studies/vlasov-maxwell.md`.
 - Gaps found (not implemented): vector sorts (`EuclideanSpace ℝ (Fin n)`), function-valued variables / `fun`, named definitions and structures, `fderiv`/`∫`/`Lp`/`ContDiff`/set predicates, depending on external Lake libraries.
