@@ -784,6 +784,11 @@ class Justify(Tactic):
         alts += [f"exact {f}" for f in fs]
         lemmas = [f for f, t in zip(fs, self.facts, strict=True) if not isinstance(t, Expr)]
         alts += [f"(apply {f}; all_goals ({close}))" for f in lemmas]
+        # a cited lemma applied to another cited fact ("by L, since h")
+        alts += [f"exact {f} {g}" for f in lemmas for g in fs if g != f and " " not in g]
+        # rewriting with a cited equation, then tidying up
+        alts += [f"(rw [{f}]; done)" for f in lemmas]
+        alts += [f"(rw [{f}]; simp{hs}; done)" for f in lemmas]
         # One half of a conjunction / one direction of an equivalence. Matching is limited
         # to reducible definitions and instances, so trying the wrong half fails at once
         # instead of unfolding definitions (a timeout there would end the whole search).

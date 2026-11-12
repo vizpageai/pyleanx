@@ -19,7 +19,7 @@ from pyleanx.serialize import theorem_from_canonical
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
 READABLE = ["infinite_primes", "consecutive_even", "limit_sum", "group_abelian", "bernoulli",
-            "trig", "side_splitter", "am_gm"]
+            "trig", "side_splitter", "am_gm", "cauchy_integral"]
 
 
 def example(name: str) -> pl.Theorem:
@@ -165,3 +165,25 @@ def test_number_theory_vocabulary() -> None:
     assert nt.even(n).to_latex() == r"n \text{ is even}"
     assert (nt.factorial(n) + 1).to_lean() == "Nat.factorial n + 1"
     assert {"even_or_odd", "exists_prime_dvd", "dvd_factorial"} <= set(nt.LEMMAS)
+
+
+def test_cauchy_integral_formula_from_cauchys_theorem() -> None:
+    thm = example("cauchy_integral")
+    src = thm.to_lean()
+    assert "set g : ℂ → ℂ := dslope f w with g_def" in src
+    assert "theorem PyLeanX.Complex.cauchy_theorem_disc" in src
+    # the forbidden lemmas' modules are imported, so `simp [-lemma]` can name them
+    assert "import Mathlib.Analysis.Complex.RemovableSingularity" in src
+    # the avoid check also looks inside the PyLeanX facts the proof cites
+    assert "(`PyLeanX).isPrefixOf u" in src
+    assert "exact Metric.pos_of_mem_ball hw" in src
+    text = str(thm.prose())
+    assert "5. ∮_(|z - c| = R)g(z) dz = 0.  (Cauchy's theorem" in text
+    assert "if f is holomorphic on D̄(c, R), w ∈ D(c, R)" in text
+
+
+def test_gap_filler_rewrites_and_applies_to_hypotheses() -> None:
+    from pyleanx.proofs import Justify, Name
+
+    alts = Justify((Name("L"), Name("h"))).alternatives()
+    assert "exact L h" in alts and "(rw [L]; done)" in alts

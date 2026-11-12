@@ -567,7 +567,9 @@ def avoid_check_lines(name: str, avoid: Sequence[str]) -> list[str]:
         "      | _ => #[]",
         "    for u in used do",
         "      if avoid.contains u && !hit.contains u then hit := hit.push u",
-        "      if root.isPrefixOf u || u.isInternal then todo := u :: todo",
+        "      -- look inside auxiliary declarations and the PyLeanX facts the proof cites",
+        "      if root.isPrefixOf u || u.isInternal || (`PyLeanX).isPrefixOf u then",
+        "        todo := u :: todo",
         "  unless hit.isEmpty do",
         '    throwError m!"the proof of {root} uses {hit}, which it was asked not to use"',
     ]

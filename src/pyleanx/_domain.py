@@ -38,7 +38,7 @@ def catalog_status(project_mathlib: str | None) -> str:
 
 
 def all_catalogs() -> Mapping[str, Mapping[str, Name]]:
-    from . import algebra, analysis, geometry, mathlib, numbers
+    from . import algebra, analysis, complex_analysis, geometry, mathlib, numbers
 
     return {
         "mathlib": {n: getattr(mathlib, n) for n in mathlib.__all__},
@@ -46,4 +46,5 @@ def all_catalogs() -> Mapping[str, Mapping[str, Name]]:
         "analysis": analysis.LEMMAS,
         "geometry": geometry.LEMMAS,
         "numbers": numbers.LEMMAS,
+        "complex_analysis": complex_analysis.LEMMAS,
     }

@@ -56,6 +56,7 @@ _SYMBOLS = {
     "ne": "≠", "neq": "≠", "cdot": "·", "times": "×", "mapsto": "↦", "to": "→", "pi": "π",
     "Longrightarrow": "⟹", "Rightarrow": "⇒", "iff": "⟺", "land": "∧", "lor": "∨",
     "wedge": "∧", "vee": "∨", "sum": "∑", "prod": "∏", "int": "∫", "infty": "∞",
+    "oint": "∮", "setminus": "∖", "partial": "∂",
     "lvert": "|", "rvert": "|", "lVert": "‖", "rVert": "‖", "bmod": "mod", "quad": " ",
     "qquad": " ", "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε",
     "theta": "θ", "varepsilon": "ε", "mid": "∣", "varphi": "φ", "lambda": "λ", "mu": "μ",
@@ -108,6 +109,9 @@ def latex_text(s: str) -> str:
             elif cmd == "mathbb":
                 arg, i = _group(s, i)
                 out.append(_BB.get(arg, arg))
+            elif cmd == "bar":
+                arg, i = _group(s, i)
+                out.append(latex_text(arg) + "̄")
             elif cmd == "overline":
                 arg, i = _group(s, i)
                 out.append(f"segment {latex_text(arg)}")

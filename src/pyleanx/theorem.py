@@ -71,6 +71,14 @@ def _avoid_names(avoid: Iterable[Any]) -> tuple[str, ...]:
     return tuple(out)
 
 
+def _avoid_imports(avoid: Iterable[Any]) -> list[str]:
+    from .proofs import Name
+
+    if isinstance(avoid, (str, Name)) or hasattr(type(avoid), "__pyleanx_term__"):
+        avoid = [avoid]
+    return [i for a in avoid if isinstance(a, Name) for i in a.imports]
+
+
 class Theorem:
     """A theorem statement plus (optionally) a proof.
 
@@ -97,11 +105,13 @@ class Theorem:
         if conclusion is None:
             raise SortError("Theorem needs a conclusion proposition")
         self.conclusion: Expr = _as_prop(conclusion, f"conclusion of {name}")
+        self.avoid: tuple[str, ...] = _avoid_names(avoid)
+        # An avoided lemma's module is imported, so `simp [-lemma]` can name it.
+        imports = list(dict.fromkeys([*imports, *_avoid_imports(avoid)]))
         self.imports: tuple[str, ...] = tuple(
             validate_qualified_name(i, "import module") for i in imports
         )
         self.origin = caller_origin()
-        self.avoid: tuple[str, ...] = _avoid_names(avoid)
         self.proof: Tactic | None = None
         self.validate_statement()
         if proof is not None:

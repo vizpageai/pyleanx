@@ -53,6 +53,12 @@ see [docs/stability.md](docs/stability.md)).
   definition `an.tendsto_iff` (shipped with its proof), `an.triangle_inequality`.
 - Examples: Euclid's infinitely many primes, n(n+1) even by cases, limit of a sum (ε–N),
   groups with x² = 1 are abelian, Bernoulli's inequality by induction.
+- `pyleanx.complex_analysis`: ℂ, discs and circles, holomorphy, `circle_integral`, Cauchy's
+  theorem for a disc and the integral ∮ dz/(z − w) = 2πi. Example
+  `readable_cauchy_integral.py`: Cauchy's integral formula from Cauchy's theorem, avoiding
+  Mathlib's own formula.
+- `avoid=` also checks inside cited PyLeanX facts, and imports avoided lemmas' modules. The gap
+  filler also applies a cited lemma to a cited fact and rewrites with cited equations.
 
 - Examples `readable_trig.py` (sin²+cos²=1 by derivatives), `readable_side_splitter.py`
   (similar triangles), `readable_am_gm.py`; `side_splitter.py`, `side_splitter_vectors.py`.

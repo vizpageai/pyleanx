@@ -84,7 +84,8 @@ The gap between the cited facts and the step is filled by standard automation. I
 each of these in turn, and an attempt counts only if it closes the step completely:
 
 * use a cited fact directly, apply it and discharge its side conditions from what is
-  known, or use the half of it the step needs (one side of an `∧`, one direction of an `↔`);
+  known, apply it to another cited fact (`L h`), rewrite with it, or use the half of it the
+  step needs (one side of an `∧`, one direction of an `↔`);
 * `simp`/`norm_num` with the facts, `linarith`/`nlinarith`, `omega`, `ring`, `field_simp`,
   `push_cast`, `fun_prop`, `positivity`, and splitting `∧`;
 * the same after unfolding `pl.let` definitions and introducing `∀` variables.
@@ -106,6 +107,7 @@ the automation cannot instantiate `n! > 0` by itself.
 | Inequalities | `readable_bernoulli.py` ((1+x)ⁿ ≥ 1+nx) | induction, chain |
 | Inequalities | `readable_am_gm.py` (AM–GM) | claims with library facts |
 | Geometry | `readable_side_splitter.py` (side-splitter) | similar triangles, shipped facts |
+| Complex analysis | `readable_cauchy_integral.py` (Cauchy's integral formula from Cauchy's theorem) | let, chain, shipped facts, `avoid=` |
 
 ## Abstract structures: "let G be a group"
 
@@ -143,6 +145,11 @@ class works: `pl.type_param("V", "AddCommGroup", label="abelian group")`.
   `differentiable` and calculus facts; `sin`, `cos`, `exp`, `log`, `sqrt`.
 * `pyleanx.algebra` (`alg`): abstract `group`/`ring`/`field`, `inv`, group facts
   (`mul_inv_rev`, `inv_eq_of_mul_eq_one`, `mul_left_cancel`, …); inequalities.
+* `pyleanx.complex_analysis` (`ca`): `C` (ℂ), `I`, `two_pi_i`, `ball`, `closed_ball`,
+  `sphere`, `mem`, `holomorphic_on`, `differentiable_at`, `continuous_on`,
+  `difference_quotient`, `circle_integral`; Cauchy's theorem for a disc
+  (`ca.cauchy_theorem`), `ca.kernel_integral` (∮ dz/(z − w) = 2πi), and
+  `ca.INTEGRAL_FORMULA` (Mathlib's own statements of the formula, to `avoid=`).
 * `pyleanx.geometry` (`geo`): points, `dist`, `angle`, `line`, `parallel`,
   `on_segment`, `triangle`, `similar`, `similar_AA`, `corresponding_angles`, `similar_sides`.
 
@@ -183,6 +190,11 @@ pythagorean_identity = pl.Theorem(
    is not tried, since its rule set cannot be restricted here);
 2. a Lean check after the theorem walks the proof term (including Lean's auxiliary
    declarations) and **fails verification** if it refers to any of them anyway.
+
+An avoided lemma's module is imported (so it can be named), and the check also looks inside
+the PyLeanX facts the proof cites, so a shipped fact cannot use an avoided lemma either.
+`readable_cauchy_integral.py` proves Cauchy's integral formula while avoiding Mathlib's own
+formula and its removable-singularity theorem, which Mathlib derives from the formula.
 
 Without `avoid=`, the step "f(0) = 1" above is proved by `simp` *using* sin²+cos²=1. The
 check catches exactly that. It checks the proof you wrote: lemmas the proof cites may

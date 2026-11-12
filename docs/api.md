@@ -349,7 +349,8 @@ context), uses one half of a cited `∧`/`↔`, and tries `simp`/`norm_num`/`lin
 also after unfolding `pl.let` definitions and introducing `∀` variables; each attempt must
 close the step.
 
-Vocabulary: `pyleanx.numbers` (`divides`, `even`, `odd`, `prime`, `factorial`, `gcd` and
+Vocabulary: `pyleanx.complex_analysis` (ℂ, discs, circles, `holomorphic_on`, `circle_integral`,
+Cauchy's theorem for a disc, `kernel_integral`, `INTEGRAL_FORMULA`); `pyleanx.numbers` (`divides`, `even`, `odd`, `prime`, `factorial`, `gcd` and
 parity/divisibility/prime facts); `an.tendsto`, `an.tendsto_iff` (ε–N, shipped),
 `an.triangle_inequality`, `an.deriv`, `an.differentiable` and calculus facts;
 `alg.group`/`abelian_group`/`ring`/`comm_ring`/`field`, `alg.inv` and group facts;
