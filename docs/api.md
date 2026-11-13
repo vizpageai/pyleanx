@@ -354,6 +354,16 @@ High-school plane geometry: `geo` has a chapter-by-chapter catalogue of citable 
 (congruence, CPCTC, similarity, parallel lines, right triangles, midpoints, circles,
 quadrilaterals); see the tutorial's "High-school plane geometry" section.
 
+Real analysis: `an` has textbook definitions with their ε–N / ε–δ unfoldings and the big
+theorems (IVT, EVT, Rolle, MVT, Bolzano–Weierstrass, monotone convergence, Heine–Cantor,
+completeness, algebra of limits, squeeze); see the tutorial's "Real analysis as in a
+textbook". `pl.take(w, such_that=P, because=…)` gives a witness with its side condition.
+
+Harmonic analysis: `pyleanx.harmonic` (`ha`) has Fourier coefficients on [−π, π], the
+Fourier transform on ℝ and its inverse, L², and Parseval, Bessel, Riemann–Lebesgue,
+integration by parts for coefficients, the Gaussian and Fourier inversion as citable facts;
+see the tutorial's "Harmonic analysis" section.
+
 Vocabulary: `pyleanx.complex_analysis` (ℂ, discs, circles, `holomorphic_on`, `circle_integral`,
 Cauchy's theorem for a disc, `kernel_integral`, `INTEGRAL_FORMULA`); `pyleanx.numbers` (`divides`, `even`, `odd`, `prime`, `factorial`, `gcd` and
 parity/divisibility/prime facts); `an.tendsto`, `an.tendsto_iff` (ε–N, shipped),

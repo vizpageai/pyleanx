@@ -62,6 +62,27 @@ see [docs/stability.md](docs/stability.md)).
   theorem without a proof is an error, and a failed cited proof rejects exactly the theorems
   that cite it. The bank records citations as dependencies and makes loaded theorems
   citable. Example `using_cauchy_integral.py`: ∮_{|z|=2} z²/(z − 1) dz = 2πi.
+- Harmonic analysis (`pyleanx.harmonic`, conventions of Stein–Shakarchi): Fourier
+  coefficients on [−π, π], Fourier transform and inverse on ℝ, L²/L¹, the two sides of
+  Parseval, and 18 shipped facts (Parseval, Bessel, Riemann–Lebesgue for coefficients and
+  for the transform, (f′)^(n) = in f̂(n), the Gaussian, Fourier inversion, the integral
+  formulas). Shipped *definitions* used in statements are now emitted into the Lean file.
+  Lecture notebook `examples/lecture_harmonic_analysis.ipynb` (partial sums and the Gibbs
+  phenomenon, decay, Riemann–Lebesgue, Gaussian dilation; three worked examples, a wrong
+  step, three exercises); helpers in `examples/harmonic_lecture.py`. Plain-text prose shows
+  f̂, ξ and ‖z‖.
+- Real analysis as in a textbook: `pyleanx.analysis` gains definitions with ε–N / ε–δ
+  unfoldings (`continuous_at`, `cauchy`, `uniformly_continuous_on`, `continuous_on`,
+  `differentiable_on`, `increasing`, `bounded`, …) and 29 shipped theorems under textbook
+  names (IVT, EVT, Rolle, MVT, Bolzano–Weierstrass, monotone convergence, Heine–Cantor,
+  completeness, limit algebra, squeeze, Archimedean property), plus absolute-value facts.
+  `pl.take(w, such_that=P, because=…)` ("take δ = ε/3 > 0"). Sequences given by a formula
+  print as the formula; written proofs show casts `(n : ℝ)` as `n`; `choose … names=` quotes
+  each part of a conjunction. Gap filler: substitute a cited equation, then algebra (also
+  inside |…|). Lecture notebook `examples/lecture_real_analysis.ipynb` for mathematicians
+  (phrasebook, catalogue, five worked examples, a rejected wrong proof, four exercises),
+  helpers in `examples/analysis_lecture.py`; `examples/lecture_tools.py` holds the shared
+  `check` (names the failing step from Lean's own step tags).
 - Interactive lecture notebook `examples/lecture_congruent_triangles.ipynb` (congruent
   triangles: SSS, SAS, ASA, CPCTC) with SVG figures, slider explorers, worked examples, a
   rejected wrong proof, and four exercises checked by Lean via `check(...)`, which names the

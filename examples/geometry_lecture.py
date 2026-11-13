@@ -16,6 +16,8 @@ import re
 from collections.abc import Callable, Sequence
 from typing import Any
 
+from lecture_tools import check as _check
+
 import pyleanx as pl
 from pyleanx import geometry as geo
 
@@ -413,78 +415,18 @@ def all_solutions() -> list[pl.Theorem]:
 # Checking a student's proof
 # =========================================================================================
 
-_STEP = re.compile(r"^\s*(?:have\s+(step\d+)\b|(·|show)\b)")
-
-
-def _failed_steps(thm: pl.Theorem, result: Any) -> list[int]:
-    """Top-level step numbers (1-based) whose Lean lines contain an error."""
-    lines = result.lean_source.splitlines()
-    start = next((i for i, ln in enumerate(lines)
-                  if ln.startswith(("theorem ", "lemma ")) and f" {thm.name}" in ln), None)
-    if start is None:
-        return []
-    # the step that starts at or before a line: the last "have stepN" above it, or the
-    # conclusion (last step) after the final claim
-    n_steps = len(thm.proof.tactics) if thm.proof is not None else 0  # type: ignore[attr-defined]
-    found: set[int] = set()
-    for d in result.errors:
-        if d.line is None or d.line - 1 < start:
-            continue
-        step = None
-        for i in range(d.line - 1, start, -1):
-            m = re.match(r"^\s{2,4}have (step(\d+))\b", lines[i])
-            if m:
-                step = int(m.group(2))
-                break
-        if step is None:
-            continue
-        # an error after the last claim's block belongs to the conclusion
-        if step < n_steps and any(re.match(r"^\s{2}(?!have )\S", lines[k])
-                                  for k in range(i + 1, d.line - 1)):
-            step = n_steps
-        found.add(step)
-    return sorted(found)
+_CPCTC = ("Check which parts CPCTC gives: in △abc ≅ △a'b'c', `cpctc_ab` gives ab = a'b', "
+          "`cpctc_bc` gives bc = b'c', `cpctc_ca` gives ca = c'a'.")
 
 
 def check(thm: pl.Theorem | None, *, timeout: float = 1800) -> Any:
-    """Check a proof with Lean and show the result as a readable proof.
-
-    Only Lean's verdict counts: ✅ means Lean's kernel accepted every step and the axiom
-    audit passed. When Lean rejects the proof, the steps it could not justify are named.
-    """
-    from IPython.display import Markdown, display
-
-    if thm is None or thm.proof is None or not getattr(thm.proof, "tactics", None):
-        display(Markdown("✏️ *Write your steps first:* put `pl.claim(...)` and "
-                         "`pl.conclude(...)` steps inside the exercise call."))
-        return None
-    display(Markdown("⏳ *Lean is checking this proof (the first check of a session takes a "
-                     "minute or two; a proof that was already checked comes back at once)…*"))
-    result = thm.verify(timeout=timeout)
-    display(Markdown(thm.prose(result).to_markdown()))
-    if result.verified:
-        display(Markdown(f"✅ **Lean accepted the proof.** Axioms used: "
-                         f"`{', '.join(result.axioms or ()) or 'none'}` (the standard ones)."))
-        return result
-    bad = _failed_steps(thm, result)
-    tips = ["❌ **Lean did not accept this proof.**"]
-    if bad:
-        names = ", ".join(f"**step {k}**" for k in bad)
-        tips.append(f"Lean could not justify {names} from the reasons given.")
-        tips.append("Check that the statement of the step is really true *here* (watch the "
-                    "order of the letters: ∠BAC is the angle at A), and that the cited fact "
-                    "and the earlier steps give it.")
-    elif any("heartbeats" in d.message for d in result.errors):
-        tips.append("Lean ran out of time looking for a justification. Usually one step "
-                    "(often the last) does not follow from its reasons: check which parts "
-                    "CPCTC gives. In △abc ≅ △a'b'c', `cpctc_ab` gives ab = a'b', `cpctc_bc` "
-                    "gives bc = b'c', `cpctc_ca` gives ca = c'a'.")
-    else:
-        first = next(iter(result.errors), None)
-        if first is not None:
-            tips.append(f"Lean says: `{first.message.splitlines()[0][:300]}`")
-    display(Markdown("\n\n".join(tips)))
-    return result
+    """Check a proof with Lean and show the result as a readable proof (see
+    :func:`lecture_tools.check`)."""
+    return _check(thm, timeout=timeout,
+                  hint="Check that the statement of the step is really true *here* (watch the "
+                       "order of the letters: ∠BAC is the angle at A), and that the cited fact "
+                       "and the earlier steps give it.",
+                  timeout_hint=_CPCTC)
 
 
 def show_solution(key: Any) -> Any:

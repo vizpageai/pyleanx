@@ -176,7 +176,7 @@ class _Latex:
         if isinstance(e, Apply):
             fn = e.fn
             args = [self.render(a)[0] for a in e.args]
-            if isinstance(fn, Const) and fn.latex and re.search(r"\{\d+\}", fn.latex):
+            if isinstance(fn, Const) and fn.latex and _SLOT.search(fn.latex):
                 try:
                     return fn.latex.format(*args), MAX
                 except IndexError:
@@ -193,8 +193,10 @@ class _Latex:
                 if e.bounds is not None:
                     lo, hi = (self.render(b)[0] for b in e.bounds)
                     return rf"\int_{{{lo}}}^{{{hi}}} {body}\, d{v}", 66
+                if e.over is not None:
+                    return rf"\int_{{{self.render(e.over)[0]}}} {body}\, d{v}", 66
                 return rf"\int_{{{latex_sort(e.var.sort)}}} {body}\, d{v}", 66
-            sym = r"\sum" if e.kind == "sum" else r"\prod"
+            sym = {"sum": r"\sum", "prod": r"\prod", "union": r"\bigcup"}[e.kind]
             dom = (rf"{v} \in {self.render(e.over)[0]}" if e.over is not None
                    else rf"{v} \in {latex_sort(e.var.sort)}")
             return rf"{sym}_{{{dom}}} {body}", 66
@@ -254,7 +256,7 @@ class _Latex:
         if name == "abs":
             return rf"\left|{args[0]}\right|", MAX
         custom = e.func.latex
-        if custom and "{0}" in custom:
+        if custom and _SLOT.search(custom):
             return custom.format(*args), MAX
         if custom and not args:
             return custom, MAX
@@ -262,6 +264,9 @@ class _Latex:
             return f"{custom} {args[0]}", MAX - 1  # \sin x
         op = custom or _FUNCS.get(name) or r"\operatorname{" + name.replace("_", r"\_") + "}"
         return op + _paren(", ".join(args)), MAX - 1
+
+
+_SLOT = re.compile(r"\{\d+[}:!]")  # a format placeholder: {0}, {1}, {0:.0} (hidden arg)
 
 
 def binders_latex(variables: Sequence[Var]) -> str:

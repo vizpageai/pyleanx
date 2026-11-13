@@ -362,9 +362,23 @@ def prod(over: object, body: Callable[..., object], *, sort: Sort | None = None)
 
 
 def integral(body: Callable[..., object], over: Sort = Real, *,
-             bounds: tuple[object, object] | None = None) -> BigOp:
-    """``∫ x : T, body x`` (Lebesgue/Bochner, volume measure) or ``∫ x in a..b, body x``."""
+             bounds: tuple[object, object] | None = None, within: object = None) -> BigOp:
+    """``∫ x : T, body x`` (Lebesgue/Bochner, volume measure), ``∫ x in a..b, body x``, or
+    ``∫ x in s, body x`` over a set ``s`` (``within=s``)."""
+    if within is not None:
+        if bounds is not None:
+            raise SortError("pl.integral: give bounds= or within=, not both")
+        return _bigop("integral", within, body, over)
     return _bigop("integral", over, body, over, bounds)
+
+
+def union(over: object, body: Callable[..., object], *, sort: Sort | None = None) -> BigOp:
+    """``⋃ i ∈ s, body i``: the union of a family of sets over a finite set ``s`` (or
+    ``⋃ i : T, body i`` over a type)."""
+    from .types import Nat
+
+    return _bigop("union", over, body, sort if sort is not None or isinstance(over, Sort)
+                  else Nat)
 
 
 def pair(a: object, b: object) -> Pair:

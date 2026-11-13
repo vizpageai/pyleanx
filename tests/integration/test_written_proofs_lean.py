@@ -99,3 +99,51 @@ def test_textbook_geometry_and_every_shipped_geometry_fact(lean_project):
         assert set(r.axioms) <= {"propext", "Classical.choice", "Quot.sound"}
     src = results[-1].lean_source
     assert all(f"theorem {f.name} " in src for f in shipped)
+
+
+def test_analysis_catalogue_and_lecture_solutions(lean_project):
+    import sys
+
+    from pyleanx import analysis as an
+    from pyleanx.proofs import LibraryFact
+
+    shipped = [f for f in an.LEMMAS.values() if isinstance(f, LibraryFact)]
+    all_facts = pl.Theorem("all_analysis_facts_check", [], conclusion=pl.TRUE,
+                           proof=pl.proof(pl.conclude(because=shipped)))
+    # facts first, on their own: a broken shipped fact would reject the whole Lean file
+    (facts,) = pl.verify_all([all_facts], project=lean_project, use_cache=False, timeout=3600)
+    assert facts.verified, [d.message for d in facts.diagnostics if d.severity == "error"]
+    assert all(f"theorem {f.name} " in facts.lean_source for f in shipped)
+    sys.path.insert(0, str(EXAMPLES))
+    try:
+        lecture = runpy.run_path(str(EXAMPLES / "analysis_lecture.py"))
+    finally:
+        sys.path.remove(str(EXAMPLES))
+    sols = lecture["all_solutions"]()
+    results = pl.verify_all(sols, project=lean_project, use_cache=False, timeout=3600)
+    for t, r in zip(sols, results, strict=True):
+        assert r.verified, (t.name, [d.message for d in r.diagnostics if d.severity == "error"])
+        assert set(r.axioms) <= {"propext", "Classical.choice", "Quot.sound"}
+
+
+def test_harmonic_catalogue_and_lecture_solutions(lean_project):
+    import sys
+
+    from pyleanx import harmonic as ha
+    from pyleanx.proofs import LibraryFact
+
+    shipped = [f for f in ha.LEMMAS.values() if isinstance(f, LibraryFact)]
+    all_facts = pl.Theorem("all_harmonic_facts_check", [], conclusion=pl.TRUE,
+                           proof=pl.proof(pl.conclude(because=shipped)))
+    (facts,) = pl.verify_all([all_facts], project=lean_project, use_cache=False, timeout=3600)
+    assert facts.verified, [d.message for d in facts.diagnostics if d.severity == "error"]
+    sys.path.insert(0, str(EXAMPLES))
+    try:
+        lecture = runpy.run_path(str(EXAMPLES / "harmonic_lecture.py"))
+    finally:
+        sys.path.remove(str(EXAMPLES))
+    sols = lecture["all_solutions"]()
+    results = pl.verify_all(sols, project=lean_project, use_cache=False, timeout=3600)
+    for t, r in zip(sols, results, strict=True):
+        assert r.verified, (t.name, [d.message for d in r.diagnostics if d.severity == "error"])
+        assert set(r.axioms) <= {"propext", "Classical.choice", "Quot.sound"}

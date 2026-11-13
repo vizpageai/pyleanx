@@ -386,6 +386,10 @@ class _Decoder:
             return P.Fix(vars=tuple(vs), hyps=tuple((n, self.expr(e)) for n, e in d[2]),
                          note=d[3])
         if kw == "take":
+            if len(d) > 3:
+                return P.Take(witnesses=tuple(self.expr(w) for w in d[1]), note=d[2],
+                              such_that=self.expr(d[3]),
+                              facts=self.facts(d[4]), unfold=tuple(d[5]))
             return P.Take(witnesses=tuple(self.expr(w) for w in d[1]), note=d[2])
         if kw == "choose":
             vs = self.bound(d[1])

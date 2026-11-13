@@ -179,11 +179,13 @@ class _ExprRenderer:
             return (f"fun {binder_groups(e.vars, self.unicode_types)} => "
                     f"{self.sub(e.body, 0)}"), 0
         if isinstance(e, BigOp):
-            sym = {"sum": "∑", "prod": "∏", "integral": "∫"}[e.kind]
+            sym = {"sum": "∑", "prod": "∏", "integral": "∫", "union": "⋃"}[e.kind]
             v = e.var
             if e.bounds is not None:
                 lo, hi = (self.sub(b, MAX) for b in e.bounds)
                 head = f"{sym} {v.name} in {lo}..{hi}"
+            elif e.over is not None and e.kind == "integral":
+                head = f"∫ {v.name} in {self.sub(e.over, MAX)}"
             elif e.over is not None:
                 head = f"{sym} {v.name} ∈ {self.sub(e.over, MAX)}"
             else:
@@ -384,7 +386,12 @@ def _written_lines(t: Tactic) -> list[str] | None:
         parts = [v.name for v in t.vars] + [f"({n} : {render_expr(p)})" for n, p in t.hyps]
         return ["intro " + " ".join(parts)]
     if isinstance(t, Take):
-        return ["refine ⟨" + ", ".join(render_expr(w) for w in t.witnesses) + ", ?_⟩"]
+        ws = ", ".join(render_expr(w) for w in t.witnesses)
+        if t.such_that is None:
+            return [f"refine ⟨{ws}, ?_⟩"]
+        side = render_tactic_lines(t.justification())
+        return [f"refine ⟨{ws}, ?_, ?_⟩", f"· show {render_expr(t.such_that)}",
+                *("  " + ln for ln in side)]
     if isinstance(t, Choose):
         pat = ", ".join([*(v.name for v in t.vars), *t.names])
         return _attach(f"obtain ⟨{pat}⟩ : {render_expr(t.statement())} :=",
@@ -533,6 +540,8 @@ def _auto_default(t: Tactic) -> bool:
         return getattr(t, "proof", None) is None
     if name in ("Choose", "Suffices", "CaseSplit", "Chain"):
         return True
+    if name == "Take":
+        return getattr(t, "such_that", None) is not None
     if name == "Have":
         return getattr(t, "proof", None) is None
     if name == "Calc":

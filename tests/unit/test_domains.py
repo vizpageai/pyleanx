@@ -100,7 +100,7 @@ def test_inequality_collects_variables_from_assumptions():
 def test_catalogs_are_named_references_with_imports():
     cats = all_catalogs()
     assert set(cats) == {"mathlib", "algebra", "analysis", "geometry", "numbers",
-                         "complex_analysis"}
+                         "complex_analysis", "harmonic"}
     total = 0
     for cat in cats.values():
         for key, ref in cat.items():

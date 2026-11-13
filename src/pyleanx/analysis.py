@@ -109,12 +109,27 @@ _TOPO = "Mathlib.Topology.MetricSpace.Pseudo.Defs"
 _ORDER_TOPO = "Mathlib.Topology.Instances.Real.Lemmas"
 
 
+def sequence_latex(a: object, wrap: bool = False) -> str:
+    """How a sequence prints: ``a_n`` for a symbol ``a``, the formula ``1/(n+1)`` (in its own
+    variable) for ``pl.fun(lambda n: …)``, ``{0}`` otherwise (a template for ``const``)."""
+    from .expr import Var
+    from .terms import Lam
+
+    if isinstance(a, Var):
+        return "({0}_n)" if wrap else "{0}_n"
+    if isinstance(a, Lam) and len(a.vars) == 1:
+        body = a.body.to_latex().replace("{", "{{").replace("}", "}}")
+        if wrap:
+            body = rf"\left({body}\right)_{{{{{a.vars[0].name}}}}}"
+        return body + "{0:.0}"  # the sequence itself is not printed again
+    return "{0}"
+
+
 def tendsto(a: object, limit: object) -> Expr:
     """``aₙ → L`` as n → ∞ for a sequence ``a : ℕ → ℝ`` (``Tendsto a atTop (𝓝 L)``)."""
-    from .expr import Var
     from .terms import apply, const
 
-    seq = "{0}_n" if isinstance(a, Var) else "{0}"
+    seq = sequence_latex(a)
     t = const("Filter.Tendsto", imports=(_TOPO, _ORDER_TOPO),
               latex=seq + r" \to {2}")
     at_top = const("Filter.atTop", imports=(_TOPO,), latex=r"\infty")
@@ -133,9 +148,26 @@ tendsto_iff = library_fact(
 triangle_inequality = lemma("abs_add_le", "Mathlib.Algebra.Order.Group.Unbundled.Abs",
                             label="triangle inequality")
 
+from ._analysis_textbook import *  # noqa: E402, F403 - textbook facts
+from ._analysis_textbook import (  # noqa: E402 - textbook vocabulary
+    bounded,
+    cauchy,
+    closed_interval,
+    continuous,
+    continuous_at,
+    continuous_on,
+    differentiable_on,
+    increasing,
+    open_interval,
+    strictly_increasing,
+    uniformly_continuous_on,
+)
+
 LEMMAS = collect_lemmas(globals())
 
 __all__ = ["sin", "cos", "pi", "sqrt", "exp", "log", "abs_", "deriv", "differentiable",
-           "tendsto",
+           "tendsto", "closed_interval", "open_interval", "continuous", "continuous_at",
+           "continuous_on", "differentiable_on", "uniformly_continuous_on", "cauchy",
+           "increasing", "strictly_increasing", "bounded",
            "LEMMAS", "VERIFIED_MATHLIB",
            "CATALOG_VERSION", *LEMMAS]

@@ -61,6 +61,7 @@ Proof.
 | `pl.fix(x, assume={"h": P})` | *Let x be arbitrary with P* (e.g. *let ε > 0*) | `intro x (h : P)` |
 | `pl.assume(P, name="h")` | *Assume P* (goal P ⇒ Q) | `intro (h : P)` |
 | `pl.take(w)` | *Take x = w* (goal ∃ x, …) | `refine ⟨w, ?_⟩` |
+| `pl.take(w, such_that=P, because=…)` | *Take δ = ε/3 > 0* (goal ∃ x, P x ∧ Q x) | `refine ⟨w, ?_, ?_⟩`, P proved in a bullet |
 | `pl.choose(x, such_that=P, because=…, names="h")` | *Choose x with P(x)* | `obtain ⟨x, h⟩ : ∃ x, P := by …` |
 | `pl.suppose_not(P, name="h")` | *Suppose, for contradiction, that P* | `by_contra`, then `have h : P` |
 | `pl.cases_on(pl.case(P₁, steps…), pl.case(P₂, …), because=…)` | *Either P₁ or P₂.* Case 1 … Case 2 … | `rcases (P₁ ∨ P₂) with h \| h` |
@@ -109,6 +110,8 @@ the automation cannot instantiate `n! > 0` by itself.
 | Geometry | `readable_side_splitter.py` (side-splitter) | similar triangles, shipped facts |
 | Geometry | `readable_angle_bisector.py` (angle bisector theorem) | auxiliary point, cites the side-splitter theorem |
 | Geometry | `textbook_geometry.py` (isosceles median, parallelogram sides, semicircle, isosceles right triangle, medial triangle) | congruence, CPCTC, parallels, Thales, midsegments |
+| Real analysis | `analysis_lecture.py` (1/(n+1) → 0, uniqueness of limits, ε–δ continuity, bounded ⇒ Cauchy subsequence, shifted limits, sign of a limit, IVT root, convergent ⇒ Cauchy) | suffices, fix, choose, take with a side condition, contradiction, chain, big theorems |
+| Harmonic analysis | `harmonic_lecture.py` (smoothness ⇒ decay of Fourier coefficients, Riemann–Lebesgue from Bessel, uniqueness from inversion, 1/n² decay, vanishing coefficients, f(0) = ∫ f̂) | citing Parseval/Bessel/inversion, citing a proved example, chain |
 | Complex analysis | `readable_cauchy_integral.py` (Cauchy's integral formula from Cauchy's theorem) | let, chain, shipped facts, `avoid=` |
 
 ## Auxiliary constructions
@@ -218,6 +221,89 @@ tangent lines; "draw the line through P parallel to l" as a construction.
 Lean rejects at the faulty step, and four exercises students solve in the notebook with
 `check(...)`. Its helpers and Lean-verified reference solutions are in
 `examples/geometry_lecture.py` (`python examples/geometry_lecture.py` re-checks them).
+
+## Real analysis as in a textbook
+
+`pyleanx.analysis` (`an`) has the definitions of a first analysis course with their ε–N and
+ε–δ unfoldings, and the big theorems under their textbook names, so a proof reads like the
+book (`examples/lecture_real_analysis.ipynb`, solutions in `examples/analysis_lecture.py`):
+
+```python
+pl.Theorem("three_x_plus_one_continuous", [f, x0],
+    assumptions={"hf": pl.Forall(t, f(t) == 3 * t + 1)},
+    conclusion=an.continuous_at(f, x0),
+    proof=pl.proof(
+        pl.suffices(eps_delta(f, x0), because=an.continuous_at_iff),
+        pl.fix(eps, assume={"hε": eps > 0}),
+        pl.take(eps / 3, such_that=eps / 3 > 0),
+        pl.fix(x, assume={"hx": pl.abs(x - x0) < eps / 3}),
+        pl.chain(pl.abs(f(x) - f(x0)),
+                 ("=", pl.abs(3 * (x - x0)), "hf", "f(x) = 3x + 1"),
+                 ("=", 3 * pl.abs(x - x0), [an.abs_mul, an.abs_of_pos]),
+                 ("<", 3 * (eps / 3)),
+                 ("=", eps))))
+```
+
+```text
+1. It suffices to show ∀ ε ∈ ℝ, ε > 0 → (∃ δ ∈ ℝ, δ > 0 ∧ (∀ x ∈ ℝ, |x - x₀| < δ → |f(x) - f(x₀)| < ε)).  (definition of continuity (ε–δ))
+2. Let ε ∈ ℝ with ε > 0.
+3. Take δ = ε/3; then ε/3 > 0.
+4. Let x ∈ ℝ with |x - x₀| < ε/3.
+5. |f(x) - f(x₀)| = |3(x - x₀)| (f(x) = 3x + 1) = 3 |x - x₀| (…) < 3 · ε/3 = ε.
+```
+
+**Definitions:** `tendsto` (unfold: `tendsto_iff`), `cauchy` (`cauchy_iff`), `continuous_at`
+(`continuous_at_iff`), `uniformly_continuous_on` (`uniformly_continuous_iff`), `continuous`,
+`continuous_on(f, a, b)` on [a, b], `differentiable_on(f, a, b)` on (a, b), `deriv`,
+`increasing`, `strictly_increasing`, `bounded` (written out: ∃ M, ∀ n, |aₙ| ≤ M). A sequence given
+by a formula, `pl.fun(lambda n: 1 / (n + 1), pl.Nat)`, prints as the formula: "1/(n + 1) → 0".
+
+**Theorems** (29 shipped with Lean proofs, plus Mathlib references):
+
+| Chapter | Facts |
+|---|---|
+| Limits | `limit_unique`, `limit_add`, `limit_sub`, `limit_mul`, `limit_const_mul`, `limit_const`, `squeeze`, `one_over_n`, `archimedean`, `reciprocal_lt` |
+| Completeness | `convergent_bounded`, `convergent_cauchy`, `cauchy_convergent`, `monotone_convergence`, `increasing_of_step`, `bolzano_weierstrass` |
+| Continuity | `sequential_continuity`, `ivt`, `evt_max`, `evt_min`, `heine_cantor`, `continuous_on_of_continuous`, `continuous_at_of_continuous` |
+| Differentiation | `rolle`, `mvt`, `differentiable_on_of_differentiable`, `constant_of_zero_derivative`, `deriv_sin`, `deriv_cos` |
+| Absolute value | `triangle_inequality`, `reverse_triangle`, `abs_sub_comm`, `abs_mul`, `abs_lt`, `abs_le`, `abs_pos`, `abs_of_pos`, `abs_of_nonneg`, `abs_nonneg`, `le_max_left`, `le_max_right` |
+
+Written proofs print a cast `(n : ℝ)` as `n`, as a book does (Lean keeps the cast). Not covered
+yet: series, Riemann integrals, sequences of functions, lim sup / lim inf, general metric
+spaces.
+
+## Harmonic analysis: Fourier series and the Fourier transform
+
+`pyleanx.harmonic` (`ha`) follows the conventions of Stein–Shakarchi, *Fourier Analysis*:
+f̂(n) = (1/2π) ∫_{−π}^{π} f(x) e^{−inx} dx (`ha.coeff`, Mathlib's `fourierCoeffOn` on [−π, π]) and
+f̂(ξ) = ∫ f(x) e^{−2πixξ} dx (`ha.ft`, Mathlib's `𝓕`), with `ha.ift` the inverse transform
+(`examples/lecture_harmonic_analysis.ipynb`, solutions in `examples/harmonic_lecture.py`):
+
+```text
+Theorem (fourier_uniqueness). For all f, g ∈ ℝ → ℂ: if f is continuous, g is continuous,
+f ∈ L¹(ℝ), g ∈ L¹(ℝ), f̂ ∈ L¹(ℝ), ĝ ∈ L¹(ℝ), f̂ = ĝ, then ∀ x ∈ ℝ, f(x) = g(x).
+Proof.
+  1. Let x ∈ ℝ be arbitrary.
+  2. g(x) = (ĝ)^(∨)(x).  (Fourier inversion formula)
+  3. f(x) = (f̂)^(∨)(x) (Fourier inversion for f) = (ĝ)^(∨)(x) (f̂ = ĝ) = g(x) (Fourier inversion for g).
+  Hence f(x) = g(x). ∎
+```
+
+**Vocabulary:** `coeff`, `coeff_seq`, `ft`, `ft_fun`, `ift`, `gauss`, `L2`, `integrable_on_circle`,
+`integrable`, `continuous`, `coeff_sq_sum`, `mean_square`, `derivative(f, g)` (f′ = g),
+`summable`, `tends_to_zero` (as |n| → ∞), `coeffs_tend_to_zero`.
+
+**Facts:** `coeff_eq_integral`, `ft_eq_integral` (the definitions are the book's formulas),
+`coeff_const_mul`, `coeff_add`, `coeff_derivative` ((f′)^(n) = in f̂(n)), `bessel_summable`,
+`parseval`, `riemann_lebesgue_coeff`, `riemann_lebesgue`, `gaussian`, `inversion`, `ift_at_zero`,
+and small steps (`terms_tend_to_zero`, `tendsto_zero_of_norm_sq`, `norm_I_mul_int`,
+`abs_int_ne_zero`, `div_of_mul`, `div_div`, `sum_of_zero_coeffs`). The objects (f̂(n), L², the two
+sides of Parseval, …) are small Lean definitions shipped with the facts; a shipped definition used
+in a statement is emitted into the Lean file like a cited fact.
+
+Not available, because Mathlib lacks them at the pinned version: Fejér/Dirichlet kernels and
+summability, the Hardy–Littlewood maximal inequality, Riesz–Thorin and Marcinkiewicz
+interpolation, the Hilbert transform, Calderón–Zygmund theory.
 
 ## Abstract structures: "let G be a group"
 

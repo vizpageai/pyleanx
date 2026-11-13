@@ -60,7 +60,8 @@ _SYMBOLS = {
     "lvert": "|", "rvert": "|", "lVert": "‖", "rVert": "‖", "bmod": "mod", "quad": " ",
     "qquad": " ", "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε",
     "theta": "θ", "varepsilon": "ε", "mid": "∣", "varphi": "φ", "lambda": "λ", "mu": "μ",
-    "sigma": "σ", "phi": "φ", "omega": "ω",
+    "sigma": "σ", "phi": "φ", "omega": "ω", "xi": "ξ", "eta": "η", "zeta": "ζ", "psi": "ψ",
+    "chi": "χ", "nu": "ν", "tau": "τ", "rho": "ρ", "kappa": "κ", "bigcup": "⋃",
 }
 _BB = {"R": "ℝ", "N": "ℕ", "Z": "ℤ", "Q": "ℚ", "C": "ℂ"}
 
@@ -112,6 +113,10 @@ def latex_text(s: str) -> str:
             elif cmd == "bar":
                 arg, i = _group(s, i)
                 out.append(latex_text(arg) + "̄")
+            elif cmd in ("hat", "widehat"):  # f̂ (combining circumflex)
+                arg, i = _group(s, i)
+                a = latex_text(arg)
+                out.append(a + "̂" if len(a) == 1 else f"({a})^")
             elif cmd == "overline":
                 arg, i = _group(s, i)
                 out.append(f"segment {latex_text(arg)}")
@@ -140,13 +145,14 @@ def latex_text(s: str) -> str:
     text = re.sub(r"\s+", " ", "".join(out)).strip()
     text = re.sub(r"\((sin|cos|tan) (\w+)\)([²³⁴])", r"\1\3 \2", text)  # (sin x)² → sin² x
     text = re.sub(r"\|\s*([^|]*?)\s*\|", r"|\1|", text)  # | AD | → |AD|
+    text = re.sub(r"‖\s*([^‖]*?)\s*‖", r"‖\1‖", text)  # ‖ z ‖ → ‖z‖
     text = re.sub(r"([∠△]) ", r"\1", text).replace("'", "′")
     text = re.sub(r"¬ ?(\w+) collinear", r"\1 is a triangle", text)
     # casts are implicit in writing: (k + 1 : ℝ) x → (k + 1)x, (n : ℝ) x → nx
     text = re.sub(r"\((\w+) : [ℝℚℤℕ]\)", r"\1", text)
     text = re.sub(r"\(([^():]+) : [ℝℚℤℕ]\)", r"(\1)", text)
     text = re.sub(r"(?<![A-Za-z])([A-Za-z]) ([A-Za-z])(?![A-Za-z])", r"\1\2", text)  # a b → ab
-    text = re.sub(r"(?<![\w.])(\d+) ([A-Za-z(])", r"\1\2", text)  # 2 k → 2k, 2 (k → 2(k
+    text = re.sub(r"(?<![\w.])(\d+) ([A-Za-z](?![A-Za-z])|\()", r"\1\2", text)  # 2 k → 2k
     text = re.sub(r"(?<![A-Za-z])([A-Za-z]) \(", r"\1(", text)  # k (n + 1) → k(n + 1)
     text = re.sub(r"\) ([A-Za-z])(?![A-Za-z])", r")\1", text)  # (1 + k) x → (1 + k)x
     text = text.replace(") (", ")(")  # (2k + 1) (k + 1) → (2k + 1)(k + 1)
@@ -251,6 +257,9 @@ class Prose:
         return "\n".join(out)
 
     def to_markdown(self) -> str:
+        return _hide_casts(self._markdown())
+
+    def _markdown(self) -> str:
         out = [f"**Theorem** (`{self.name}`). ${self.statement_latex}$", "", "*Proof.*", ""]
         out.extend(_lines(self.steps, "", 0, True, True))
         if self.avoid:
@@ -260,6 +269,14 @@ class Prose:
 
     def _repr_markdown_(self) -> str:
         return self.to_markdown()
+
+
+_CAST = re.compile(r"\\left\(((?:(?! : \\mathbb).)+?) : \\mathbb\{[RQZNC]\}\\right\)")
+
+
+def _hide_casts(text: str) -> str:
+    """Written proofs show ``(n : ℝ)`` as ``n``, as a book does (Lean keeps the cast)."""
+    return _CAST.sub(r"\1", text)
 
 
 def _m(e: Expr) -> str:
@@ -410,11 +427,27 @@ class _Reader:
                     parts.append(plain(w))
                     tparts.append(_m(w))
             new = _instantiate_exists(target, s.witnesses)
-            return ProseStep("take", "Take " + ", ".join(parts),
-                             "Take " + ", ".join(tparts), s.note), new
+            text, tex = "Take " + ", ".join(parts), "Take " + ", ".join(tparts)
+            note = s.note
+            if s.such_that is not None:
+                text += f"; then {plain(s.such_that)}"
+                tex += f"; then {_m(s.such_that)}"
+                note = self.reason(s.facts, s.note)
+                if isinstance(new, Logic) and new.op == "and":
+                    new = new.rhs
+            return ProseStep("take", text, tex, note), new
         if isinstance(s, Choose):
             vt = ", ".join(v.name for v in s.vars)
-            self.hyps.update({n: plain(s.prop) for n in s.names})
+            parts, rest = [], s.prop
+            for _ in s.names[:-1]:  # "hφ hlim" names the parts of a conjunction
+                if isinstance(rest, Logic) and rest.op == "and":
+                    parts.append(rest.lhs)
+                    rest = rest.rhs
+            parts.append(rest)
+            if len(parts) == len(s.names):
+                self.hyps.update({n: plain(p) for n, p in zip(s.names, parts, strict=True)})
+            else:
+                self.hyps.update({n: plain(s.prop) for n in s.names})
             return ProseStep("choose", f"Choose {vt} such that {plain(s.prop)}",
                              f"Choose ${vt}$ such that {_m(s.prop)}",
                              self.reason(s.facts, s.note)), target

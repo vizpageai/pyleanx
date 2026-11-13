@@ -230,6 +230,23 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [x] Real Lean (warm REPL, pinned Mathlib): sin²+cos²=1 by derivatives (8 s), side-splitter by similar triangles (2 s), AM–GM (1.4 s) all accepted with propext/Classical.choice/Quot.sound; the `avoid` check rejects `simp` proving sin²+cos²=1. Cold `verify_all` of the three plus a circular `simp` proof (693 s, one Lean run): **3 verified, circular one rejected** by the avoid check (`span_kind=avoid_check`). First cold run exposed an attribution bug (an avoid-check error is outside the theorem's lines, so the batch was marked `environment_error`); fixed, with a unit test. `tests/integration/test_written_proofs_lean.py` encodes the same run (written; its content was run via a script, not via pytest).
 - Unit tests: 284 passed (14 new in `tests/unit/test_written_proofs.py`); ruff and mypy clean.
 
+### Harmonic analysis as in a textbook (2026-11-13)
+- [x] `pyleanx/harmonic.py` (generated from Lean checked in the pinned Mathlib): 8 shipped definitions (`PyLeanX.Harmonic.coeff` = `fourierCoeffOn` on [−π, π], `ft` = `𝓕`, `ift` = `𝓕⁻`, `gauss`, `L2`, `integrable_on_circle`, `coeff_sq_sum`, `mean_square`) and 18 facts (coefficient/transform integral formulas, linearity, integration by parts, Bessel, Parseval, Riemann–Lebesgue ×2, Gaussian, inversion, inverse transform at 0, small algebra).
+- [x] Engine: `library_facts` also collects shipped definitions referenced by constants in statements and steps.
+- [x] `examples/lecture_harmonic_analysis.ipynb` + `examples/harmonic_lecture.py`; references Stein–Shakarchi and Tao for topics/conventions (no text reproduced).
+- [x] Real Lean: a theorem emitting all 26 shipped declarations verified (71 s); all 6 reference solutions verified (standard axioms only).
+- Blockers (Mathlib at the pin): no Fejér/Dirichlet kernels, maximal functions, interpolation, Hilbert transform, Calderón–Zygmund; Plancherel exists only on `Lp` and is not yet in the vocabulary.
+- Finding: `complex_analysis.pi()` is complex; real-variable statements need `pl.analysis.pi()`.
+
+### Real analysis as in a textbook (2026-11-13)
+- [x] `pyleanx/_analysis_textbook.py` (generated, imported into `pyleanx.analysis`): definitions with ε–N / ε–δ unfoldings and 29 shipped Lean theorems in textbook form (IVT, EVT max/min, Rolle, MVT, Bolzano–Weierstrass, monotone convergence, Heine–Cantor, Cauchy ⇔ convergent, convergent ⇒ bounded, limit algebra, squeeze, 1/(n+1) → 0, Archimedean, reciprocals), plus Mathlib absolute-value facts.
+- [x] `pl.take(w, such_that=P, because=…)`: witness plus side condition (`refine ⟨w, ?_, ?_⟩`, bullet); prose "Take δ = ε/3; then ε/3 > 0"; serialized.
+- [x] Display: formula sequences print as the formula; prose markdown hides `(n : ℝ)` casts; `choose … names=` maps each name to its conjunct; template slots `{0:.0}` allowed.
+- [x] Gap filler: `(simp only [h]; first | ring1 | (congr 1; ring1))` (substitute a cited equation, then algebra inside |…|).
+- [x] `examples/lecture_real_analysis.ipynb` + `examples/analysis_lecture.py` + shared `examples/lecture_tools.py` (step numbers from Lean's `step k:` span labels).
+- [x] Real Lean: a theorem citing all 29 shipped facts verified; all 8 reference solutions verified (standard axioms only); the notebook's worked examples verified and its wrong proof (δ = ε) rejected at the chain step.
+- Findings: a failing shipped fact in the same Lean file rejects every theorem of the batch (check facts separately); `pl.abs(3)` needs `pl.real(3)`; the BW fact is stated ∃ φ, ∃ L, … so `choose([φ, L], …)` matches it.
+
 ### Lecture notebook: congruent triangles (2026-11-13)
 - [x] `examples/lecture_congruent_triangles.ipynb` + `examples/geometry_lecture.py`: SVG figures (no plotting dependency), ipywidgets slider explorers, worked examples (kite by SAS, isosceles median by SSS), a wrong proof (SSS used circularly) rejected at step 2, exercises 1-4 (vertical angles + SAS, SSS + CPCTC, ASA, isosceles right triangle) with hints and solutions.
 - [x] `check()` maps Lean errors back to the student's step numbers; a declaration-wide heartbeat time-out gets a hint instead of a step number (Lean does not attribute it to a step).

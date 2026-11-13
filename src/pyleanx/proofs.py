@@ -825,6 +825,8 @@ class Justify(Tactic):
         # normalising everything with a cited rule (e.g. ∠ABC = ∠CBA), then closing
         alts += [f"(simp only [{f}] at *; first | assumption | linarith | (simp_all; done))"
                  for f in lemmas]
+        # substituting a cited equation (f(x) = 3x + 1), then algebra, also inside |…|
+        alts += [f"(simp only [{f}]; first | ring1 | (congr 1; ring1))" for f in lemmas]
         # One half of a conjunction / one direction of an equivalence. Matching is limited
         # to reducible definitions and instances, so trying the wrong half fails at once
         # instead of unfolding definitions (a timeout there would end the whole search).
@@ -1162,19 +1164,30 @@ class Fix(Tactic):
 
 
 @dataclass(frozen=True)
-class Take(Tactic):
-    """*Take x = w*: provide the witness of an ∃ goal (``refine ⟨w, ?_⟩``)."""
+class Take(_Justified):
+    """*Take x = w*: provide the witness of an ∃ goal (``refine ⟨w, ?_⟩``).
+
+    With ``such_that`` (the first part of a goal ``∃ x, P x ∧ Q x``, e.g. ``δ > 0``) the
+    witness's side condition is proved from the cited facts and the goal becomes ``Q w``
+    (``refine ⟨w, ?_, ?_⟩`` and a bullet proving ``P w``)."""
 
     witnesses: tuple[Expr, ...] = ()
-    note: str = ""
+    such_that: Expr | None = None
 
     def imports(self) -> tuple[str, ...]:
         from .imports import expr_imports
 
-        return tuple(i for w in self.witnesses for i in expr_imports(w))
+        out = [i for w in self.witnesses for i in expr_imports(w)]
+        if self.such_that is not None:
+            out += [*expr_imports(self.such_that), *self.justification().imports()]
+        return tuple(out)
 
     def canonical(self) -> Any:
-        return ["take", [w.canonical() for w in self.witnesses], self.note]
+        base = ["take", [w.canonical() for w in self.witnesses], self.note]
+        if self.such_that is None:
+            return base
+        return [*base, self.such_that.canonical(), [_canon_term(t) for t in self.facts],
+                list(self.unfold)]
 
 
 @dataclass(frozen=True)
@@ -1385,14 +1398,22 @@ def assume(prop: object, *, name: str = "h", note: str = "") -> Fix:
                origin=caller_origin())
 
 
-def take(*witnesses: object, note: str = "") -> Take:
-    """*Take x = w*: the witness(es) for an ∃ goal (``pl.take(eps / 2)``)."""
-    from .expr import _lift
+def take(*witnesses: object, such_that: object = None, because: object = None,
+         note: str = "") -> Take:
+    """*Take x = w*: the witness(es) for an ∃ goal (``pl.take(eps / 2)``).
+
+    For a goal ``∃ δ, δ > 0 ∧ …`` write ``pl.take(eps / 3, such_that=eps / 3 > 0)``:
+    "take δ = ε/3 (> 0)". The side condition is proved from ``because`` (and the earlier
+    steps); the goal becomes the rest."""
+    from .expr import _as_prop, _lift
 
     if not witnesses:
         raise TacticError("pl.take needs a witness")
-    return Take(witnesses=tuple(_lift(w) for w in witnesses), note=note,
-                origin=caller_origin())
+    if such_that is None and because is not None:
+        raise TacticError("pl.take: because= justifies such_that=; give both")
+    side = _as_prop(such_that, "pl.take such_that") if such_that is not None else None
+    return Take(witnesses=tuple(_lift(w) for w in witnesses), such_that=side,
+                facts=_facts(because), note=note, origin=caller_origin())
 
 
 def choose(variables: object, such_that: object, because: object = None, *,
@@ -1543,7 +1564,7 @@ def prepare(t: Tactic, avoid: tuple[str, ...] = (), *, prefix: str = "step",
         elif isinstance(s, InductionOn):
             s = replace(s, base=prepare(s.base, avoid, prefix=f"{here}b_", lets=seen),
                         step=prepare(s.step, avoid, prefix=f"{here}i_", lets=seen))
-        elif isinstance(s, (Choose, Suffices)):
+        elif isinstance(s, (Choose, Suffices, Take)):
             s = replace(s, unfold=seen, avoid=avoid)
         elif isinstance(s, Justify):
             s = replace(s, avoid=avoid)
@@ -1639,4 +1660,41 @@ def library_facts(theorems: Iterable[Any]) -> list[LibraryFact]:
         for term in iter_terms(thm.proof):
             if isinstance(term, LibraryFact):
                 visit(term)
+        # shipped *definitions* used in statements or steps (e.g. a Fourier coefficient)
+        roots = [thm.conclusion, *(h.prop for h in getattr(thm, "assumptions", ())),
+                 *_exprs_in(thm.proof)]
+        for name in _const_names(roots):
+            fact = LIBRARY_FACTS.get(name)
+            if fact is not None:
+                visit(fact)
     return order
+
+
+def _exprs_in(obj: Any) -> list[Expr]:
+    """Every expression stored in a tactic tree (claims, chain terms, witnesses, …)."""
+    from dataclasses import fields, is_dataclass
+
+    out: list[Expr] = []
+    stack = [obj]
+    while stack:
+        o = stack.pop()
+        if isinstance(o, Expr):
+            out.append(o)
+        elif isinstance(o, (tuple, list)):
+            stack.extend(o)
+        elif is_dataclass(o) and not isinstance(o, type):
+            stack.extend(getattr(o, f.name) for f in fields(o))
+    return out
+
+
+def _const_names(roots: Iterable[Any]) -> set[str]:
+    from .terms import Const
+
+    names: set[str] = set()
+    stack = [r for r in roots if isinstance(r, Expr)]
+    while stack:
+        e = stack.pop()
+        if isinstance(e, Const):
+            names.add(e.name)
+        stack.extend(e.children())
+    return names

@@ -147,6 +147,7 @@ from .terms import (  # noqa: E402
     norm,
     pair,
     smul,
+    union,
     var,
 )
 from .terms import prod as prod  # noqa: E402
@@ -203,7 +204,7 @@ __all__ = [
     "infoview", "DeclView", "proof_graph", "ProofGraph", "explain", "Explanation",
     # general Lean vocabulary
     "Type", "LeanType", "Fn", "Prod", "Fin", "EuclideanSpace", "UNKNOWN", "var", "const", "app",
-    "fun", "sum", "prod", "integral", "pair", "field", "ascribe", "smul", "norm",
+    "fun", "sum", "prod", "integral", "union", "pair", "field", "ascribe", "smul", "norm",
     "define", "define_type", "structure", "mk",
     # structured proofs
     "auto", "have", "calc", "show", "obtain", "cases", "induction", "unfold", "ext", "proof",
