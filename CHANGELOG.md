@@ -62,6 +62,15 @@ see [docs/stability.md](docs/stability.md)).
   theorem without a proof is an error, and a failed cited proof rejects exactly the theorems
   that cite it. The bank records citations as dependencies and makes loaded theorems
   citable. Example `using_cauchy_integral.py`: ∮_{|z|=2} z²/(z − 1) dz = 2πi.
+- High-school plane geometry catalogue in `geo` (64 citable facts by chapter): SSS/SAS/ASA/
+  AAS/HL congruence and CPCTC, similarity, alternate and co-interior angles, angle sum,
+  exterior angle, isosceles triangles, Pythagoras, laws of sines and cosines, midpoints and
+  the midsegment theorem, perpendicular bisectors, Thales, intersecting chords, parallelogram
+  diagonals; 17 are shipped with Lean proofs. New vocabulary: `congruent`, `midpoint`,
+  `is_midpoint`, `right_angle`, `opposite_sides`, `same_side`, `on_circle`, `concyclic`,
+  `parallelogram`. Example `textbook_geometry.py` (five textbook proofs). The gap filler also
+  uses a part of a cited conjunction, a cited fact with its points in another order, and a
+  cited rewrite rule applied everywhere (e.g. `geo.angle_comm`).
 - Auxiliary constructions in geometry: `geo.extend_beyond`, `geo.strictly_between`, shipped
   construction facts (`geo.extension_between/length/triangle`, `geo.bisector_parallel`,
   `geo.componendo`, …). Example `readable_angle_bisector.py`: the angle bisector theorem by

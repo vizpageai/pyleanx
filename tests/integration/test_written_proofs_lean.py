@@ -81,3 +81,21 @@ def test_written_proofs_verify_and_bad_ones_are_rejected(lean_project):
     bis = results[-1]
     assert bis.verified, [d.message for d in bis.diagnostics]
     assert set(bis.axioms) <= {"propext", "Classical.choice", "Quot.sound"}
+
+
+def test_textbook_geometry_and_every_shipped_geometry_fact(lean_project):
+    from pyleanx import geometry as geo
+    from pyleanx.proofs import LibraryFact
+
+    textbook = runpy.run_path(str(EXAMPLES / "textbook_geometry.py"))["THEOREMS"]
+    shipped = [f for f in geo.LEMMAS.values() if isinstance(f, LibraryFact)]
+    # a theorem whose Lean file contains every shipped geometry fact with its proof
+    all_facts = pl.Theorem("all_geometry_facts_check", [], conclusion=pl.TRUE,
+                           proof=pl.proof(pl.conclude(because=shipped)))
+    results = pl.verify_all([*textbook, all_facts], project=lean_project, use_cache=False,
+                            timeout=3600)
+    for t, r in zip([*textbook, all_facts], results, strict=True):
+        assert r.verified, (t.name, [d.message for d in r.diagnostics if d.severity == "error"])
+        assert set(r.axioms) <= {"propext", "Classical.choice", "Quot.sound"}
+    src = results[-1].lean_source
+    assert all(f"theorem {f.name} " in src for f in shipped)

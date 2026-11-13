@@ -85,7 +85,8 @@ angle_add_angle_add_angle_eq_pi = lemma("EuclideanGeometry.angle_add_angle_add_a
                                         _TRIANGLE)
 #: Pythagoras (both directions): |p₁p₃|² = |p₁p₂|² + |p₃p₂|²  ↔  ∠ p₁ p₂ p₃ = π / 2.
 pythagoras_iff = lemma(
-    "EuclideanGeometry.dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two", _RIGHT)
+    "EuclideanGeometry.dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two", _RIGHT,
+    label="Pythagoras' theorem (and its converse)")
 
 # ---------------------------------------------------------------------------------------
 # Lines, segments, triangles and similarity (Mathlib's notions, written as a textbook does)
@@ -166,6 +167,79 @@ def similar(t1: tuple[object, object, object], t2: tuple[object, object, object]
     return apply(_c("Similar", (_SIMILAR,), r"\triangle {0} \sim \triangle {1}"),
                  _vec(*t1), _vec(*t2))
 
+
+def congruent(t1: tuple[object, object, object], t2: tuple[object, object, object]) -> Expr:
+    """Triangle ``t1`` is congruent to ``t2`` with vertices in this order
+    (Mathlib's ``Congruent ![…] ![…]``: all corresponding distances are equal)."""
+    from .terms import apply
+
+    return apply(_c("Congruent", (_CONGRUENCE,), r"\triangle {0} \cong \triangle {1}"),
+                 _vec(*t1), _vec(*t2))
+
+
+def midpoint(a: object, b: object) -> Any:
+    """The midpoint of segment ``ab`` (Mathlib's ``midpoint ℝ a b``)."""
+    from .terms import Const, apply
+
+    c = Const("midpoint", Point, ("Mathlib.LinearAlgebra.AffineSpace.Midpoint",),
+              r"\text{{the midpoint of }} {1}{2}", arity=3, result=Point)
+    return apply(c, Real, a, b)
+
+
+def right_angle(a: object, b: object, c: object) -> Expr:
+    """``∠abc`` is a right angle (``∠ a b c = π / 2``)."""
+    from .analysis import pi
+
+    return angle(a, b, c) == pi() / 2
+
+
+def on_circle(p: object, center: object, radius: object) -> Expr:
+    """``p`` lies on the circle with ``center`` and ``radius`` (``dist p center = radius``)."""
+    return dist(p, center) == radius
+
+
+def parallelogram(a: object, b: object, c: object, d: object) -> Expr:
+    """``abcd`` is a parallelogram: a non-degenerate quadrilateral whose opposite sides
+    are parallel (``ab ∥ cd``, ``cb ∥ ad``, and ``a, b, c`` not collinear)."""
+    from .expr import And
+
+    return And(triangle(a, b, c), parallel(line(a, b), line(c, d)),
+               parallel(line(c, b), line(a, d)))
+
+
+def is_midpoint(m: object, a: object, b: object) -> Expr:
+    """``m`` is the midpoint of segment ``ab`` (``m = midpoint ℝ a b``)."""
+    from .expr import _compare
+
+    return _compare("eq", m, midpoint(a, b))
+
+
+def opposite_sides(p: object, q: object, a: object, b: object) -> Expr:
+    """``p`` and ``q`` lie on opposite sides of line ``ab`` (strictly; Mathlib's
+    ``line[ℝ, a, b].SOppSide p q``)."""
+    from .terms import apply
+
+    return apply(_c("AffineSubspace.SOppSide", ("Mathlib.Analysis.Convex.Side",),
+                    r"{1}, {2} \text{{ lie on opposite sides of }} {0}"), line(a, b), p, q)
+
+
+def same_side(p: object, q: object, a: object, b: object) -> Expr:
+    """``p`` and ``q`` lie (strictly) on the same side of line ``ab``."""
+    from .terms import apply
+
+    return apply(_c("AffineSubspace.SSameSide", ("Mathlib.Analysis.Convex.Side",),
+                    r"{1}, {2} \text{{ lie on the same side of }} {0}"), line(a, b), p, q)
+
+
+def concyclic(*pts: object) -> Expr:
+    """The points lie on one circle (Mathlib's ``Cospherical {…}``)."""
+    from .terms import apply
+
+    return apply(_c("EuclideanGeometry.Cospherical", ("Mathlib.Geometry.Euclidean.Sphere.Basic",),
+                    r"{0} \text{{ lie on a circle}}"), _set(*pts))
+
+
+_CONGRUENCE = "Mathlib.Geometry.Euclidean.Congruence"
 
 #: AA: two pairs of equal angles (at b and at c) make the triangles similar.
 similar_AA = lemma("EuclideanGeometry.similar_of_angle_angle", _SIMILAR,
@@ -397,9 +471,15 @@ theorem PyLeanX.Algebra.componendo {a b c d : ℝ} (ha : 0 ≤ a) (hb : 0 < b) (
 dist_add_dist = lemma("Wbtw.dist_add_dist", "Mathlib.Analysis.Normed.Affine.Convex",
                       label="distances add along a segment")
 
+# The textbook catalogue (chapters: angles, triangles, congruence, similarity, parallels,
+# right triangles, midpoints, circles, quadrilaterals): ``geo.sss``, ``geo.thales``, …
+from ._geometry_textbook import *  # noqa: E402, F403
+
 LEMMAS = collect_lemmas(globals())
 
 __all__ = ["Point", "point", "points", "dist", "angle", "line", "parallel", "on_segment",
            "collinear", "triangle", "similar", "strictly_between", "extend_beyond",
+           "congruent", "midpoint", "right_angle", "on_circle", "parallelogram",
+           "is_midpoint", "opposite_sides", "same_side", "concyclic",
            "LEMMAS", "VERIFIED_MATHLIB",
            "CATALOG_VERSION", *LEMMAS]

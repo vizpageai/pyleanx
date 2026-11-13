@@ -807,11 +807,14 @@ class Justify(Tactic):
         h = (" [" + ", ".join(fs) + "]") if fs else ""
         simp_args = fs + [f"-{a}" for a in self.avoid]
         hs = (" [" + ", ".join(simp_args) + "]") if simp_args else ""
-        close = ("first | assumption | rfl | omega | fun_prop | positivity | linarith | "
-                 "(simp_all; done)")
+        close = ("first | assumption | exact Ne.symm ‹_› | rfl | omega | fun_prop | positivity | "
+                 "linarith | (simp_all; done)")
         alts = ["assumption", "contradiction"]
         alts += [f"exact {f}" for f in fs]
         alts += [f"exact ({f}).symm" for f in fs if " " not in f]  # a cited equation, reversed
+        # a part of a cited conjunction (e.g. one property of a parallelogram hypothesis)
+        alts += [f"exact {f}{proj}" for f in fs if " " not in f
+                 for proj in (".1", ".2", ".2.1", ".2.2", ".1.1", ".1.2")]
         lemmas = [f for f, t in zip(fs, self.facts, strict=True) if not isinstance(t, Expr)]
         alts += [f"(apply {f}; all_goals ({close}))" for f in lemmas]
         # a cited lemma applied to another cited fact ("by L, since h")
@@ -819,12 +822,18 @@ class Justify(Tactic):
         # rewriting with a cited equation, then tidying up
         alts += [f"(rw [{f}]; done)" for f in lemmas]
         alts += [f"(rw [{f}]; simp{hs}; done)" for f in lemmas]
+        # normalising everything with a cited rule (e.g. ∠ABC = ∠CBA), then closing
+        alts += [f"(simp only [{f}] at *; first | assumption | linarith | (simp_all; done))"
+                 for f in lemmas]
         # One half of a conjunction / one direction of an equivalence. Matching is limited
         # to reducible definitions and instances, so trying the wrong half fails at once
         # instead of unfolding definitions (a timeout there would end the whole search).
         alts += [f"(with_reducible_and_instances apply {half}; "
                  f"with_reducible_and_instances apply {f}; all_goals ({close}))"
                  for f in lemmas for half in ("And.left", "And.right", "Iff.mp", "Iff.mpr")]
+        # a cited fact about the same points listed in another order ({A, B, C} = {B, A, C})
+        alts += [f"(convert {f} using {d}; ext; simp only [Set.mem_insert_iff, "
+                 f"Set.mem_singleton_iff]; tauto)" for f in fs if " " not in f for d in (2, 1)]
         alts += ["rfl", "ring1", "omega", "positivity", "fun_prop", f"linarith{h}",
                  "(congr 1; ring1)", "(push_cast; ring1)",
                  f"(norm_num{hs}; done)", f"(simp{hs}; done)", f"(simp{hs}; ring1)",

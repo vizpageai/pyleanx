@@ -108,6 +108,7 @@ the automation cannot instantiate `n! > 0` by itself.
 | Inequalities | `readable_am_gm.py` (AM–GM) | claims with library facts |
 | Geometry | `readable_side_splitter.py` (side-splitter) | similar triangles, shipped facts |
 | Geometry | `readable_angle_bisector.py` (angle bisector theorem) | auxiliary point, cites the side-splitter theorem |
+| Geometry | `textbook_geometry.py` (isosceles median, parallelogram sides, semicircle, isosceles right triangle, medial triangle) | congruence, CPCTC, parallels, Thales, midsegments |
 | Complex analysis | `readable_cauchy_integral.py` (Cauchy's integral formula from Cauchy's theorem) | let, chain, shipped facts, `avoid=` |
 
 ## Auxiliary constructions
@@ -144,6 +145,73 @@ Lean proofs. The parallel step is proved with vectors (equal angles give
 (1 − s)|AB| = s|AC| for D = B + s(C − B), and then E − C is a multiple of A − D), not by
 the angle chase in the note. Euclid (Elements VI.3) draws the parallel first and deduces
 AE = AC; this proof fixes AE = AC and deduces the parallel. Both use the same triangle.
+
+## High-school plane geometry
+
+`pyleanx.geometry` (`geo`) has the vocabulary and the facts of a high-school course, so
+textbook proofs can be written step by step (`examples/textbook_geometry.py`):
+
+```python
+isosceles_median = pl.Theorem(
+    "isosceles_median_perpendicular", [A, B, C, M],
+    assumptions={"hABC": geo.triangle(A, B, C), "hiso": dist(A, B) == dist(A, C),
+                 "hM": geo.is_midpoint(M, B, C)},
+    conclusion=geo.right_angle(A, M, B),
+    proof=pl.proof(
+        pl.claim(dist(B, M) == dist(C, M), because=geo.midpoint_equal_halves),
+        pl.claim(geo.congruent((B, M, A), (C, M, A)), because=geo.sss),
+        pl.claim(angle(B, M, A) == angle(C, M, A), because=geo.cpctc_angle_b),
+        pl.claim(B != C, because=geo.distinct_bc("hABC")),
+        pl.claim(angle(B, M, C) == pi(), because=geo.midpoint_straight),
+        pl.claim(angle(A, M, B) + angle(A, M, C) == pi(), because=geo.linear_pair),
+        pl.conclude(because=geo.angle_comm),
+    ),
+)
+```
+
+```text
+1. |BM| = |CM|.  (the midpoint divides a segment into equal halves)
+2. △BMA ≅ △CMA.  (SSS: BM = CM, MA = MA, AB = AC)
+3. ∠BMA = ∠CMA.  (corresponding parts of congruent triangles (CPCTC))
+...
+Hence ∠AMB = π/2 (two equal angles adding up to 180°). ∎
+✔ Checked by Lean (axioms: propext, Classical.choice, Quot.sound).
+```
+
+**Vocabulary:** `points`, `dist`, `angle`, `line`, `parallel`, `on_segment`,
+`strictly_between`, `collinear`, `triangle`, `right_angle`, `congruent`, `similar`,
+`midpoint`, `is_midpoint`, `opposite_sides`, `same_side`, `on_circle`, `concyclic`,
+`parallelogram`, `extend_beyond`.
+
+**Facts, by chapter** (cite with `because=`; each prints as the textbook reason):
+
+| Chapter | Facts |
+|---|---|
+| Angles | `angle_comm`, `vertical_angles`, `linear_pair`, `straight_angle`, `angle_addition` |
+| Triangles | `angle_sum`, `exterior_angle`, `isosceles_base_angles`, `isosceles_converse`, `larger_side_larger_angle`, `distinct_ab/ac/bc`, `triangle_sides_pos` |
+| Congruence | `sss`, `sas`, `asa`, `aas`, `hl`, CPCTC: `cpctc_ab/bc/ca`, `cpctc_angle_a/b/c` |
+| Similarity | `similar_AA`, `similar_SAS`, `similar_SSS`, `similar_angles`, `similar_sides` |
+| Parallel lines | `alternate_angles`, `cointerior_angles`, `corresponding_angles`, `parallel_trans`, `parallel_symm` |
+| Right triangles | `pythagoras_iff`, `law_of_cosines`, `law_of_sines`, `dist_triangle` |
+| Midpoints | `midpoint_equal_halves`, `midpoint_half`, `midpoint_straight`, `midsegment_parallel`, `midsegment_length`, `median_to_base_is_perpendicular`, `perpendicular_bisector` |
+| Circles | `thales`, `intersecting_chords` |
+| Quadrilaterals | `parallelogram_diagonal_sides` |
+| Constructions | `extension_between/length/triangle`, `bisector_parallel`, `componendo` |
+
+Facts Mathlib states in textbook form are references to it; the others (CPCTC, HL, parallel
+line angles, midpoints, midsegments, Thales, parallelograms, constructions) are shipped as
+Lean theorems with their proofs and re-checked in every file that cites them.
+
+Conventions: angles are unoriented and in radians (`pl.analysis.pi()` is 180°); "M is the
+midpoint of AB" is the hypothesis `geo.is_midpoint(M, A, B)`; where a textbook reads a fact
+off the figure ("B and D are on opposite sides of AC"), the proof states it as a step
+(`geo.opposite_sides`) and justifies it. Steps that only reorder ("∠BAC = ∠CAB", "△BAC is
+△ABC", "the midpoint of AB is the midpoint of BA") cite `geo.angle_comm`, `geo.dist_comm` or
+`geo.midpoint_comm`, or the hypothesis being reordered.
+
+Not covered yet: areas; the inscribed angle theorem and cyclic quadrilaterals (Mathlib has
+them for oriented angles or the plane only); converses of the parallel-line angle facts;
+tangent lines; "draw the line through P parallel to l" as a construction.
 
 ## Abstract structures: "let G be a group"
 

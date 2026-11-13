@@ -230,6 +230,14 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [x] Real Lean (warm REPL, pinned Mathlib): sin²+cos²=1 by derivatives (8 s), side-splitter by similar triangles (2 s), AM–GM (1.4 s) all accepted with propext/Classical.choice/Quot.sound; the `avoid` check rejects `simp` proving sin²+cos²=1. Cold `verify_all` of the three plus a circular `simp` proof (693 s, one Lean run): **3 verified, circular one rejected** by the avoid check (`span_kind=avoid_check`). First cold run exposed an attribution bug (an avoid-check error is outside the theorem's lines, so the batch was marked `environment_error`); fixed, with a unit test. `tests/integration/test_written_proofs_lean.py` encodes the same run (written; its content was run via a script, not via pytest).
 - Unit tests: 284 passed (14 new in `tests/unit/test_written_proofs.py`); ruff and mypy clean.
 
+### High-school plane geometry catalogue (2026-11-13)
+- [x] Surveyed the pinned Mathlib for textbook geometry: 38 facts referenced by name (all checked against their declared modules: none missing), 17 shipped with Lean proofs where Mathlib lacks a citable unoriented form (CPCTC x6, HL, parallel direction, alternate/co-interior angles, midpoint x3, midsegment x2, Thales, parallelogram diagonal sides).
+- [x] `examples/textbook_geometry.py`: isosceles median perpendicular to the base (SSS, CPCTC, linear pair), parallelogram opposite sides (alternate angles, ASA, CPCTC), angle in a semicircle + Pythagoras, isosceles right triangle base angles, medial triangle perimeter (midsegments).
+- [x] Gap filler: conjunction projections (`h.2.1`), point-order normalisation (`convert h using 2; ext; ...; tauto`), cited rewrite rules everywhere (`simp only [angle_comm] at *`), `Ne.symm`.
+- [x] Real Lean, cold (pytest, 204 s): all 5 textbook proofs and a theorem emitting all 17 shipped facts verified (standard axioms only); every earlier written proof still verified, negatives rejected.
+- Unit tests: 326 passed; ruff and mypy clean.
+- Not covered: areas, inscribed angles / cyclic quadrilaterals (oriented or plane-only in Mathlib), converses of parallel-line angle facts, tangents, "draw the parallel through P" constructions.
+
 ### Angle bisector theorem by the side splitter (2026-11-12)
 - [x] `examples/readable_angle_bisector.py`: construct E on BA beyond A with AE = AC (`pl.let` + `geo.extend_beyond`), prove A ∈ BE, AE = AC, AD ∥ EC, BEC a triangle (shipped facts with Lean proofs; the parallel step by a vector computation from the equal angles), cite the proved side-splitter theorem for triangle BEC, then componendo. 14 written steps.
 - [x] Real Lean: verified with propext/Classical.choice/Quot.sound only (single run ✔; integration test 116 s with all other written proofs and negatives).

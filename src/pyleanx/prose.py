@@ -56,7 +56,7 @@ _SYMBOLS = {
     "ne": "≠", "neq": "≠", "cdot": "·", "times": "×", "mapsto": "↦", "to": "→", "pi": "π",
     "Longrightarrow": "⟹", "Rightarrow": "⇒", "iff": "⟺", "land": "∧", "lor": "∨",
     "wedge": "∧", "vee": "∨", "sum": "∑", "prod": "∏", "int": "∫", "infty": "∞",
-    "oint": "∮", "setminus": "∖", "partial": "∂",
+    "oint": "∮", "cong": "≅", "setminus": "∖", "partial": "∂",
     "lvert": "|", "rvert": "|", "lVert": "‖", "rVert": "‖", "bmod": "mod", "quad": " ",
     "qquad": " ", "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε",
     "theta": "θ", "varepsilon": "ε", "mid": "∣", "varphi": "φ", "lambda": "λ", "mu": "μ",

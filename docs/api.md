@@ -350,6 +350,10 @@ context), uses one half of a cited `∧`/`↔`, and tries `simp`/`norm_num`/`lin
 also after unfolding `pl.let` definitions and introducing `∀` variables; each attempt must
 close the step.
 
+High-school plane geometry: `geo` has a chapter-by-chapter catalogue of citable facts
+(congruence, CPCTC, similarity, parallel lines, right triangles, midpoints, circles,
+quadrilaterals); see the tutorial's "High-school plane geometry" section.
+
 Vocabulary: `pyleanx.complex_analysis` (ℂ, discs, circles, `holomorphic_on`, `circle_integral`,
 Cauchy's theorem for a disc, `kernel_integral`, `INTEGRAL_FORMULA`); `pyleanx.numbers` (`divides`, `even`, `odd`, `prime`, `factorial`, `gcd` and
 parity/divisibility/prime facts); `an.tendsto`, `an.tendsto_iff` (ε–N, shipped),
