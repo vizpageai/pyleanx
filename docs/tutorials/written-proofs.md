@@ -213,6 +213,12 @@ Not covered yet: areas; the inscribed angle theorem and cyclic quadrilaterals (M
 them for oriented angles or the plane only); converses of the parallel-line angle facts;
 tangent lines; "draw the line through P parallel to l" as a construction.
 
+**Classroom notebook.** `examples/lecture_congruent_triangles.ipynb` is an interactive lecture
+(SSS, SAS, ASA, CPCTC): slider figures to explore, two worked examples, a wrong proof that
+Lean rejects at the faulty step, and four exercises students solve in the notebook with
+`check(...)`. Its helpers and Lean-verified reference solutions are in
+`examples/geometry_lecture.py` (`python examples/geometry_lecture.py` re-checks them).
+
 ## Abstract structures: "let G be a group"
 
 ```python

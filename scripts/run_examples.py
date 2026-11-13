@@ -46,6 +46,7 @@ CASES: dict[str, tuple[list[str], int]] = {
     "using_cauchy_integral": (RUN, 0),
     "readable_angle_bisector": (RUN, 0),
     "textbook_geometry": (RUN, 0),
+    "geometry_lecture": (RUN, 0),  # the lecture notebook's reference solutions
 }
 
 # Examples deliberately not run here, with the reason (each must be run by hand).

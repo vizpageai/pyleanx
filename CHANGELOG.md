@@ -62,6 +62,10 @@ see [docs/stability.md](docs/stability.md)).
   theorem without a proof is an error, and a failed cited proof rejects exactly the theorems
   that cite it. The bank records citations as dependencies and makes loaded theorems
   citable. Example `using_cauchy_integral.py`: ∮_{|z|=2} z²/(z − 1) dz = 2πi.
+- Interactive lecture notebook `examples/lecture_congruent_triangles.ipynb` (congruent
+  triangles: SSS, SAS, ASA, CPCTC) with SVG figures, slider explorers, worked examples, a
+  rejected wrong proof, and four exercises checked by Lean via `check(...)`, which names the
+  step Lean could not justify; helpers and verified solutions in `examples/geometry_lecture.py`.
 - High-school plane geometry catalogue in `geo` (64 citable facts by chapter): SSS/SAS/ASA/
   AAS/HL congruence and CPCTC, similarity, alternate and co-interior angles, angle sum,
   exterior angle, isosceles triangles, Pythagoras, laws of sines and cosines, midpoints and

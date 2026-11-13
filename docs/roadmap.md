@@ -230,6 +230,13 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [x] Real Lean (warm REPL, pinned Mathlib): sin²+cos²=1 by derivatives (8 s), side-splitter by similar triangles (2 s), AM–GM (1.4 s) all accepted with propext/Classical.choice/Quot.sound; the `avoid` check rejects `simp` proving sin²+cos²=1. Cold `verify_all` of the three plus a circular `simp` proof (693 s, one Lean run): **3 verified, circular one rejected** by the avoid check (`span_kind=avoid_check`). First cold run exposed an attribution bug (an avoid-check error is outside the theorem's lines, so the batch was marked `environment_error`); fixed, with a unit test. `tests/integration/test_written_proofs_lean.py` encodes the same run (written; its content was run via a script, not via pytest).
 - Unit tests: 284 passed (14 new in `tests/unit/test_written_proofs.py`); ruff and mypy clean.
 
+### Lecture notebook: congruent triangles (2026-11-13)
+- [x] `examples/lecture_congruent_triangles.ipynb` + `examples/geometry_lecture.py`: SVG figures (no plotting dependency), ipywidgets slider explorers, worked examples (kite by SAS, isosceles median by SSS), a wrong proof (SSS used circularly) rejected at step 2, exercises 1-4 (vertical angles + SAS, SSS + CPCTC, ASA, isosceles right triangle) with hints and solutions.
+- [x] `check()` maps Lean errors back to the student's step numbers; a declaration-wide heartbeat time-out gets a hint instead of a step number (Lean does not attribute it to a step).
+- [x] Real Lean: all 6 reference solutions verified (standard axioms only); the two wrong proofs rejected at the expected steps; the notebook executes end to end.
+- Unit tests: tests/unit/test_geometry_lecture.py (figures, solutions render, notebook names).
+- Finding: concluding with `because=[geo.cpctc_ca, geo.dist_comm]` exhausts Lean's heartbeat budget; a separate CPCTC step followed by `conclude(because=geo.dist_comm)` verifies quickly.
+
 ### High-school plane geometry catalogue (2026-11-13)
 - [x] Surveyed the pinned Mathlib for textbook geometry: 38 facts referenced by name (all checked against their declared modules: none missing), 17 shipped with Lean proofs where Mathlib lacks a citable unoriented form (CPCTC x6, HL, parallel direction, alternate/co-interior angles, midpoint x3, midsegment x2, Thales, parallelogram diagonal sides).
 - [x] `examples/textbook_geometry.py`: isosceles median perpendicular to the base (SSS, CPCTC, linear pair), parallelogram opposite sides (alternate angles, ASA, CPCTC), angle in a semicircle + Pythagoras, isosceles right triangle base angles, medial triangle perimeter (midsegments).
