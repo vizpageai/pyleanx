@@ -356,7 +356,10 @@ parity/divisibility/prime facts); `an.tendsto`, `an.tendsto_iff` (ε–N, shippe
 `an.triangle_inequality`, `an.deriv`, `an.differentiable` and calculus facts;
 `alg.group`/`abelian_group`/`ring`/`comm_ring`/`field`, `alg.inv` and group facts;
 `geo.line`, `geo.parallel`, `geo.on_segment`, `geo.collinear`, `geo.triangle`,
-`geo.similar`, `geo.similar_AA`, and the shipped facts `geo.corresponding_angles` (both
+`geo.similar`, `geo.similar_AA`, `geo.strictly_between`, `geo.extend_beyond` (auxiliary points)
+with the shipped construction facts `geo.extension_between/length/triangle`,
+`geo.bisector_parallel`, `geo.triangle_sides_pos`, `geo.between_dist_pos`, `geo.componendo`,
+and the shipped facts `geo.corresponding_angles` (both
 pairs of angles) and `geo.similar_sides`. Shipped facts are Lean theorems with proofs,
 emitted into every file that cites them.
 

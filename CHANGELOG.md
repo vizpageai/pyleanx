@@ -62,6 +62,11 @@ see [docs/stability.md](docs/stability.md)).
   theorem without a proof is an error, and a failed cited proof rejects exactly the theorems
   that cite it. The bank records citations as dependencies and makes loaded theorems
   citable. Example `using_cauchy_integral.py`: ∮_{|z|=2} z²/(z − 1) dz = 2πi.
+- Auxiliary constructions in geometry: `geo.extend_beyond`, `geo.strictly_between`, shipped
+  construction facts (`geo.extension_between/length/triangle`, `geo.bisector_parallel`,
+  `geo.componendo`, …). Example `readable_angle_bisector.py`: the angle bisector theorem by
+  extending BA and citing the proved side-splitter theorem. The gap filler also uses a
+  cited equation reversed (`exact h.symm`).
 - `avoid=` also checks inside cited PyLeanX facts and theorems, and imports avoided lemmas' modules. The gap
   filler also applies a cited lemma to a cited fact and rewrites with cited equations.
 

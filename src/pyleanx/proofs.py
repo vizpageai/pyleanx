@@ -811,6 +811,7 @@ class Justify(Tactic):
                  "(simp_all; done)")
         alts = ["assumption", "contradiction"]
         alts += [f"exact {f}" for f in fs]
+        alts += [f"exact ({f}).symm" for f in fs if " " not in f]  # a cited equation, reversed
         lemmas = [f for f, t in zip(fs, self.facts, strict=True) if not isinstance(t, Expr)]
         alts += [f"(apply {f}; all_goals ({close}))" for f in lemmas]
         # a cited lemma applied to another cited fact ("by L, since h")

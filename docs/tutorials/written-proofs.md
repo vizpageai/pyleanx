@@ -107,7 +107,43 @@ the automation cannot instantiate `n! > 0` by itself.
 | Inequalities | `readable_bernoulli.py` ((1+x)ⁿ ≥ 1+nx) | induction, chain |
 | Inequalities | `readable_am_gm.py` (AM–GM) | claims with library facts |
 | Geometry | `readable_side_splitter.py` (side-splitter) | similar triangles, shipped facts |
+| Geometry | `readable_angle_bisector.py` (angle bisector theorem) | auxiliary point, cites the side-splitter theorem |
 | Complex analysis | `readable_cauchy_integral.py` (Cauchy's integral formula from Cauchy's theorem) | let, chain, shipped facts, `avoid=` |
+
+## Auxiliary constructions
+
+A construction is a `pl.let` that names a new point; later steps prove its properties and
+use it. The angle bisector theorem (`readable_angle_bisector.py`) extends BA beyond A to E
+with AE = AC and applies the side-splitter theorem to triangle BEC:
+
+```python
+from readable_side_splitter import side_splitter      # proved earlier
+
+pl.let(E, geo.extend_beyond(B, A, dist(A, C)), note="extend BA beyond A to E with AE = AC"),
+pl.claim(geo.on_segment(A, B, E), because=geo.extension_between),
+pl.claim(dist(A, E) == dist(A, C), because=geo.extension_length),
+pl.claim(geo.parallel(geo.line(A, D), geo.line(E, C)), because=geo.bisector_parallel),
+pl.claim(geo.triangle(B, E, C), because=geo.extension_triangle),
+...
+pl.claim(dist(B, A) / dist(B, E) == dist(B, D) / dist(B, C), because=side_splitter),
+```
+
+```text
+1. Let E = the point on ray BA beyond A.  (extend BA beyond A to E with AE = AC)
+...
+4. AD ∥ EC.  (△ACE is isosceles (AE = AC), so EC is parallel to the bisector AD)
+...
+7. |BA|/|BE| = |BD|/|BC|.  (theorem side_splitter_similar)
+...
+Hence |BD|/|DC| = |AB|/|AC|. ∎
+✔ Checked by Lean (axioms: propext, Classical.choice, Quot.sound).
+```
+
+The construction facts (`geo.extension_*`, `geo.bisector_parallel`) are shipped with their
+Lean proofs. The parallel step is proved with vectors (equal angles give
+(1 − s)|AB| = s|AC| for D = B + s(C − B), and then E − C is a multiple of A − D), not by
+the angle chase in the note. Euclid (Elements VI.3) draws the parallel first and deduces
+AE = AC; this proof fixes AE = AC and deduces the parallel. Both use the same triangle.
 
 ## Abstract structures: "let G be a group"
 

@@ -47,13 +47,15 @@ def test_written_proofs_verify_and_bad_ones_are_rejected(lean_project):
     sys.path.insert(0, str(EXAMPLES))
     try:
         contour = runpy.run_path(str(EXAMPLES / "using_cauchy_integral.py"))["contour_integral"]
+        bisector = runpy.run_path(str(EXAMPLES / "readable_angle_bisector.py"))["angle_bisector"]
     finally:
         sys.path.remove(str(EXAMPLES))
     a = pl.symbol("a", pl.Real)
     broken = pl.Theorem("broken_lemma", [a], conclusion=a + 1 <= a, proof=pl.linarith())
     uses_broken = pl.Theorem("uses_broken", [a], conclusion=a + 1 <= a + 0,
                              proof=pl.proof(pl.conclude(because=broken)))
-    results = pl.verify_all([*good, circular, false_step, cif_cheat, contour, uses_broken],
+    results = pl.verify_all([*good, circular, false_step, cif_cheat, contour, uses_broken,
+                             bisector],
                             project=lean_project, use_cache=False, timeout=3600)
     for t, r in zip(good, results, strict=False):
         assert r.verified, (t.name, [d.message for d in r.diagnostics])
@@ -73,6 +75,9 @@ def test_written_proofs_verify_and_bad_ones_are_rejected(lean_project):
     used = results[len(good) + 3]
     assert used.verified, [d.message for d in used.diagnostics]
     assert "theorem cauchy_integral_formula" in str(contour.prose(used))
-    citing_broken = results[-1]
+    citing_broken = results[len(good) + 4]
     assert citing_broken.status is pl.Status.REJECTED and not citing_broken.verified
     assert any("cited" in d.message for d in citing_broken.diagnostics)
+    bis = results[-1]
+    assert bis.verified, [d.message for d in bis.diagnostics]
+    assert set(bis.axioms) <= {"propext", "Classical.choice", "Quot.sound"}

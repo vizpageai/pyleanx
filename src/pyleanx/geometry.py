@@ -228,8 +228,178 @@ similar_sides = library_fact(
       field_simp
     """, *_GEO_FACT_IMPORTS, label="similar triangles have proportional sides")
 
+# ---------------------------------------------------------------------------------------
+# Constructions: extending a side; angle bisectors
+# ---------------------------------------------------------------------------------------
+
+
+def strictly_between(p: object, a: object, b: object) -> Expr:
+    """``p`` lies on segment ``ab`` and is neither endpoint (Mathlib's ``Sbtw ℝ a p b``)."""
+    from .terms import apply
+
+    return apply(_c("Sbtw", (_BETWEEN,), r"{2} \text{{ lies strictly between }} {1} "
+                    r"\text{{ and }} {3}"), Real, a, p, b)
+
+
+def extend_beyond(b: object, a: object, length: object) -> Any:
+    """The point on ray ``ba`` beyond ``a`` whose distance from ``a`` is ``length``
+    (``AffineMap.lineMap b a (1 + length / dist a b)``)."""
+    from .terms import apply
+
+    t = 1 + length / dist(a, b)
+    return apply(_c("AffineMap.lineMap", ("Mathlib.LinearAlgebra.AffineSpace.AffineMap",),
+                    r"\text{{the point on ray }} {0}{1} \text{{ beyond }} {1}"), b, a, t)
+
+
+_BIS = (*_GEO_FACT_IMPORTS, "Mathlib.Analysis.Normed.Affine.AddTorsor",
+        "Mathlib.Analysis.Normed.Affine.Convex", "Mathlib.Analysis.InnerProductSpace.Basic",
+        "Mathlib.Geometry.Euclidean.Angle.Unoriented.Basic")
+
+#: E on ray BA beyond A (E = extend_beyond(B, A, r))  ⟹  A lies on segment BE.
+extension_between = library_fact("PyLeanX.Geometry.extend_wbtw", """
+theorem PyLeanX.Geometry.extend_wbtw {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    {A B : V} {r : ℝ} (hr : 0 ≤ r) :
+    Wbtw ℝ B A (AffineMap.lineMap B A (1 + r)) := by
+  have h := wbtw_smul_vadd_smul_vadd_of_nonneg_of_le B (A -ᵥ B) zero_le_one
+    (show (1 : ℝ) ≤ 1 + r by linarith)
+  simpa [AffineMap.lineMap_apply] using h
+""", *_BIS, label="E lies on BA extended beyond A")
+
+#: AE = AC for E = extend_beyond(B, A, dist A C).
+extension_length = library_fact("PyLeanX.Geometry.extend_dist", """
+theorem PyLeanX.Geometry.extend_dist {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    {A B C : V} (hABC : ¬ Collinear ℝ {A, B, C}) :
+    dist A (AffineMap.lineMap B A (1 + dist A C / dist A B)) = dist A C := by
+  have hAB : dist A B ≠ 0 := dist_ne_zero.2 (ne₁₂_of_not_collinear hABC)
+  rw [dist_comm, dist_lineMap_right, dist_comm B A]
+  have : ‖(1 : ℝ) - (1 + dist A C / dist A B)‖ = dist A C / dist A B := by
+    rw [show (1 : ℝ) - (1 + dist A C / dist A B) = -(dist A C / dist A B) by ring, norm_neg,
+      Real.norm_eq_abs, abs_of_nonneg (by positivity)]
+  rw [this]
+  field_simp
+""", *_BIS, label="AE = AC by the construction of E")
+
+#: ABC a triangle, A between B and E  ⟹  B, E, C form a triangle.
+extension_triangle = library_fact("PyLeanX.Geometry.extend_triangle", """
+theorem PyLeanX.Geometry.extend_triangle {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    {A B C E : V} (hABC : ¬ Collinear ℝ {A, B, C}) (hE : Wbtw ℝ B A E) :
+    ¬ Collinear ℝ {B, E, C} := by
+  intro h
+  have hAB : A ≠ B := ne₁₂_of_not_collinear hABC
+  have hBE : B ≠ E := by
+    rintro rfl
+    exact hAB ((wbtw_self_iff ℝ).1 hE)
+  have hC : C ∈ line[ℝ, B, E] :=
+    h.mem_affineSpan_of_mem_of_ne (by simp) (by simp) (by simp) hBE
+  have hA : A ∈ line[ℝ, B, E] := hE.mem_affineSpan
+  have hB : B ∈ line[ℝ, B, E] := left_mem_affineSpan_pair _ _ _
+  exact hABC (collinear_triple_of_mem_affineSpan_pair hA hB hC)
+""", *_BIS, label="C is not on line BA, so BEC is a triangle")
+
+#: AD bisects ∠BAC (D strictly between B and C), E on BA beyond A with AE = AC  ⟹  AD ∥ EC.
+bisector_parallel = library_fact("PyLeanX.Geometry.bisector_parallel", """
+theorem PyLeanX.Geometry.bisector_parallel {V : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V]
+    {A B C D : V} (hABC : ¬ Collinear ℝ {A, B, C}) (hD : Sbtw ℝ B D C)
+    (hbis : EuclideanGeometry.angle B A D = EuclideanGeometry.angle D A C) :
+    (line[ℝ, A, D]).Parallel line[ℝ, AffineMap.lineMap B A (1 + dist A C / dist A B), C] := by
+  have hAB : A ≠ B := ne₁₂_of_not_collinear hABC
+  have hAC : A ≠ C := ne₁₃_of_not_collinear hABC
+  have hAD : A ≠ D := by
+    rintro rfl
+    exact hABC (collinear_insert_of_mem_affineSpan_pair hD.wbtw.mem_affineSpan)
+  obtain ⟨⟨s, ⟨hs0, hs1⟩, hsD⟩, hDB, hDC⟩ := hD
+  have hs : s ≠ 0 := by
+    rintro rfl
+    exact hDB (by simpa using hsD.symm)
+  rw [AffineMap.lineMap_apply] at hsD
+  simp only [vsub_eq_sub, vadd_eq_add] at hsD
+  -- equal angles: equal cosines
+  have hcos := congrArg Real.cos hbis
+  simp only [EuclideanGeometry.angle, vsub_eq_sub, InnerProductGeometry.cos_angle] at hcos
+  rw [real_inner_comm (C - A) (D - A)] at hcos
+  have hd : D - A = (B - A) + s • ((C - A) - (B - A)) := by rw [← hsD]; module
+  have hβ : ‖B - A‖ ≠ 0 := by simpa [sub_eq_zero] using hAB.symm
+  have hγ : ‖C - A‖ ≠ 0 := by simpa [sub_eq_zero] using hAC.symm
+  have hδ : ‖D - A‖ ≠ 0 := by simpa [sub_eq_zero] using hAD.symm
+  rw [div_eq_div_iff (mul_ne_zero hβ hδ) (mul_ne_zero hδ hγ)] at hcos
+  set b := B - A with hb_def
+  set c := C - A with hc_def
+  set δ := ‖D - A‖ with hδ_def
+  clear_value b c δ
+  rw [hd] at hcos
+  simp only [inner_add_right, inner_smul_right, inner_sub_right, real_inner_self_eq_norm_sq,
+    real_inner_comm b c] at hcos
+  -- strict Cauchy–Schwarz: b and c are not parallel
+  have hp : inner ℝ b c ≠ ‖b‖ * ‖c‖ := by
+    intro h
+    rw [inner_eq_norm_mul_iff_real] at h
+    apply hABC
+    rw [collinear_iff_of_mem (p₀ := A) (by simp)]
+    refine ⟨b, ?_⟩
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff]
+    rintro p (rfl | rfl | rfl)
+    · exact ⟨0, by simp⟩
+    · exact ⟨1, by simp [hb_def]⟩
+    · refine ⟨‖c‖ / ‖b‖, ?_⟩
+      have : c = (‖c‖ / ‖b‖) • b := by
+        rw [div_eq_inv_mul, mul_smul, h, smul_smul, inv_mul_cancel₀ hβ, one_smul]
+      rw [vadd_eq_add, ← this, hc_def]
+      abel
+  have key : (1 - s) * ‖b‖ = s * ‖c‖ := by
+    have hpos : ‖b‖ * ‖c‖ - inner ℝ b c ≠ 0 := sub_ne_zero.2 (Ne.symm hp)
+    have h0 : δ * ((‖b‖ * ‖c‖ - inner ℝ b c) * ((1 - s) * ‖b‖ - s * ‖c‖)) = 0 := by
+      linear_combination hcos
+    rcases mul_eq_zero.1 h0 with h | h
+    · exact absurd h hδ
+    rcases mul_eq_zero.1 h with h | h
+    · exact absurd h hpos
+    · linarith
+  -- E - C = s⁻¹ • (A - D)
+  have hr : s * (dist A C / dist A B) = 1 - s := by
+    rw [dist_eq_norm, dist_eq_norm, norm_sub_rev A C, norm_sub_rev A B, ← hb_def, ← hc_def]
+    field_simp
+    linarith [key]
+  have hsE : s • (AffineMap.lineMap B A (1 + dist A C / dist A B) -ᵥ C) = A -ᵥ D := by
+    rw [AffineMap.lineMap_apply, ← hsD]
+    simp only [vsub_eq_sub, vadd_eq_add]
+    linear_combination (norm := module) hr • (A - B)
+  have hE : AffineMap.lineMap B A (1 + dist A C / dist A B) -ᵥ C = s⁻¹ • (A -ᵥ D) := by
+    rw [← hsE, smul_smul, inv_mul_cancel₀ hs, one_smul]
+  rw [AffineSubspace.affineSpan_pair_parallel_iff_vectorSpan_eq, vectorSpan_pair, vectorSpan_pair,
+    hE, Submodule.span_singleton_smul_eq (IsUnit.inv (Ne.isUnit hs))]
+""", *_BIS, label="△ACE is isosceles (AE = AC), so EC is parallel to the bisector AD")
+
+#: 0 < AB and 0 < AC in a triangle ABC.
+triangle_sides_pos = library_fact("PyLeanX.Geometry.triangle_sides_pos", """
+theorem PyLeanX.Geometry.triangle_sides_pos {V P : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {A B C : P}
+    (hABC : ¬ Collinear ℝ {A, B, C}) : 0 < dist A B ∧ 0 < dist A C :=
+  ⟨dist_pos.2 (ne₁₂_of_not_collinear hABC), dist_pos.2 (ne₁₃_of_not_collinear hABC)⟩
+""", *_BIS, label="the sides of a triangle have positive length")
+
+#: D strictly between B and C  ⟹  0 < BD and 0 < DC.
+between_dist_pos = library_fact("PyLeanX.Geometry.sbtw_dist_pos", """
+theorem PyLeanX.Geometry.sbtw_dist_pos {V P : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {B C D : P}
+    (hD : Sbtw ℝ B D C) : 0 < dist B D ∧ 0 < dist D C :=
+  ⟨dist_pos.2 hD.left_ne, dist_pos.2 hD.ne_right⟩
+""", *_BIS, label="D is strictly between B and C")
+
+#: Componendo: a/(a + b) = c/(c + d) with b, d > 0 and a, c ≥ 0  ⟹  a/b = c/d.
+componendo = library_fact("PyLeanX.Algebra.componendo", """
+theorem PyLeanX.Algebra.componendo {a b c d : ℝ} (ha : 0 ≤ a) (hb : 0 < b) (hc : 0 ≤ c)
+    (hd : 0 < d) (h : a / (a + b) = c / (c + d)) : a / b = c / d := by
+  rw [div_eq_div_iff (by positivity) (by positivity)] at h
+  rw [div_eq_div_iff hb.ne' hd.ne']
+  linarith
+""", *_BIS, label="componendo: a/(a + b) = c/(c + d) gives a/b = c/d")
+dist_add_dist = lemma("Wbtw.dist_add_dist", "Mathlib.Analysis.Normed.Affine.Convex",
+                      label="distances add along a segment")
+
 LEMMAS = collect_lemmas(globals())
 
 __all__ = ["Point", "point", "points", "dist", "angle", "line", "parallel", "on_segment",
-           "collinear", "triangle", "similar", "LEMMAS", "VERIFIED_MATHLIB",
+           "collinear", "triangle", "similar", "strictly_between", "extend_beyond",
+           "LEMMAS", "VERIFIED_MATHLIB",
            "CATALOG_VERSION", *LEMMAS]

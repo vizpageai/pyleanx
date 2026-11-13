@@ -298,3 +298,25 @@ def test_a_broken_cited_theorem_rejects_only_its_citers() -> None:
     assert v["unrelated"][0] is Status.VERIFIED
     assert v["uses_lemma"][0] is Status.REJECTED
     assert any("cited theorem sq_nonneg_lemma" in d.message for d in v["uses_lemma"][1])
+
+
+def test_angle_bisector_by_side_splitter() -> None:
+    import sys
+
+    sys.path.insert(0, str(EXAMPLES))
+    try:
+        thm = runpy.run_path(str(EXAMPLES / "readable_angle_bisector.py"))["angle_bisector"]
+    finally:
+        sys.path.remove(str(EXAMPLES))
+    src = thm.to_lean()
+    # the auxiliary point, the cited side-splitter theorem (with its proof), shipped facts
+    assert "set E : EuclideanSpace Real (Fin 2) := AffineMap.lineMap B A (1 + dist A C / dist A B)" in src
+    assert "-- PyLeanX: theorem side_splitter_similar, cited by a proof below" in src
+    assert src.index("theorem side_splitter_similar") < src.index("theorem angle_bisector")
+    assert "theorem PyLeanX.Geometry.bisector_parallel" in src
+    assert "sorry" not in src
+    text = str(thm.prose())
+    assert "1. Let E = the point on ray BA beyond A.  (extend BA beyond A to E with AE = AC)" in text
+    assert "7. |BA|/|BE| = |BD|/|BC|.  (theorem side_splitter_similar)" in text
+    assert "Hence |BD|/|DC| = |AB|/|AC|. ∎" in text
+    assert _body(theorem_from_canonical(thm.canonical()).to_lean()) == _body(src)

@@ -44,6 +44,7 @@ CASES: dict[str, tuple[list[str], int]] = {
     "readable_bernoulli": (RUN, 0),
     "readable_cauchy_integral": (RUN, 0),
     "using_cauchy_integral": (RUN, 0),
+    "readable_angle_bisector": (RUN, 0),
 }
 
 # Examples deliberately not run here, with the reason (each must be run by hand).
