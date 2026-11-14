@@ -42,3 +42,21 @@ def test_singular_integrals_proofs_render():
         assert "sorry" not in thm.to_lean() and "∎" in str(thm.prose())
     text = str(si.covering_bound.prose())
     assert "Vitali covering lemma (theorem 1)" in text
+
+
+def test_singular_lecture_figures():
+    sys.path.insert(0, str(EXAMPLES))
+    try:
+        import singular_lecture as sl
+    finally:
+        sys.path.remove(str(EXAMPLES))
+    fam = sl._intervals(20, 7)
+    chosen = sl.vitali_select(fam)
+    for a in chosen:  # pairwise disjoint
+        for b in chosen:
+            if a != b:
+                assert abs(fam[a][0] - fam[b][0]) > fam[a][1] + fam[b][1]
+    svg, note = sl.figure_vitali(20, 7)
+    assert svg.startswith("<svg") and "<b>True</b>" in note
+    svg, note = sl.figure_maximal(0.5)
+    assert svg.startswith("<svg") and "theorem 5" in note

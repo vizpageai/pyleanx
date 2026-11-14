@@ -129,6 +129,30 @@ def disjoint_intervals(v: object, c: object, r: object, index: Any = Nat) -> Exp
                 r"\text{{ are pairwise disjoint}}", v, family)
 
 
+def vol(E: object) -> Expr:  # noqa: N803
+    """μ(E) ∈ [0, ∞], the Lebesgue measure of E (``volume E``)."""
+    from .terms import apply, const
+
+    return apply(const("MeasureTheory.volume", imports=_ALL, latex=r"\mu"), E)
+
+
+def of_real(a: object) -> Expr:
+    """A real number a ≥ 0 viewed in [0, ∞] (``ENNReal.ofReal a``)."""
+    return _app("ENNReal.ofReal", "{0}", a)
+
+
+def measurable(E: object) -> Expr:  # noqa: N803
+    """E is (Lebesgue/Borel) measurable."""
+    return _app("MeasurableSet", r"{0} \text{{ is measurable}}", E)
+
+
+def finite_measure_ne(E: object) -> Expr:  # noqa: N803
+    """μ(E) ≠ ∞."""
+    from .terms import const
+
+    return vol(E) != const("Top.top", latex=r"\infty")  # type: ignore[operator]
+
+
 def finite_measure(E: object) -> Expr:  # noqa: N803
     """|E| < ∞ (``volume E < ⊤`` for Lebesgue measure, in [0, ∞])."""
     from .terms import apply, const
@@ -251,6 +275,30 @@ ball_in_interval = lemma("Metric.ball_subset_closedBall",
 mem_coe = lemma("Finset.mem_coe", _FINSET, label="membership in a finite set and in its set")
 mul_le_mul_left = lemma("mul_le_mul_of_nonneg_left", "Mathlib.Algebra.Order.Ring.Defs",
                         label="multiply an inequality by α ≥ 0")
+inner_regular = lemma("MeasurableSet.exists_lt_isCompact_of_ne_top",
+                      "Mathlib.MeasureTheory.Measure.Regular",
+                      label="inner regularity: a measurable set of finite measure contains "
+                            "compact sets of almost the same measure")
+subset_finite_measure = lemma("MeasureTheory.measure_ne_top_of_subset",
+                              "Mathlib.MeasureTheory.Measure.MeasureSpaceDef",
+                              label="a subset of a set of finite measure has finite measure")
+of_real_lt = lemma("ENNReal.ofReal_lt_iff_lt_toReal", "Mathlib.Basic.ENNReal.Real",
+                   label="comparing a real number with a finite measure")
+integral_nonneg_ae = lemma("MeasureTheory.integral_nonneg_of_ae",
+                           "Mathlib.MeasureTheory.Integral.Bochner.Basic",
+                           label="the integral of a nonnegative function is nonnegative")
+div_lt_iff = lemma("div_lt_iff₀'", "Mathlib.Algebra.Order.GroupWithZero.Basic",
+                   label="b/c < a iff b < ca for c > 0")
+mul_div_cancel = lemma("mul_div_cancel₀", "Mathlib.Algebra.Group.Basic",
+                       label="c · (b/c) = b for c ≠ 0")
+measure_real_def = lemma("MeasureTheory.measureReal_def",
+                         "Mathlib.MeasureTheory.Measure.MeasureSpaceDef",
+                         label="|E| is μ(E) as a real number")
+div_nonneg = lemma("div_nonneg", "Mathlib.Algebra.Order.GroupWithZero.Basic",
+                   label="a quotient of nonnegative numbers is nonnegative")
+mul_lt_mul_left = lemma("mul_lt_mul_of_pos_left", "Mathlib.Algebra.Order.GroupWithZero.Defs",
+                        label="multiply a strict inequality by α > 0")
+ne_of_gt = lemma("ne_of_gt", "Mathlib.Order.Basic", label="α > 0 gives α ≠ 0")
 mul_nonneg = lemma("mul_nonneg", "Mathlib.Algebra.Order.Ring.Defs",
                    label="a product of nonnegative numbers is nonnegative")
 sum_le_sum = lemma("Finset.sum_le_sum", _FINSET, label="termwise comparison of sums")

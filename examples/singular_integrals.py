@@ -324,7 +324,66 @@ maximal_inequality = pl.Theorem(
     proof=_maximal_proof(),
 )
 
-THEOREMS = [vitali_finite, disjoint_integrals, covering_bound, maximal_inequality]
+
+# -----------------------------------------------------------------------------------------
+# 5. The weak (1,1) inequality on measurable sets (Stein ch. I §1, Theorem 1(b))
+# -----------------------------------------------------------------------------------------
+# For a measurable E ⊆ {Mf > α} of finite measure: α |E| ≤ 4 ‖f‖₁.
+# Proof: if not, inner regularity gives a compact K ⊆ E with |K| > 4‖f‖₁/α,
+# contradicting theorem 4.
+
+E = pl.symbol("E", rv.set_of(pl.Real))
+
+
+def _weak_type_proof() -> pl.Tactic:
+    claim, fix = pl.claim, pl.fix
+    norm = rv.l1_norm(f)
+    a = 4 * norm / alpha
+    return pl.proof(
+        pl.suppose_not(4 * norm < alpha * rv.measure(E), name="hcon"),
+        claim(rv.ae_nonneg(rv.abs_fun(f)), because=[rv.everywhere_ae, rv.abs_nonneg]),
+        claim(0 <= norm, because=[rv.integral_nonneg_ae, "step2"]),
+        claim(a < rv.measure(E), because=[rv.div_lt_iff, "hα", "hcon"],
+              note="4‖f‖₁ < α|E|"),
+        claim(0 <= a, because=[rv.div_nonneg, "step3", "hα"]),
+        claim(rv.of_real(a) < rv.vol(E),
+              because=[rv.of_real_lt, rv.measure_real_def, "step5", "hEfin", "step4"]),
+        pl.choose(K, such_that=pl.And(rv.subset(K, E), rv.is_compact(K),
+                                      rv.of_real(a) < rv.vol(K)),
+                  because=[rv.inner_regular, "hE", "hEfin", "step6"], names="hKE hKc hKa",
+                  note="inner regularity of Lebesgue measure"),
+        claim(rv.finite_measure_ne(K), because=[rv.subset_finite_measure, "hKE", "hEfin"]),
+        claim(a < rv.measure(K), because=[rv.of_real_lt, rv.measure_real_def, "step5", "step8",
+                       "hKa"]),
+        claim(pl.Forall(x, pl.Implies(rv.mem(x, K), pl.Exists(rho, pl.And(
+            0 < rho, _avg(x, rho))))), name="hKsub", note="K ⊆ E",
+            proof=pl.proof(
+                fix(x, assume={"hx": rv.mem(x, K)}),
+                claim(rv.mem(x, E), because=["hKE", "hx"]),
+                pl.conclude(because="hsub"),
+            )),
+        claim(alpha * rv.measure(K) <= 4 * norm,
+              because=[maximal_inequality, "hf", "hα", "hKc", "hKsub"],
+              note="theorem 4 for the compact set K"),
+        claim(alpha * a < alpha * rv.measure(K), because=[rv.mul_lt_mul_left, "step9", "hα"]),
+        claim(alpha != 0, because=[rv.ne_of_gt, "hα"]),
+        claim(alpha * a == 4 * norm, because=[rv.mul_div_cancel, "step13"],
+              note="α · (4‖f‖₁/α) = 4‖f‖₁"),
+        pl.conclude(note="4‖f‖₁ = α·(4‖f‖₁/α) < α|K| ≤ 4‖f‖₁ is impossible"),
+    )
+
+
+weak_type = pl.Theorem(
+    "hardy_littlewood_weak_type", [f, alpha, E],
+    assumptions={"hf": rv.integrable(f), "hα": alpha > 0, "hE": rv.measurable(E),
+                 "hEfin": rv.finite_measure_ne(E),
+                 "hsub": pl.Forall(x, pl.Implies(rv.mem(x, E), pl.Exists(rho, pl.And(
+                     0 < rho, _avg(x, rho)))))},
+    conclusion=alpha * rv.measure(E) <= 4 * rv.l1_norm(f),
+    proof=_weak_type_proof(),
+)
+
+THEOREMS = [vitali_finite, disjoint_integrals, covering_bound, maximal_inequality, weak_type]
 
 if __name__ == "__main__":
     import sys

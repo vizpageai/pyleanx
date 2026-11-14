@@ -65,7 +65,9 @@ see [docs/stability.md](docs/stability.md)).
 - Real-variable methods (`pyleanx.realvar`) and `examples/singular_integrals.py`: the Vitali
   covering lemma for finite families, integrals over disjoint intervals, and the covering
   bound behind the Hardy–Littlewood maximal inequality, and the maximal inequality itself
-  on compact sets (α|K| ≤ 4‖f‖₁), all as PyLeanX written proofs verified by Lean. `pl.union`, `pl.integral(within=…)`, and `⊆` as an infix relation.
+  on compact sets and its weak type (1,1) form on measurable sets of finite measure
+  (α|{Mf > α}| ≤ 4‖f‖₁), all as PyLeanX written proofs verified by Lean; lecture notebook
+  `examples/lecture_singular_integrals.ipynb`. `pl.union`, `pl.integral(within=…)`, and `⊆` as an infix relation.
 - Harmonic analysis (`pyleanx.harmonic`, conventions of Stein–Shakarchi): Fourier
   coefficients on [−π, π], Fourier transform and inverse on ℝ, L²/L¹, the two sides of
   Parseval, and 18 shipped facts (Parseval, Bessel, Riemann–Lebesgue for coefficients and

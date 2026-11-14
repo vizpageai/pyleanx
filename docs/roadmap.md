@@ -236,7 +236,10 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [x] Gap filler: side conditions left by applying one cited fact may be closed by another cited fact (`exact`, after `intros`, `apply … <;> assumption`).
 - [x] `examples/singular_integrals.py` (Stein, *Singular Integrals* ch. I §1): Vitali covering lemma for finite families of intervals; integrals over disjoint intervals ≤ ‖f‖₁; the covering bound α|⋃Iᵢ| ≤ 4‖f‖₁. Real Lean: all three verified (standard axioms only, 118 s).
 - [x] Theorem 4, the Hardy–Littlewood maximal inequality on compact sets (Stein's form): if every x in a compact K has an interval on which the average of |f| exceeds α, then α|K| ≤ 4‖f‖₁. Written proof: choice of radii, finite subcover by compactness, closed intervals, the covering bound. Families are now indexed by ℝ. Real Lean: all four theorems verified (standard axioms only).
-- Next: weak (1,1) on measurable sets (inner regularity), Marcinkiewicz interpolation, Calderón–Zygmund decomposition.
+- [x] Theorem 5, weak type (1,1) on measurable sets of finite measure (Stein Thm I.1(b)): suppose not; inner regularity gives a compact K with |K| > 4‖f‖₁/α; theorem 4 contradicts. Real Lean: theorems 1–5 verified (standard axioms only).
+- [x] `examples/lecture_singular_integrals.ipynb` (+ `singular_lecture.py`): Vitali selection and maximal-function pictures, the five proofs, an exercise.
+- Findings: phrasing matters for the gap filler — `div_lt_iff₀'` (c·a form) not `div_lt_iff₀`; cite `measureReal_def` when moving between |E| and μ(E); cite `mul_div_cancel₀` for α·(b/α) = b.
+- Next: Marcinkiewicz interpolation, Calderón–Zygmund decomposition, Lebesgue differentiation from the maximal inequality.
 
 ### Harmonic analysis as in a textbook (2026-11-13)
 - [x] `pyleanx/harmonic.py` (generated from Lean checked in the pinned Mathlib): 8 shipped definitions (`PyLeanX.Harmonic.coeff` = `fourierCoeffOn` on [−π, π], `ft` = `𝓕`, `ift` = `𝓕⁻`, `gauss`, `L2`, `integrable_on_circle`, `coeff_sq_sum`, `mean_square`) and 18 facts (coefficient/transform integral formulas, linearity, integration by parts, Bessel, Parseval, Riemann–Lebesgue ×2, Gaussian, inversion, inverse transform at 0, small algebra).

@@ -305,6 +305,18 @@ Not available, because Mathlib lacks them at the pinned version: Fejér/Dirichle
 summability, the Hardy–Littlewood maximal inequality, Riesz–Thorin and Marcinkiewicz
 interpolation, the Hilbert transform, Calderón–Zygmund theory.
 
+## Singular integrals: real-variable methods as written proofs
+
+Mathlib does not contain the Hardy–Littlewood maximal inequality, so
+`examples/singular_integrals.py` proves it, following Stein (*Singular Integrals*, ch. I §1), as a
+chain of PyLeanX written proofs over the `pyleanx.realvar` vocabulary (intervals, |E|, finite
+families, ⋃, ∫ over a set, ⊆): (1) Vitali's covering lemma for finitely many intervals,
+(2) integrals over disjoint intervals, (3) the covering bound α|⋃Iᵢ| ≤ 4‖f‖₁, (4) the maximal
+inequality on compact sets, (5) the weak type (1,1) inequality on measurable sets of finite
+measure. Each cites Mathlib facts (Vitali's selection, compactness, inner regularity,
+subadditivity) and the earlier theorems; Lean checks every step
+(`examples/lecture_singular_integrals.ipynb`).
+
 ## Abstract structures: "let G be a group"
 
 ```python

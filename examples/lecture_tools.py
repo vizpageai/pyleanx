@@ -71,3 +71,21 @@ def check(thm: pl.Theorem | None, *, timeout: float = 1800, hint: str = "",
             tips.append(f"Lean says: `{first.message.splitlines()[0][:300]}`")
     display(Markdown("\n\n".join(tips)))
     return result
+
+
+def check_all(theorems: list[pl.Theorem], *, timeout: float = 3600) -> list[Any]:
+    """Check several theorems in one Lean run (they may cite each other) and show each."""
+    from IPython.display import Markdown, display
+
+    display(Markdown(f"⏳ *Lean is checking {len(theorems)} theorems in one file…*"))
+    results = pl.verify_all(theorems, timeout=timeout)
+    for thm, res in zip(theorems, results, strict=True):
+        display(Markdown(thm.prose(res).to_markdown()))
+        if not res.verified:
+            bad = failed_steps(thm, res)
+            display(Markdown(f"❌ Lean could not justify {describe(bad) or 'this proof'}."))
+    ok = sum(r.verified for r in results)
+    display(Markdown(f"**{ok} of {len(theorems)} theorems accepted by Lean** "
+                     "(standard axioms only)." if ok == len(theorems) else
+                     f"**{ok} of {len(theorems)} theorems accepted.**"))
+    return results
