@@ -36,6 +36,20 @@ RFun = Fn(Real, Real)
 Family = Fn(Nat, Real)
 
 
+def finset_of(index: Any) -> Any:
+    """The type of finite sets of indices of sort ``index`` (``Finset ℕ``, ``Finset ℝ``)."""
+    sym = {"Nat": "ℕ", "Real": "ℝ", "Int": "ℤ"}[index.name]
+    bb = {"Nat": "N", "Real": "R", "Int": "Z"}[index.name]
+    return lean_type(f"Finset {sym}", (_FINSET,), latex=rf"\text{{Finset}}(\mathbb{{{bb}}})")
+
+
+def set_of(index: Any) -> Any:
+    """The type of sets of indices of sort ``index``."""
+    sym = {"Nat": "ℕ", "Real": "ℝ", "Int": "ℤ"}[index.name]
+    bb = {"Nat": "N", "Real": "R", "Int": "Z"}[index.name]
+    return lean_type(f"Set {sym}", (_FINSET,), latex=rf"\text{{Set}}(\mathbb{{{bb}}})")
+
+
 def _c(name: str, latex: str, imports: tuple[str, ...] = _ALL) -> Any:
     from .terms import const
     from .types import UNKNOWN
@@ -52,6 +66,16 @@ def _app(name: str, latex: str, *args: object) -> Expr:
 def interval(c: object, r: object) -> Expr:
     """The closed interval [c − r, c + r] (``Metric.closedBall c r``)."""
     return _app("Metric.closedBall", r"[{0} - {1}, {0} + {1}]", c, r)
+
+
+def ball(c: object, r: object) -> Expr:
+    """The open interval (c − r, c + r) (``Metric.ball c r``)."""
+    return _app("Metric.ball", r"({0} - {1}, {0} + {1})", c, r)
+
+
+def is_compact(K: object) -> Expr:  # noqa: N803
+    """K is compact."""
+    return _app("IsCompact", r"{0} \text{{ is compact}}", K)
 
 
 def measure(E: object) -> Expr:  # noqa: N803 - mathematical name
@@ -74,11 +98,11 @@ def subset(A: object, B: object) -> Expr:  # noqa: N803
     return Compare("subset", _lift(A), _lift(B))
 
 
-def as_set(v: object) -> Expr:
+def as_set(v: object, index: Any = Nat) -> Expr:
     """A finite set of indices viewed as a set (Lean's coercion ``↑v``)."""
     from .terms import ascribe
 
-    return ascribe(v, IndexSet)
+    return ascribe(v, IndexSet if index is Nat else set_of(index))
 
 
 def finite(u: object) -> Expr:
@@ -86,20 +110,21 @@ def finite(u: object) -> Expr:
     return _app("Set.Finite", r"{0} \text{{ is finite}}", u)
 
 
-def union(s: object, c: object, r: object, scale: object = 1) -> Expr:
+def union(s: object, c: object, r: object, scale: object = 1, index: Any = Nat) -> Expr:
     """⋃_{i ∈ s} [cᵢ − k rᵢ, cᵢ + k rᵢ] (``scale`` = k dilates every interval)."""
     from .terms import union as big_union
 
     if isinstance(scale, int) and scale == 1:
-        return big_union(s, lambda i: interval(c(i), r(i)))  # type: ignore[operator]
-    return big_union(s, lambda i: interval(c(i), scale * r(i)))  # type: ignore[operator]
+        return big_union(s, lambda i: interval(c(i), r(i)), sort=index)  # type: ignore[operator]
+    return big_union(s, lambda i: interval(c(i), scale * r(i)),  # type: ignore[operator]
+                     sort=index)
 
 
-def disjoint_intervals(v: object, c: object, r: object) -> Expr:
+def disjoint_intervals(v: object, c: object, r: object, index: Any = Nat) -> Expr:
     """The intervals [cⱼ − rⱼ, cⱼ + rⱼ], j ∈ v, are pairwise disjoint."""
     from .terms import fun
 
-    family = fun(lambda j: interval(c(j), r(j)), Nat)  # type: ignore[operator]
+    family = fun(lambda j: interval(c(j), r(j)), index)  # type: ignore[operator]
     return _app("Set.PairwiseDisjoint", r"\text{{the intervals indexed by }} {0}"
                 r"\text{{ are pairwise disjoint}}", v, family)
 
@@ -155,7 +180,7 @@ def average_exceeds(f: Any, lam: object, c: object, r: object) -> Expr:
     from .terms import integral
 
     I = interval(c, r)  # noqa: E741
-    return lam * measure(I) < integral(lambda x: abs_(f(x)), within=I)  # type: ignore[operator]
+    return lam * measure(I) < integral(lambda w: abs_(f(w)), within=I)  # type: ignore[operator]
 
 
 # =========================================================================================
@@ -211,6 +236,21 @@ everywhere_ae = lemma("Filter.Eventually.of_forall", "Mathlib.Order.Filter.Basic
                       label="what holds everywhere holds almost everywhere")
 abs_nonneg = lemma("abs_nonneg", "Mathlib.Algebra.Order.Group.Unbundled.Abs",
                    label="|x| ≥ 0")
+axiom_of_choice = lemma("Classical.axiomOfChoice", "Mathlib.Order.Basic",
+                        label="choice: pick one ρ for every x")
+compact_finite_subcover = lemma(
+    "IsCompact.elim_finite_subcover_image", "Mathlib.Topology.Compactness.Compact",
+    label="compactness: finitely many of the open sets already cover")
+ball_open = lemma("Metric.isOpen_ball", "Mathlib.Topology.MetricSpace.Pseudo.Defs",
+                  label="open intervals are open")
+mem_ball_self = lemma("Metric.mem_ball_self", "Mathlib.Topology.MetricSpace.Pseudo.Defs",
+                      label="x ∈ (x − ρ, x + ρ) for ρ > 0")
+ball_in_interval = lemma("Metric.ball_subset_closedBall",
+                         "Mathlib.Topology.MetricSpace.Pseudo.Defs",
+                         label="(c − r, c + r) ⊆ [c − r, c + r]")
+mem_coe = lemma("Finset.mem_coe", _FINSET, label="membership in a finite set and in its set")
+mul_le_mul_left = lemma("mul_le_mul_of_nonneg_left", "Mathlib.Algebra.Order.Ring.Defs",
+                        label="multiply an inequality by α ≥ 0")
 mul_nonneg = lemma("mul_nonneg", "Mathlib.Algebra.Order.Ring.Defs",
                    label="a product of nonnegative numbers is nonnegative")
 sum_le_sum = lemma("Finset.sum_le_sum", _FINSET, label="termwise comparison of sums")
