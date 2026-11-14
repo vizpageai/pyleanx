@@ -62,6 +62,10 @@ see [docs/stability.md](docs/stability.md)).
   theorem without a proof is an error, and a failed cited proof rejects exactly the theorems
   that cite it. The bank records citations as dependencies and makes loaded theorems
   citable. Example `using_cauchy_integral.py`: ∮_{|z|=2} z²/(z − 1) dz = 2πi.
+- Real-variable methods (`pyleanx.realvar`) and `examples/singular_integrals.py`: the Vitali
+  covering lemma for finite families, integrals over disjoint intervals, and the covering
+  bound behind the Hardy–Littlewood maximal inequality, all as PyLeanX written proofs
+  verified by Lean. `pl.union`, `pl.integral(within=…)`, and `⊆` as an infix relation.
 - Harmonic analysis (`pyleanx.harmonic`, conventions of Stein–Shakarchi): Fourier
   coefficients on [−π, π], Fourier transform and inverse on ℝ, L²/L¹, the two sides of
   Parseval, and 18 shipped facts (Parseval, Bessel, Riemann–Lebesgue for coefficients and

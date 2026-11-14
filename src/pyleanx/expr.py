@@ -384,7 +384,7 @@ class App(Expr):
 # Propositions
 # =====================================================================================
 
-COMPARE_OPS = ("eq", "ne", "lt", "le", "gt", "ge")
+COMPARE_OPS = ("eq", "ne", "lt", "le", "gt", "ge", "subset")  # subset: A ⊆ B (sets)
 
 
 @dataclass(frozen=True, eq=False, repr=False)

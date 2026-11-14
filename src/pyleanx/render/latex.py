@@ -44,7 +44,8 @@ _GREEK = {
 _GREEK.update({g: lat for g, lat in zip("ΑΒΕΖΗΙΚΜΝΟΡΤΧ", "ABEZHIKMNOPTX", strict=True)})
 _SUBSCRIPT = {chr(0x2080 + i): str(i) for i in range(10)}
 
-_CMP = {"eq": "=", "ne": r"\neq", "lt": "<", "le": r"\leq", "gt": ">", "ge": r"\geq"}
+_CMP = {"eq": "=", "ne": r"\neq", "lt": "<", "le": r"\leq", "gt": ">", "ge": r"\geq",
+        "subset": r"\subseteq"}
 _LOGIC = {
     # op: (symbol, prec, lhs_min, rhs_min) -- same precedences as Lean
     "iff": (r"\leftrightarrow", 20, 21, 21),

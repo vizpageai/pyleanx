@@ -48,7 +48,8 @@ CASES: dict[str, tuple[list[str], int]] = {
     "textbook_geometry": (RUN, 0),
     "geometry_lecture": (RUN, 0),
     "analysis_lecture": (RUN, 0),
-    "harmonic_lecture": (RUN, 0),  # lecture notebooks: reference solutions
+    "harmonic_lecture": (RUN, 0),
+    "singular_integrals": (RUN, 0),  # lecture notebooks: reference solutions
 }
 
 # Examples deliberately not run here, with the reason (each must be run by hand).

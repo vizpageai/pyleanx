@@ -25,6 +25,8 @@ NOTATION_IMPORTS = {
     "prod": ("Mathlib.Algebra.BigOperators.Group.Finset.Defs",),
     "integral": ("Mathlib.MeasureTheory.Integral.Bochner.Basic",),
     "interval_integral": ("Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic",),
+    "set_integral": ("Mathlib.MeasureTheory.Integral.Bochner.Set",),
+    "union": ("Mathlib.Order.SetNotation",),
     "norm": ("Mathlib.Analysis.Normed.Group.Basic",),
     "smul": ("Mathlib.Algebra.Group.Defs",),
 }
@@ -53,7 +55,8 @@ def expr_imports(e: Expr) -> list[str]:
             out.extend(i for v in sub.vars for i in v.sort.imports)
         elif isinstance(sub, BigOp):
             out.extend(sub.var.sort.imports)
-            key = "interval_integral" if sub.bounds is not None else sub.kind
+            key = ("interval_integral" if sub.bounds is not None else "set_integral"
+                   if sub.kind == "integral" and sub.over is not None else sub.kind)
             out.extend(NOTATION_IMPORTS[key])
         elif isinstance(sub, Norm):
             out.extend(NOTATION_IMPORTS["norm"])

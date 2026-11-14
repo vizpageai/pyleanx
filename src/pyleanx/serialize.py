@@ -89,7 +89,7 @@ def _builtin_funcs() -> None:
 
 _POLY: dict[str, Callable[..., Expr]] = {"abs": abs_, "min": min_, "max": max_}
 _ARITH = {"add", "sub", "mul", "div", "mod", "pow", "smul"}
-_CMP = {"eq", "ne", "lt", "le", "gt", "ge"}
+_CMP = {"eq", "ne", "lt", "le", "gt", "ge", "subset"}
 _LOGIC = {"and", "or", "implies", "iff"}
 
 

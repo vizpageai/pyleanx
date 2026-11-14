@@ -809,6 +809,13 @@ class Justify(Tactic):
         hs = (" [" + ", ".join(simp_args) + "]") if simp_args else ""
         close = ("first | assumption | exact Ne.symm ‹_› | rfl | omega | fun_prop | positivity | "
                  "linarith | (simp_all; done)")
+        # side conditions left by applying one cited fact may be closed by another cited fact
+        # ("by A, since B"), possibly for every element of a set ("∀ i ∈ s, …")
+        side = [f for f, t in zip(fs, self.facts, strict=True)
+                if not isinstance(t, Expr) and " " not in f]
+        if side:
+            close += "".join(f" | exact {f} | (intros; exact {f}) | (apply {f} <;> assumption)"
+                             f" | (intros; apply {f})" for f in side)
         alts = ["assumption", "contradiction"]
         alts += [f"exact {f}" for f in fs]
         alts += [f"exact ({f}).symm" for f in fs if " " not in f]  # a cited equation, reversed

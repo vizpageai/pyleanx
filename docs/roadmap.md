@@ -230,6 +230,13 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [x] Real Lean (warm REPL, pinned Mathlib): sin²+cos²=1 by derivatives (8 s), side-splitter by similar triangles (2 s), AM–GM (1.4 s) all accepted with propext/Classical.choice/Quot.sound; the `avoid` check rejects `simp` proving sin²+cos²=1. Cold `verify_all` of the three plus a circular `simp` proof (693 s, one Lean run): **3 verified, circular one rejected** by the avoid check (`span_kind=avoid_check`). First cold run exposed an attribution bug (an avoid-check error is outside the theorem's lines, so the batch was marked `environment_error`); fixed, with a unit test. `tests/integration/test_written_proofs_lean.py` encodes the same run (written; its content was run via a script, not via pytest).
 - Unit tests: 284 passed (14 new in `tests/unit/test_written_proofs.py`); ruff and mypy clean.
 
+### Singular integrals I: covering and the maximal inequality, as written proofs (2026-11-14)
+- [x] `pyleanx.realvar`: intervals, Lebesgue measure |E| (`volume.real`), finite index sets, unions, set integrals, a.e. statements; Mathlib facts under textbook names (Vitali selection, subadditivity, monotonicity, disjoint-union integrals, …). No shipped Lean proofs: the classics are PyLeanX written proofs.
+- [x] Term language: `pl.integral(…, within=S)`, `pl.union(s, …)`, and `⊆` as an infix relation (`HasSubset.Subset v s` written as a function application fails instance synthesis for `Finset`; `v ⊆ s` works).
+- [x] Gap filler: side conditions left by applying one cited fact may be closed by another cited fact (`exact`, after `intros`, `apply … <;> assumption`).
+- [x] `examples/singular_integrals.py` (Stein, *Singular Integrals* ch. I §1): Vitali covering lemma for finite families of intervals; integrals over disjoint intervals ≤ ‖f‖₁; the covering bound α|⋃Iᵢ| ≤ 4‖f‖₁. Real Lean: all three verified (standard axioms only, 118 s).
+- Next: weak (1,1) for the Hardy–Littlewood maximal function (compact form, then inner regularity), Marcinkiewicz interpolation, Calderón–Zygmund decomposition.
+
 ### Harmonic analysis as in a textbook (2026-11-13)
 - [x] `pyleanx/harmonic.py` (generated from Lean checked in the pinned Mathlib): 8 shipped definitions (`PyLeanX.Harmonic.coeff` = `fourierCoeffOn` on [−π, π], `ft` = `𝓕`, `ift` = `𝓕⁻`, `gauss`, `L2`, `integrable_on_circle`, `coeff_sq_sum`, `mean_square`) and 18 facts (coefficient/transform integral formulas, linearity, integration by parts, Bessel, Parseval, Riemann–Lebesgue ×2, Gaussian, inversion, inverse transform at 0, small algebra).
 - [x] Engine: `library_facts` also collects shipped definitions referenced by constants in statements and steps.
