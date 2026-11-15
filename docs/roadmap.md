@@ -239,7 +239,9 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [x] Theorem 5, weak type (1,1) on measurable sets of finite measure (Stein Thm I.1(b)): suppose not; inner regularity gives a compact K with |K| > 4‖f‖₁/α; theorem 4 contradicts. Real Lean: theorems 1–5 verified (standard axioms only).
 - [x] `examples/lecture_singular_integrals.ipynb` (+ `singular_lecture.py`): Vitali selection and maximal-function pictures, the five proofs, an exercise.
 - Findings: phrasing matters for the gap filler — `div_lt_iff₀'` (c·a form) not `div_lt_iff₀`; cite `measureReal_def` when moving between |E| and μ(E); cite `mul_div_cancel₀` for α·(b/α) = b.
-- Next: Marcinkiewicz interpolation, Calderón–Zygmund decomposition, Lebesgue differentiation from the maximal inequality.
+- [x] Theorem 6, the splitting estimate of the Lᵖ proof: α|K| ≤ 8∫|f·1{|f|>α/2}| for compact K ⊆ {Mf > α} (case split |f| ≤ |g| + α/2, set-integral monotonicity, theorem 4 at level α/2). Verified.
+- Display: templates ending in `{*}` name a function and are applied to further arguments ((f·1_S)(y)).
+- Next: {Mf > α} is open; weak bound on the whole level set; ‖Mf‖_p ≤ C_p‖f‖_p by the layer-cake formula; Calderón–Zygmund decomposition.
 
 ### Harmonic analysis as in a textbook (2026-11-13)
 - [x] `pyleanx/harmonic.py` (generated from Lean checked in the pinned Mathlib): 8 shipped definitions (`PyLeanX.Harmonic.coeff` = `fourierCoeffOn` on [−π, π], `ft` = `𝓕`, `ift` = `𝓕⁻`, `gauss`, `L2`, `integrable_on_circle`, `coeff_sq_sum`, `mean_square`) and 18 facts (coefficient/transform integral formulas, linearity, integration by parts, Bessel, Parseval, Riemann–Lebesgue ×2, Gaussian, inversion, inverse transform at 0, small algebra).

@@ -105,7 +105,7 @@ def latex_text(s: str) -> str:
                 arg, i = _group(s, i)
                 a = latex_text(arg)
                 out.append(f"√{a}" if re.fullmatch(r"\w|\d+|\(.*\)", a) else f"√({a})")
-            elif cmd in ("text", "operatorname", "mathrm"):
+            elif cmd in ("text", "operatorname", "mathrm", "mathbf", "mathcal"):
                 arg, i = _group(s, i)
                 out.append(arg)
             elif cmd == "mathbb":

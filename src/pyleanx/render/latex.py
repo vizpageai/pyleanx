@@ -179,6 +179,14 @@ class _Latex:
             args = [self.render(a)[0] for a in e.args]
             if isinstance(fn, Const) and fn.latex and _SLOT.search(fn.latex):
                 try:
+                    if fn.latex.endswith("{*}"):  # the template names a function: apply it
+                        tmpl = fn.latex[:-3]
+                        used = max(int(m) for m in re.findall(r"\{(\d+)[}:!]", tmpl))
+                        text = tmpl.format(*args)
+                        if len(args) > used + 1:
+                            return (rf"\left({text}\right)"
+                                    + _paren(", ".join(args[used + 1:])), MAX)
+                        return text, MAX
                     return fn.latex.format(*args), MAX
                 except IndexError:
                     pass

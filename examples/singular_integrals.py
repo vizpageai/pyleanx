@@ -383,7 +383,90 @@ weak_type = pl.Theorem(
     proof=_weak_type_proof(),
 )
 
-THEOREMS = [vitali_finite, disjoint_integrals, covering_bound, maximal_inequality, weak_type]
+
+# -----------------------------------------------------------------------------------------
+# 6. The splitting estimate behind the Lᵖ bound (Stein ch. I §1, proof of Theorem 1(c))
+# -----------------------------------------------------------------------------------------
+# With g = f·1{|f| > α/2}: |f| ≤ |g| + α/2, so an interval where |f| averages more than α is
+# one where |g| averages more than α/2; theorem 4 for g gives α|K| ≤ 8 ∫|g|.
+
+
+def _avg_of(h: object, lev: object, p: object, q: object) -> pl.Expr:
+    return rv.average_exceeds(h, lev, p, q)
+
+
+def _splitting_proof() -> pl.Tactic:
+    claim, fix, choose = pl.claim, pl.fix, pl.choose
+    g = rv.cut(f, alpha / 2)
+    Ixr = rv.interval(x, rho)
+    abs_g = lambda w: pl.abs(g(w))  # noqa: E731
+    return pl.proof(
+        claim(pl.Forall(y, pl.abs(f(y)) <= pl.abs(g(y)) + alpha / 2), name="hpt",
+              note="|f| ≤ |g| + α/2 everywhere",
+              proof=pl.proof(
+                  fix(y),
+                  pl.cases_on(
+                      pl.case(alpha / 2 < pl.abs(f(y)),
+                              claim(g(y) == f(y), because=[rv.indicator_of_mem, "h"]),
+                              pl.conclude(because="hpt_2c1_1"),
+                              name="h"),
+                      pl.case(pl.Not(alpha / 2 < pl.abs(f(y))),
+                              claim(g(y) == 0, because=[rv.indicator_of_not_mem, "h"]),
+                              claim(pl.abs(g(y)) == 0, because=["hpt_2c2_1", rv.abs_zero]),
+                              pl.conclude(),
+                              name="h"),
+                  ),
+              )),
+        claim(rv.integrable(rv.abs_fun(g)), because=[rv.integrable_abs, "hg"]),
+        claim(pl.Forall(x, pl.Implies(rv.mem(x, K), pl.Exists(rho, pl.And(
+            0 < rho, _avg_of(g, alpha / 2, x, rho))))), name="hKg",
+            note="K lies in {Mg > α/2}",
+            proof=pl.proof(
+                fix(x, assume={"hx": rv.mem(x, K)}),
+                choose(rho, such_that=pl.And(0 < rho, _avg_of(f, alpha, x, rho)),
+                       because=["hsub", "hx"], names="hρ hρf"),
+                claim(rv.integrable_on(f, Ixr),
+                      because=[rv.integrable_on_compact, "hf", rv.interval_compact]),
+                claim(rv.integrable_on(rv.abs_fun(f), Ixr), because=[rv.integrable_abs, "hKg_3"]),
+                claim(rv.integrable_on(rv.abs_fun(g), Ixr),
+                      because=[rv.integrable_on_of_integrable, "step2"]),
+                claim(rv.finite_measure_ne(Ixr), because=[rv.lt_ne, rv.interval_finite_measure]),
+                claim(rv.integrable_on(pl.fun(lambda w: alpha / 2, pl.Real), Ixr),
+                      because=[rv.integrable_const_on, "hKg_6"]),
+                claim(rv.integrable_on(pl.fun(lambda w: pl.abs(g(w)) + alpha / 2, pl.Real), Ixr),
+                      because=[rv.integrable_add, "hKg_5", "hKg_7"]),
+                claim(pl.integral(lambda w: pl.abs(f(w)), within=Ixr)
+                      <= pl.integral(lambda w: pl.abs(g(w)) + alpha / 2, within=Ixr),
+                      because=[rv.set_integral_mono, "hKg_4", "hKg_8", "hpt"]),
+                claim(pl.integral(lambda w: pl.abs(g(w)) + alpha / 2, within=Ixr)
+                      == pl.integral(abs_g, within=Ixr)
+                      + pl.integral(lambda w: alpha / 2, within=Ixr),
+                      because=[rv.integral_add, "hKg_5", "hKg_7"]),
+                claim(pl.integral(lambda w: alpha / 2, within=Ixr) == rv.measure(Ixr) * (alpha / 2),
+                      because=[rv.set_integral_const, rv.smul_eq_mul]),
+                pl.take(rho, such_that=0 < rho, because="hρ"),
+                pl.conclude(note="α|I| < ∫_I|f| ≤ ∫_I|g| + (α/2)|I|"),
+            )),
+        claim(alpha / 2 > 0),
+        claim(alpha / 2 * rv.measure(K) <= 4 * rv.l1_norm(g),
+              because=[maximal_inequality, "hg", "step4", "hK", "hKg"],
+              note="theorem 4 for g at level α/2"),
+        pl.conclude(),
+    )
+
+
+splitting = pl.Theorem(
+    "maximal_splitting_estimate", [f, alpha, K],
+    assumptions={"hf": rv.locally_integrable(f), "hg": rv.integrable(rv.cut(f, alpha / 2)),
+                 "hα": alpha > 0, "hK": rv.is_compact(K),
+                 "hsub": pl.Forall(x, pl.Implies(rv.mem(x, K), pl.Exists(rho, pl.And(
+                     0 < rho, _avg(x, rho)))))},
+    conclusion=alpha * rv.measure(K) <= 8 * rv.l1_norm(rv.cut(f, alpha / 2)),
+    proof=_splitting_proof(),
+)
+
+THEOREMS = [vitali_finite, disjoint_integrals, covering_bound, maximal_inequality, weak_type,
+            splitting]
 
 if __name__ == "__main__":
     import sys

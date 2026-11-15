@@ -190,6 +190,30 @@ def abs_fun(f: Any) -> Expr:
     return fun(lambda t: abs_(f(t)), _R)
 
 
+def above(f: Any, beta: object) -> Expr:
+    """The set {x : |f(x)| > β} (``setOf fun x => β < |f x|``)."""
+    from .expr import _lift, abs_
+    from .terms import apply, fun
+    from .types import Real as _R
+
+    tex = (r"\{" + "|" + f.to_latex() + r"| > " + _lift(beta).to_latex() + r"\}")
+    tex = tex.replace("{", "{{").replace("}", "}}") + "{0:.0}"
+    return apply(_c("setOf", tex), fun(lambda t: beta < abs_(f(t)), _R))  # type: ignore[operator]
+
+
+def cut(f: Any, beta: object) -> Expr:
+    """The function f·1{|f|>β}: f where |f| > β, 0 elsewhere (``Set.indicator``)."""
+    from .terms import apply
+
+    return apply(_c("Set.indicator", r"{1} \mathbf{{1}}_{{{0}}}{*}",
+                    (*_ALL, "Mathlib.Algebra.Notation.Indicator")), above(f, beta), f)
+
+
+def locally_integrable(f: object) -> Expr:
+    """f is locally integrable (integrable on every compact set)."""
+    return _app("MeasureTheory.LocallyIntegrable", r"{0} \in L^1_{{\mathrm{{loc}}}}", f)
+
+
 def l1_norm(f: Any) -> Expr:
     """‖f‖₁ = ∫ |f(x)| dx."""
     from .expr import abs_
@@ -299,6 +323,32 @@ div_nonneg = lemma("div_nonneg", "Mathlib.Algebra.Order.GroupWithZero.Basic",
 mul_lt_mul_left = lemma("mul_lt_mul_of_pos_left", "Mathlib.Algebra.Order.GroupWithZero.Defs",
                         label="multiply a strict inequality by α > 0")
 ne_of_gt = lemma("ne_of_gt", "Mathlib.Order.Basic", label="α > 0 gives α ≠ 0")
+_IND = "Mathlib.Algebra.Notation.Indicator"
+indicator_of_mem = lemma("Set.indicator_of_mem", _IND,
+                         label="f·1_S = f on S")
+indicator_of_not_mem = lemma("Set.indicator_of_notMem", _IND,
+                             label="f·1_S = 0 off S")
+abs_zero = lemma("abs_zero", "Mathlib.Algebra.Order.Group.Unbundled.Abs", label="|0| = 0")
+integrable_on_compact = lemma("MeasureTheory.LocallyIntegrable.integrableOn_isCompact",
+                              "Mathlib.MeasureTheory.Function.LocallyIntegrable",
+                              label="a locally integrable function is integrable on compact sets")
+interval_compact = lemma("isCompact_closedBall", "Mathlib.Topology.MetricSpace.ProperSpace",
+                         label="closed intervals are compact")
+integrable_const_on = lemma("MeasureTheory.integrableOn_const",
+                            "Mathlib.MeasureTheory.Integral.IntegrableOn",
+                            label="a constant is integrable on a set of finite measure")
+integrable_add = lemma("MeasureTheory.Integrable.add",
+                       "Mathlib.MeasureTheory.Function.L1Space.Integrable",
+                       label="a sum of integrable functions is integrable")
+integral_add = lemma("MeasureTheory.integral_add", "Mathlib.MeasureTheory.Integral.Bochner.Basic",
+                     label="the integral of a sum is the sum of the integrals")
+set_integral_const = lemma("MeasureTheory.setIntegral_const",
+                           "Mathlib.MeasureTheory.Integral.Bochner.Set",
+                           label="∫_E c = c|E|")
+set_integral_mono = lemma("MeasureTheory.setIntegral_mono",
+                          "Mathlib.MeasureTheory.Integral.Bochner.Set",
+                          label="monotonicity of the integral")
+smul_eq_mul = lemma("smul_eq_mul", "Mathlib.Algebra.Group.Defs", label="a • b = ab")
 mul_nonneg = lemma("mul_nonneg", "Mathlib.Algebra.Order.Ring.Defs",
                    label="a product of nonnegative numbers is nonnegative")
 sum_le_sum = lemma("Finset.sum_le_sum", _FINSET, label="termwise comparison of sums")
