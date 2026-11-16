@@ -247,7 +247,10 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [x] Lemmas 9d (the bound at a fixed level t: p t^{p−1}·8∫|f·1{|f|>t/2}|/t = ∫ 8p t^{p−2}|f·1{|f|>t/2}|) and 9e (the inner t-integral ∫_{(0,∞)} 8p t^{p−2} a 1{t<2a} dt = 8pa(2a)^{p−1}/(p−1)), verified.
 - [x] Theorem 9, the Lᵖ bound for the maximal function (Stein Thm I.1(c)): p∫₀^∞ t^{p−1} μ{Mf > t} dt ≤ (8p·2^{p−1}/(p−1)) ∫|f|^p (the left side is ‖Mf‖_p^p by the layer-cake formula). Written proof: theorem 8 at each level, lemma 9d, measurability on (0,∞)×ℝ via the product-set form of the truncation, Tonelli, lemma 9e at each x, lemma 9c. Verified (standard axioms only).
 - Engine: a pair-typed term no longer turns the internal attribute `vars` into a field projection.
-- Next: the Calderón–Zygmund decomposition; the Hilbert transform (L² theory via Plancherel, then weak (1,1)).
+- [x] `pyleanx/hilbert.py`: L²(ℝ) (`MeasureTheory.Lp ℂ 2 volume`), shipped definitions of the symbol m(ξ) = −i sgn ξ, the operator F ↦ m·F on L² (|m| ≤ 1 keeps it in L²) and Hf = 𝓕⁻(m·𝓕f); vocabulary for 𝓕, 𝓕⁻, a.e. statements; Mathlib facts (Plancherel `Lp.norm_fourier_eq`, inversion on L², `Lp.ext`, `MemLp.coeFn_toLp`, …).
+- [x] `examples/hilbert_transform.py` (Stein, *Singular Integrals* ch. II §1): 10 |m(ξ)| = 1 and m(ξ)² = −1 for ξ ≠ 0; 11 ‖m·F‖₂ = ‖F‖₂; 12 m·(m·F) = −F; 13 ‖Hf‖₂ = ‖f‖₂; 14 H(Hf) = −f. All six written proofs verified (standard axioms only).
+- Finding: state a cited lemma in its own orientation (‖𝓕(𝓕⁻G)‖ = ‖𝓕⁻G‖); the reversed claim timed out in `isDefEq` on Lp terms.
+- Next: the Calderón–Zygmund decomposition; weak (1,1) for the Hilbert transform.
 
 ### Harmonic analysis as in a textbook (2026-11-13)
 - [x] `pyleanx/harmonic.py` (generated from Lean checked in the pinned Mathlib): 8 shipped definitions (`PyLeanX.Harmonic.coeff` = `fourierCoeffOn` on [−π, π], `ft` = `𝓕`, `ift` = `𝓕⁻`, `gauss`, `L2`, `integrable_on_circle`, `coeff_sq_sum`, `mean_square`) and 18 facts (coefficient/transform integral formulas, linearity, integration by parts, Bessel, Parseval, Riemann–Lebesgue ×2, Gaussian, inversion, inverse transform at 0, small algebra).

@@ -50,7 +50,8 @@ CASES: dict[str, tuple[list[str], int]] = {
     "analysis_lecture": (RUN, 0),
     "harmonic_lecture": (RUN, 0),
     "singular_integrals": (RUN, 0),  # Stein ch. I §1: covering, maximal function
-    "marcinkiewicz": (RUN, 0),  # the Lp bound for the maximal function  # lecture notebooks: reference solutions
+    "marcinkiewicz": (RUN, 0),  # the Lp bound for the maximal function
+    "hilbert_transform": (RUN, 0),  # the Hilbert transform on L2
 }
 
 # Examples deliberately not run here, with the reason (each must be run by hand).

@@ -318,7 +318,9 @@ subadditivity) and the earlier theorems; Lean checks every step
 (`examples/lecture_singular_integrals.ipynb`). `examples/marcinkiewicz.py` continues with the
 Lᵖ bound (Stein Thm I.1(c)): p∫₀^∞ t^{p−1}μ{Mf > t} dt ≤ (8p·2^{p−1}/(p−1))∫|f|^p, whose left side
 is ‖Mf‖_p^p by the layer-cake formula; the proof integrates theorem 8 over t and swaps the
-order of integration (Tonelli), as in the book.
+order of integration (Tonelli), as in the book. `examples/hilbert_transform.py` defines the
+Hilbert transform on L²(ℝ) by Hf = 𝓕⁻(m·𝓕f), m(ξ) = −i sgn ξ, and proves ‖Hf‖₂ = ‖f‖₂ and
+H(Hf) = −f from Plancherel.
 
 ## Abstract structures: "let G be a group"
 
