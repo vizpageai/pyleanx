@@ -49,7 +49,8 @@ CASES: dict[str, tuple[list[str], int]] = {
     "geometry_lecture": (RUN, 0),
     "analysis_lecture": (RUN, 0),
     "harmonic_lecture": (RUN, 0),
-    "singular_integrals": (RUN, 0),  # theorems 1-5 of Stein ch. I §1  # lecture notebooks: reference solutions
+    "singular_integrals": (RUN, 0),  # Stein ch. I §1: covering, maximal function
+    "marcinkiewicz": (RUN, 0),  # the Lp bound for the maximal function  # lecture notebooks: reference solutions
 }
 
 # Examples deliberately not run here, with the reason (each must be run by hand).

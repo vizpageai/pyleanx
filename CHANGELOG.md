@@ -62,6 +62,11 @@ see [docs/stability.md](docs/stability.md)).
   theorem without a proof is an error, and a failed cited proof rejects exactly the theorems
   that cite it. The bank records citations as dependencies and makes loaded theorems
   citable. Example `using_cauchy_integral.py`: ∮_{|z|=2} z²/(z − 1) dz = 2πi.
+- The Lᵖ bound for the Hardy–Littlewood maximal function (`examples/marcinkiewicz.py`):
+  p∫₀^∞ t^{p−1}μ{Mf > t} dt ≤ (8p·2^{p−1}/(p−1))∫|f|^p, from the weak-type bound by the
+  calculus lemmas 9a–9e, a measurability argument on (0,∞)×ℝ and Tonelli — all written
+  proofs verified by Lean. Real exponents, [0, ∞]-valued integrals, intervals, indicators,
+  pairs and product measures in `pyleanx.realvar`.
 - Real-variable methods (`pyleanx.realvar`) and `examples/singular_integrals.py`: the Vitali
   covering lemma for finite families, integrals over disjoint intervals, and the covering
   bound behind the Hardy–Littlewood maximal inequality, and the maximal inequality itself

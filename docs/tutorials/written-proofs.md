@@ -315,7 +315,10 @@ families, ⋃, ∫ over a set, ⊆): (1) Vitali's covering lemma for finitely ma
 inequality on compact sets, (5) the weak type (1,1) inequality on measurable sets of finite
 measure. Each cites Mathlib facts (Vitali's selection, compactness, inner regularity,
 subadditivity) and the earlier theorems; Lean checks every step
-(`examples/lecture_singular_integrals.ipynb`).
+(`examples/lecture_singular_integrals.ipynb`). `examples/marcinkiewicz.py` continues with the
+Lᵖ bound (Stein Thm I.1(c)): p∫₀^∞ t^{p−1}μ{Mf > t} dt ≤ (8p·2^{p−1}/(p−1))∫|f|^p, whose left side
+is ‖Mf‖_p^p by the layer-cake formula; the proof integrates theorem 8 over t and swaps the
+order of integration (Tonelli), as in the book.
 
 ## Abstract structures: "let G be a group"
 

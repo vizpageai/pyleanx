@@ -244,7 +244,10 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [x] Theorem 7, {Mf > α} is open (let J = ∫_I|f|, δ = (J − α|I|)/(4α); the interval of radius ρ + δ around any y with |x − y| < δ still has average > α). Verified (537 s alone).
 - [x] Theorem 8, μ{Mf > α} ≤ 8∫|f·1{|f|>α/2}|/α on the whole level set, no finiteness assumption (openness + inner regularity of open sets + theorem 6). Verified.
 - [x] `examples/marcinkiewicz.py` lemmas 9a ∫₀^{2a} t^{p−2} = (2a)^{p−1}/(p−1), 9b the weight p t^{p−1}·(8/t)I = 8p t^{p−2} I in [0, ∞], 9c (2a)^{p−1}a = 2^{p−1}a^p — written proofs, verified. `rv.rpow` (real exponents), `rv.lintegral`.
-- Next: theorem 9 proper (level-set bound per t, Tonelli on (0,∞)×ℝ, inner t-integral, constants), i.e. ‖Mf‖_p ≤ C_p‖f‖_p via layer cake; then Calderón–Zygmund.
+- [x] Lemmas 9d (the bound at a fixed level t: p t^{p−1}·8∫|f·1{|f|>t/2}|/t = ∫ 8p t^{p−2}|f·1{|f|>t/2}|) and 9e (the inner t-integral ∫_{(0,∞)} 8p t^{p−2} a 1{t<2a} dt = 8pa(2a)^{p−1}/(p−1)), verified.
+- [x] Theorem 9, the Lᵖ bound for the maximal function (Stein Thm I.1(c)): p∫₀^∞ t^{p−1} μ{Mf > t} dt ≤ (8p·2^{p−1}/(p−1)) ∫|f|^p (the left side is ‖Mf‖_p^p by the layer-cake formula). Written proof: theorem 8 at each level, lemma 9d, measurability on (0,∞)×ℝ via the product-set form of the truncation, Tonelli, lemma 9e at each x, lemma 9c. Verified (standard axioms only).
+- Engine: a pair-typed term no longer turns the internal attribute `vars` into a field projection.
+- Next: the Calderón–Zygmund decomposition; the Hilbert transform (L² theory via Plancherel, then weak (1,1)).
 
 ### Harmonic analysis as in a textbook (2026-11-13)
 - [x] `pyleanx/harmonic.py` (generated from Lean checked in the pinned Mathlib): 8 shipped definitions (`PyLeanX.Harmonic.coeff` = `fourierCoeffOn` on [−π, π], `ft` = `𝓕`, `ift` = `𝓕⁻`, `gauss`, `L2`, `integrable_on_circle`, `coeff_sq_sum`, `mean_square`) and 18 facts (coefficient/transform integral formulas, linearity, integration by parts, Bessel, Parseval, Riemann–Lebesgue ×2, Gaussian, inversion, inverse transform at 0, small algebra).

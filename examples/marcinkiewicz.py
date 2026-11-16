@@ -19,6 +19,8 @@ Run:  python examples/marcinkiewicz.py
 
 from __future__ import annotations
 
+from singular_integrals import level_set_bound
+
 import pyleanx as pl
 from pyleanx import realvar as rv
 
@@ -302,7 +304,241 @@ level_integral = pl.Theorem(
     proof=_level_proof(),
 )
 
-THEOREMS = [inner_integral, weight, powers, inner_t_integral, level_integral]
+# -----------------------------------------------------------------------------------------
+# 9. The Lp bound: p int_0^oo t^(p-1) mu{Mf > t} dt <= (8p 2^(p-1)/(p-1)) int |f|^p
+# -----------------------------------------------------------------------------------------
+# By the layer-cake formula the left side is the p-th power of the Lp norm of Mf.
+
+x = pl.symbol("x", pl.Real)
+q = pl.symbol("q", pl.Prod(pl.Real, pl.Real))
+CONST = 8 * p * rp(pl.real(2), p - 1) / (p - 1)
+
+
+def _F(tt: object, xx: object) -> pl.Expr:  # noqa: N802
+    return rv.of_real(8 * p * rp(tt, p - 2) * pl.abs(rv.cut(f, tt / 2)(xx)))
+
+
+def _prodset() -> pl.Expr:
+    return rv.pred_set(lambda r: pl.field(r, "1") / 2 < pl.abs(f(pl.field(r, "2"))),
+                       pl.Prod(pl.Real, pl.Real))
+
+
+def _prod_ind(qq: object) -> pl.Expr:
+    return rv.indicator(_prodset(), pl.fun(lambda r: pl.abs(f(pl.field(r, "2"))),
+                                           pl.Prod(pl.Real, pl.Real)))(qq)
+
+
+def _Gq(qq: object) -> pl.Expr:  # noqa: N802
+    return rv.of_real(8 * p * rp(pl.field(qq, "1"), p - 2) * _prod_ind(qq))
+
+
+def _int9e(tt: object, aa: object) -> pl.Expr:
+    return rv.of_real(8 * p * rp(tt, p - 2)
+                      * rv.indicator(rv.Iio(2 * aa), pl.fun(lambda s: aa, pl.Real))(tt))
+
+
+def _lp_proof() -> pl.Tactic:
+    claim, fix, chain, case, cases_on = pl.claim, pl.fix, pl.chain, pl.case, pl.cases_on
+    Ioi0 = rv.Ioi(0)
+    w = lambda tt: rv.of_real(p * rp(tt, p - 1))  # noqa: E731
+    E = lambda tt: rv.level_set(f, tt)  # noqa: E731
+    mu = rv.volume_on_half_line_times_line()
+    F2 = pl.fun(lambda tt, xx: _F(tt, xx), [pl.Real, pl.Real])
+    G = pl.fun(_Gq, pl.Prod(pl.Real, pl.Real))
+    q1, q2 = pl.field(q, "1"), pl.field(q, "2")
+    a_x = pl.abs(f(x))
+    final = lambda xx: rv.of_real(8 * p * pl.abs(f(xx))  # noqa: E731
+                                  * (rp(2 * pl.abs(f(xx)), p - 1) / (p - 1)))
+    return pl.proof(
+        # 1. the level-set bound at every t > 0 (theorem 8 and lemma 9d)
+        claim(pl.Forall(t, pl.Implies(rv.mem(t, Ioi0), w(t) * rv.vol(E(t))
+                                      <= rv.lintegral(lambda xx: _F(t, xx)))),
+              name="hstep", note="theorem 8 at level t, then lemma 9d",
+              proof=pl.proof(
+                  fix(t, assume={"ht": rv.mem(t, Ioi0)}),
+                  claim(0 < t, because=[rv.mem_Ioi, "ht"], name="ht0"),
+                  claim(rv.integrable(rv.cut(f, t / 2)), because=["hg", "ht0"], name="hgt"),
+                  claim(rv.vol(E(t)) <= rv.of_real(8 * rv.l1_norm(rv.cut(f, t / 2)) / t),
+                        because=[level_set_bound, "hloc", "hgt", "ht0"], name="hE"),
+                  chain(w(t) * rv.vol(E(t)),
+                        ("<=", w(t) * rv.of_real(8 * rv.l1_norm(rv.cut(f, t / 2)) / t),
+                         [rv.mul_le_mul_left_ennreal, "hE"]),
+                        ("=", rv.lintegral(lambda xx: _F(t, xx)),
+                         [level_integral, "hp", "ht0", "hgt"])),
+              )),
+        claim(rv.lintegral(lambda tt: w(tt) * rv.vol(E(tt)), within=Ioi0)
+              <= rv.lintegral(lambda tt: rv.lintegral(lambda xx: _F(tt, xx)), within=Ioi0),
+              because=[rv.set_lintegral_mono, rv.measurable_Ioi, "hstep"], name="hmono"),
+        # 2. measurability on (0, oo) x R, through the product-set form of the truncation
+        claim(pl.Forall(q, _F(q1, q2) == _Gq(q)), name="hbridge",
+              note="|f 1{|f|>t/2}(x)| = 1{t/2 < |f(x)|} |f(x)|",
+              proof=pl.proof(
+                  fix(q),
+                  cases_on(
+                      case(q1 / 2 < pl.abs(f(q2)),
+                           claim(rv.mem(q2, rv.above(f, q1 / 2)), because=[rv.mem_set_of, "h"],
+                                 name="hin1"),
+                           claim(rv.cut(f, q1 / 2)(q2) == f(q2),
+                                 because=[rv.indicator_of_mem, "hin1"], name="hcut"),
+                           claim(rv.mem(q, _prodset()), because=[rv.mem_set_of, "h"], name="hin2"),
+                           claim(_prod_ind(q) == pl.abs(f(q2)),
+                                 because=[rv.indicator_of_mem, "hin2"], name="hind"),
+                           chain(_F(q1, q2),
+                                 ("=", rv.of_real(8 * p * rp(q1, p - 2) * pl.abs(f(q2))), "hcut"),
+                                 ("=", _Gq(q), "hind")),
+                           name="h"),
+                      case(pl.Not(q1 / 2 < pl.abs(f(q2))),
+                           claim(pl.Not(rv.mem(q2, rv.above(f, q1 / 2))),
+                                 because=[rv.mem_set_of, "h"], name="hout1"),
+                           claim(rv.cut(f, q1 / 2)(q2) == 0,
+                                 because=[rv.indicator_of_not_mem, "hout1"], name="hcut"),
+                           claim(pl.Not(rv.mem(q, _prodset())), because=[rv.mem_set_of, "h"],
+                                 name="hout2"),
+                           claim(_prod_ind(q) == 0, because=[rv.indicator_of_not_mem, "hout2"],
+                                 name="hind"),
+                           chain(_F(q1, q2),
+                                 ("=", rv.of_real(8 * p * rp(q1, p - 2) * pl.abs(pl.real(0))),
+                                  "hcut"),
+                                 ("=", rv.of_real(8 * p * rp(q1, p - 2) * 0), rv.abs_zero),
+                                 ("=", _Gq(q), "hind")),
+                           name="h"),
+                  ),
+              )),
+        claim(rv.measurable_fn(pl.fun(lambda r: pl.abs(f(pl.field(r, "2"))),
+                                      pl.Prod(pl.Real, pl.Real))), name="hm_abs"),
+        claim(rv.measurable_fn(pl.fun(lambda r: pl.field(r, "1") / 2,
+                                      pl.Prod(pl.Real, pl.Real))), name="hm_half"),
+        claim(rv.measurable(_prodset()), because=[rv.measurable_set_lt, "hm_half", "hm_abs"],
+              name="hm_set"),
+        claim(rv.measurable_fn(pl.fun(_prod_ind, pl.Prod(pl.Real, pl.Real))),
+              because=[rv.measurable_indicator, "hm_abs", "hm_set"], name="hm_ind"),
+        claim(rv.measurable_fn(pl.fun(lambda r: 8 * p * rp(pl.field(r, "1"), p - 2),
+                                      pl.Prod(pl.Real, pl.Real))), name="hm_pow"),
+        claim(rv.measurable_fn(pl.fun(lambda r: 8 * p * rp(pl.field(r, "1"), p - 2)
+                                      * _prod_ind(r), pl.Prod(pl.Real, pl.Real))),
+              because=[rv.measurable_mul, "hm_pow", "hm_ind"], name="hm_prod"),
+        claim(rv.measurable_fn(G), because=[rv.measurable_of_real, "hm_prod"], name="hm_G"),
+        claim(rv.uncurry(F2) == G, because=[rv.fun_ext, "hbridge"], name="heq"),
+        claim(rv.ae_measurable(G, mu), because=[rv.measurable_ae, "hm_G"], name="hae_G"),
+        claim(rv.ae_measurable(rv.uncurry(F2), mu), because=["heq", "hae_G"], name="hae"),
+        # 3. Tonelli
+        claim(rv.lintegral(lambda tt: rv.lintegral(lambda xx: _F(tt, xx)), within=Ioi0)
+              == rv.lintegral(lambda xx: rv.lintegral(lambda tt: _F(tt, xx), within=Ioi0)),
+              because=[rv.tonelli, "hae"], name="hswap", note="Tonelli"),
+        # 4. the inner integral in t for each x (lemma 9e with a = |f(x)|)
+        claim(pl.Forall(x, rv.lintegral(lambda tt: _F(tt, x), within=Ioi0) == final(x)),
+              name="hinner", note="lemma 9e with a = |f(x)|",
+              proof=pl.proof(
+                  fix(x),
+                  claim(pl.Forall(t, pl.Implies(rv.mem(t, Ioi0), _F(t, x) == _int9e(t, a_x))),
+                        name="htr", note="t/2 < |f(x)| iff t < 2|f(x)|",
+                        proof=pl.proof(
+                            fix(t, assume={"ht": rv.mem(t, Ioi0)}),
+                            cases_on(
+                                case(t / 2 < a_x,
+                                     claim(t < 2 * a_x, name="h2"),
+                                     claim(rv.mem(x, rv.above(f, t / 2)),
+                                           because=[rv.mem_set_of, "h"], name="hin1"),
+                                     claim(rv.cut(f, t / 2)(x) == f(x),
+                                           because=[rv.indicator_of_mem, "hin1"], name="hcut"),
+                                     claim(rv.mem(t, rv.Iio(2 * a_x)), because=[rv.mem_Iio, "h2"],
+                                           name="hin2"),
+                                     claim(rv.indicator(rv.Iio(2 * a_x),
+                                                        pl.fun(lambda s: a_x, pl.Real))(t) == a_x,
+                                           because=[rv.indicator_of_mem, "hin2"], name="hind"),
+                                     chain(_F(t, x),
+                                           ("=", rv.of_real(8 * p * rp(t, p - 2) * a_x), "hcut"),
+                                           ("=", _int9e(t, a_x), "hind")),
+                                     name="h"),
+                                case(pl.Not(t / 2 < a_x),
+                                     claim(pl.Not(t < 2 * a_x), name="h2"),
+                                     claim(pl.Not(rv.mem(x, rv.above(f, t / 2))),
+                                           because=[rv.mem_set_of, "h"], name="hout1"),
+                                     claim(rv.cut(f, t / 2)(x) == 0,
+                                           because=[rv.indicator_of_not_mem, "hout1"],
+                                           name="hcut"),
+                                     claim(pl.Not(rv.mem(t, rv.Iio(2 * a_x))),
+                                           because=[rv.mem_Iio, "h2"], name="hout2"),
+                                     claim(rv.indicator(rv.Iio(2 * a_x),
+                                                        pl.fun(lambda s: a_x, pl.Real))(t) == 0,
+                                           because=[rv.indicator_of_not_mem, "hout2"],
+                                           name="hind"),
+                                     chain(_F(t, x),
+                                           ("=", rv.of_real(8 * p * rp(t, p - 2)
+                                                            * pl.abs(pl.real(0))), "hcut"),
+                                           ("=", rv.of_real(8 * p * rp(t, p - 2) * 0),
+                                            rv.abs_zero),
+                                           ("=", _int9e(t, a_x), "hind")),
+                                     name="h"),
+                            ),
+                        )),
+                  claim(rv.lintegral(lambda tt: _F(tt, x), within=Ioi0)
+                        == rv.lintegral(lambda tt: _int9e(tt, a_x), within=Ioi0),
+                        because=[rv.set_lintegral_congr, rv.measurable_Ioi, "htr"],
+                        name="hcongr9"),
+                  claim(0 <= a_x, because=rv.abs_nonneg, name="ha0"),
+                  claim(rv.lintegral(lambda tt: _int9e(tt, a_x), within=Ioi0) == final(x),
+                        because=[inner_t_integral, "hp", "ha0"], name="h9e"),
+                  chain(rv.lintegral(lambda tt: _F(tt, x), within=Ioi0),
+                        ("=", rv.lintegral(lambda tt: _int9e(tt, a_x), within=Ioi0), "hcongr9"),
+                        ("=", final(x), "h9e")),
+              )),
+        claim(rv.lintegral(lambda xx: rv.lintegral(lambda tt: _F(tt, xx), within=Ioi0))
+              == rv.lintegral(final), because=[rv.lintegral_congr, "hinner"], name="hcongr"),
+        # 5. the constants (lemma 9c)
+        claim(0 <= CONST, name="hC0", note="p > 1",
+              proof=pl.proof(
+                  claim(0 < rp(pl.real(2), p - 1), name="h2p", because=rv.rpow_pos_two),
+                  claim(0 < p - 1, name="hp1"),
+                  pl.conclude(because=[rv.div_nonneg, rv.mul_nonneg]),
+              )),
+        claim(pl.Forall(x, final(x) == rv.of_real(CONST) * rv.of_real(rp(a_x, p))),
+              name="halg", note="8p a (2a)^(p-1)/(p-1) = C a^p by lemma 9c",
+              proof=pl.proof(
+                  fix(x),
+                  claim(0 <= a_x, because=rv.abs_nonneg, name="ha0"),
+                  claim(rp(2 * a_x, p - 1) * a_x == rp(pl.real(2), p - 1) * rp(a_x, p),
+                        because=[powers, "hp", "ha0"], name="h9c"),
+                  chain(8 * p * a_x * (rp(2 * a_x, p - 1) / (p - 1)),
+                        ("=", 8 * p / (p - 1) * (rp(2 * a_x, p - 1) * a_x), None, "rearrange"),
+                        ("=", 8 * p / (p - 1) * (rp(pl.real(2), p - 1) * rp(a_x, p)), "h9c"),
+                        ("=", CONST * rp(a_x, p)),
+                        name="hreal"),
+                  chain(final(x),
+                        ("=", rv.of_real(CONST * rp(a_x, p)), "hreal"),
+                        ("=", rv.of_real(CONST) * rv.of_real(rp(a_x, p)),
+                         [rv.of_real_mul, "hC0"])),
+              )),
+        claim(rv.lintegral(final)
+              == rv.lintegral(lambda xx: rv.of_real(CONST) * rv.of_real(rp(pl.abs(f(xx)), p))),
+              because=[rv.lintegral_congr, "halg"], name="hcongr2"),
+        claim(rv.lintegral(lambda xx: rv.of_real(CONST) * rv.of_real(rp(pl.abs(f(xx)), p)))
+              == rv.of_real(CONST) * rv.lintegral(lambda xx: rv.of_real(rp(pl.abs(f(xx)), p))),
+              because=[rv.lintegral_const_mul, rv.of_real_ne_top], name="hpull"),
+        chain(rv.lintegral(lambda tt: w(tt) * rv.vol(E(tt)), within=Ioi0),
+              ("<=", rv.lintegral(lambda tt: rv.lintegral(lambda xx: _F(tt, xx)), within=Ioi0),
+               "hmono"),
+              ("=", rv.lintegral(lambda xx: rv.lintegral(lambda tt: _F(tt, xx), within=Ioi0)),
+               "hswap"),
+              ("=", rv.lintegral(final), "hcongr"),
+              ("=", rv.lintegral(lambda xx: rv.of_real(CONST) * rv.of_real(rp(pl.abs(f(xx)), p))),
+               "hcongr2"),
+              ("=", rv.of_real(CONST) * rv.lintegral(lambda xx: rv.of_real(rp(pl.abs(f(xx)), p))),
+               "hpull")),
+    )
+
+
+maximal_Lp = pl.Theorem(
+    "hardy_littlewood_Lp", [f, p],
+    assumptions={"hp": 1 < p, "hfm": rv.measurable_fn(f), "hloc": rv.locally_integrable(f),
+                 "hg": pl.Forall(t, pl.Implies(0 < t, rv.integrable(rv.cut(f, t / 2))))},
+    conclusion=rv.lintegral(lambda t: rv.of_real(p * rp(t, p - 1))
+                            * rv.vol(rv.level_set(f, t)), within=rv.Ioi(0))
+    <= rv.of_real(CONST) * rv.lintegral(lambda x: rv.of_real(rp(pl.abs(f(x)), p))),
+    proof=_lp_proof(),
+)
+
+THEOREMS = [inner_integral, weight, powers, inner_t_integral, level_integral, maximal_Lp]
 
 if __name__ == "__main__":
     import sys

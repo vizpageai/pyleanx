@@ -308,6 +308,41 @@ def lintegral_nested(body: Any, within: object, inside: object) -> Expr:
                  mu, lam)
 
 
+def measurable_fn(g: object) -> Expr:
+    """g is measurable."""
+    return _app("Measurable", r"{0} \text{{ is measurable}}", g)
+
+
+def pred_set(body: Any, sort: Any) -> Expr:
+    """{q : sort | body(q)} (a set given by a property)."""
+    from .terms import apply, fun
+
+    return apply(_c("setOf", r"\{{ {0} \}}"), fun(body, sort))
+
+
+def volume_on_half_line_times_line() -> Expr:
+    """Lebesgue measure on (0, ∞) × ℝ (the product of the restriction and Lebesgue measure)."""
+    from .terms import apply, const
+
+    vol = const("MeasureTheory.volume", imports=_ALL, latex="")
+    restrict = apply(const("MeasureTheory.Measure.restrict", imports=_ALL, latex=""), vol,
+                     Ioi(0))
+    return apply(const("MeasureTheory.Measure.prod",
+                       imports=(*_ALL, "Mathlib.MeasureTheory.Measure.Prod"),
+                       latex=r"dt\,dx \text{{ on }} (0, \infty) \times \mathbb{{R}}{0:.0}{1:.0}"),
+                 restrict, vol)
+
+
+def ae_measurable(g: object, mu: object) -> Expr:
+    """g is almost-everywhere measurable for the measure mu."""
+    return _app("AEMeasurable", r"{0} \text{{ is measurable for }} {1}", g, mu)
+
+
+def uncurry(F: object) -> Expr:  # noqa: N803
+    """(t, x) ↦ F(t, x) as a function on pairs."""
+    return _app("Function.uncurry", r"{0}", F)
+
+
 def dist(a: object, b: object) -> Expr:
     """|a − b|, the distance on ℝ (``dist a b``)."""
     return _app("dist", "|{0} - {1}|", a, b)
@@ -567,8 +602,36 @@ of_real_zero = lemma("ENNReal.ofReal_zero", "Mathlib.Basic.ENNReal.Real", label=
 integral_const_mul = lemma("MeasureTheory.integral_const_mul",
                            "Mathlib.MeasureTheory.Integral.Bochner.Basic",
                            label="a constant comes out of the integral")
-mul_le_mul_left_ennreal = lemma("mul_le_mul_left'", "Mathlib.Algebra.Order.Monoid.Unbundled.Basic",
+mul_le_mul_left_ennreal = lemma("mul_le_mul'", "Mathlib.Algebra.Order.Monoid.Unbundled.Basic",
                                 label="multiply both sides of an inequality by w ≥ 0")
+_PROD = "Mathlib.MeasureTheory.Measure.Prod"
+_MEAS = "Mathlib.MeasureTheory.Measure.MeasureSpace"
+tonelli = lemma("MeasureTheory.lintegral_lintegral_swap", _PROD,
+                label="Tonelli: the order of integration can be swapped")
+lintegral_congr = lemma("MeasureTheory.lintegral_congr",
+                        "Mathlib.MeasureTheory.Integral.Lebesgue.Basic",
+                        label="integrals of equal functions are equal")
+lintegral_const_mul = lemma("MeasureTheory.lintegral_const_mul'",
+                            "Mathlib.MeasureTheory.Integral.Lebesgue.Basic",
+                            label="a finite constant comes out of the integral")
+of_real_ne_top = lemma("ENNReal.ofReal_ne_top", "Mathlib.Basic.ENNReal.Real",
+                       label="a real number is finite in [0, ∞]")
+fun_ext = lemma("funext", "Mathlib.Order.Basic", label="functions equal at every point are equal")
+measurable_set_lt = lemma("measurableSet_lt",
+                          "Mathlib.MeasureTheory.Constructions.BorelSpace.Order",
+                          label="{a | g a < h a} is measurable for measurable g, h")
+measurable_indicator = lemma("Measurable.indicator",
+                             "Mathlib.MeasureTheory.MeasurableSpace.Basic",
+                             label="g·1_S is measurable for measurable g and S")
+measurable_mul = lemma("Measurable.mul", "Mathlib.MeasureTheory.Group.Arithmetic",
+                       label="a product of measurable functions is measurable")
+measurable_of_real = lemma("Measurable.ennreal_ofReal",
+                           "Mathlib.MeasureTheory.Function.SpecialFunctions.Basic",
+                           label="a measurable real function is measurable in [0, ∞]")
+measurable_ae = lemma("Measurable.aemeasurable", _MEAS,
+                      label="measurable implies almost-everywhere measurable")
+rpow_pos_two = lemma("Real.rpow_pos_of_pos", "Mathlib.Analysis.SpecialFunctions.Pow.Real",
+                     label="a positive number to any power is positive")
 mul_nonneg = lemma("mul_nonneg", "Mathlib.Algebra.Order.Ring.Defs",
                    label="a product of nonnegative numbers is nonnegative")
 sum_le_sum = lemma("Finset.sum_le_sum", _FINSET, label="termwise comparison of sums")
