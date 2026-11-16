@@ -241,7 +241,9 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - Findings: phrasing matters for the gap filler — `div_lt_iff₀'` (c·a form) not `div_lt_iff₀`; cite `measureReal_def` when moving between |E| and μ(E); cite `mul_div_cancel₀` for α·(b/α) = b.
 - [x] Theorem 6, the splitting estimate of the Lᵖ proof: α|K| ≤ 8∫|f·1{|f|>α/2}| for compact K ⊆ {Mf > α} (case split |f| ≤ |g| + α/2, set-integral monotonicity, theorem 4 at level α/2). Verified.
 - Display: templates ending in `{*}` name a function and are applied to further arguments ((f·1_S)(y)).
-- Next: {Mf > α} is open; weak bound on the whole level set; ‖Mf‖_p ≤ C_p‖f‖_p by the layer-cake formula; Calderón–Zygmund decomposition.
+- [x] Theorem 7, {Mf > α} is open (let J = ∫_I|f|, δ = (J − α|I|)/(4α); the interval of radius ρ + δ around any y with |x − y| < δ still has average > α). Verified (537 s alone).
+- [x] Theorem 8, μ{Mf > α} ≤ 8∫|f·1{|f|>α/2}|/α on the whole level set, no finiteness assumption (openness + inner regularity of open sets + theorem 6). Verified.
+- Next: theorem 9, p∫₀^∞ t^{p−1}μ{Mf > t} dt ≤ C_p∫|f|^p (Tonelli, ∫₀^{2|f|} t^{p−2}), i.e. ‖Mf‖_p ≤ C_p‖f‖_p by layer cake; then Calderón–Zygmund.
 
 ### Harmonic analysis as in a textbook (2026-11-13)
 - [x] `pyleanx/harmonic.py` (generated from Lean checked in the pinned Mathlib): 8 shipped definitions (`PyLeanX.Harmonic.coeff` = `fourierCoeffOn` on [−π, π], `ft` = `𝓕`, `ift` = `𝓕⁻`, `gauss`, `L2`, `integrable_on_circle`, `coeff_sq_sum`, `mean_square`) and 18 facts (coefficient/transform integral formulas, linearity, integration by parts, Bessel, Parseval, Riemann–Lebesgue ×2, Gaussian, inversion, inverse transform at 0, small algebra).

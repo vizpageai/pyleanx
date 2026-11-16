@@ -465,8 +465,126 @@ splitting = pl.Theorem(
     proof=_splitting_proof(),
 )
 
+
+# -----------------------------------------------------------------------------------------
+# 7. {Mf > α} is open (so measurable, and inner regularity applies to it)
+# -----------------------------------------------------------------------------------------
+# If [x − ρ, x + ρ] has average > α, take δ = (J − α|I|)/4/α with J = ∫_I |f|; for |y − x| < δ
+# the interval [y − (ρ+δ), y + (ρ+δ)] contains I and still has average > α.
+
+r1, eps_, Jv, dv = pl.symbols("ρ₁ ε J δ", pl.Real)
+
+
+def _open_proof() -> pl.Tactic:
+    claim, fix = pl.claim, pl.fix
+    E_a = rv.level_set(f, alpha)
+    Ix = rv.interval(x, r1)
+    m = rv.measure(Ix)
+    J, d = Jv, dv
+    Z = (J - alpha * m) / 4
+    Iy = rv.interval(y, r1 + d)
+    Jy = pl.integral(lambda w: pl.abs(f(w)), within=Iy)
+    return pl.proof(
+        pl.suffices(pl.Forall(x, pl.Implies(rv.mem(x, E_a), pl.Exists(eps_, pl.And(
+            eps_ > 0, rv.subset(rv.ball(x, eps_), E_a))))), because=rv.is_open_iff),
+        fix(x, assume={"hx": rv.mem(x, E_a)}),
+        pl.choose(r1, such_that=pl.And(0 < r1, _avg(x, r1)), because="hx", names="hρ hρavg"),
+        pl.let(Jv, pl.integral(lambda w: pl.abs(f(w)), within=Ix)),
+        claim(0 <= r1, name="hρ0"),
+        claim(m == 2 * r1, because=[rv.measure_interval, "hρ0"], name="hm"),
+        claim(alpha * m == 2 * (alpha * r1), because="hm", name="hαm"),
+        claim(J - alpha * m > 0, name="hgap", note="the average over [x − ρ, x + ρ] exceeds α"),
+        claim(Z > 0, because=[rv.div_pos, "hgap"], name="hZ"),
+        pl.let(dv, (Jv - alpha * m) / 4 / alpha),
+        claim(d > 0, because=[rv.div_pos, "hZ", "hα"], name="hd"),
+        pl.take(d, such_that=d > 0, because="hd"),
+        fix(y, assume={"hy": rv.mem(y, rv.ball(x, d))}),
+        pl.suffices(pl.Exists(r1, pl.And(0 < r1, _avg(y, r1))), because=rv.mem_set_of,
+                    name="hgoal"),
+        claim(rv.dist(x, y) < d, because=[rv.mem_ball, "hy"], name="hyx"),
+        claim(rv.subset(Ix, Iy), because=[rv.interval_in_interval, "hyx"], name="hsubI"),
+        claim(rv.integrable_on(f, Iy),
+              because=[rv.integrable_on_compact, "hf", rv.interval_compact], name="hfy"),
+        claim(rv.integrable_on(rv.abs_fun(f), Iy), because=[rv.integrable_abs, "hfy"],
+              name="hafy"),
+        claim(rv.ae_nonneg_on(rv.abs_fun(f), Iy), because=[rv.everywhere_ae, rv.abs_nonneg],
+              name="hpos"),
+        claim(rv.ae_subset(Ix, Iy), because=[rv.subset_ae, "hsubI"], name="haesub"),
+        claim(J <= Jy, because=[rv.set_integral_mono_set, "hafy", "hpos", "haesub"],
+              name="hJ", note="[x − ρ, x + ρ] ⊆ [y − (ρ+δ), y + (ρ+δ)] and |f| ≥ 0"),
+        claim(0 <= r1 + d, name="hρd0"),
+        claim(rv.measure(Iy) == 2 * (r1 + d), because=[rv.measure_interval, "hρd0"], name="hmy"),
+        claim(alpha * rv.measure(Iy) == 2 * (alpha * r1) + 2 * (alpha * d), because="hmy",
+              name="hαmy"),
+        claim(alpha * d == Z, because=[rv.mul_div_cancel, rv.ne_of_gt, "hα"], name="hαd"),
+        pl.take(r1 + d, such_that=0 < r1 + d),
+        pl.conclude(note="α|I_y| = α|I_x| + (J − α|I_x|)/2 < J ≤ ∫_{I_y}|f|"),
+    )
+
+
+level_set_open = pl.Theorem(
+    "maximal_level_set_open", [f, alpha],
+    assumptions={"hf": rv.locally_integrable(f), "hα": alpha > 0},
+    conclusion=rv.is_open(rv.level_set(f, alpha)),
+    proof=_open_proof(),
+)
+
+
+# -----------------------------------------------------------------------------------------
+# 8. The weak bound on the whole level set: μ{Mf > α} ≤ 8 ∫|f·1{|f|>α/2}| / α
+# -----------------------------------------------------------------------------------------
+# No finiteness assumption: {Mf > α} is open (theorem 7), so inner regularity applies.
+
+
+def _level_bound_proof() -> pl.Tactic:
+    claim, fix = pl.claim, pl.fix
+    E_a = rv.level_set(f, alpha)
+    g = rv.cut(f, alpha / 2)
+    norm_g = rv.l1_norm(g)
+    c = 8 * norm_g / alpha
+    return pl.proof(
+        pl.suppose_not(name="hneg"),
+        claim(rv.of_real(c) < rv.vol(E_a), because=[rv.not_le, "hneg"], name="hcon"),
+        claim(rv.is_open(E_a), because=[level_set_open, "hf", "hα"], name="hopen",
+              note="theorem 7"),
+        pl.choose(K, such_that=pl.And(rv.subset(K, E_a), rv.is_compact(K),
+                                      rv.of_real(c) < rv.vol(K)),
+                  because=[rv.open_inner_regular, "hopen", "hcon"], names="hKE hKc hKc'",
+                  note="inner regularity of the open set {Mf > α}"),
+        claim(rv.finite_measure(K), because=[rv.compact_finite_measure, "hKc"], name="hKfin"),
+        claim(rv.finite_measure_ne(K), because=[rv.lt_ne, "hKfin"], name="hKne"),
+        claim(rv.ae_nonneg(rv.abs_fun(g)), because=[rv.everywhere_ae, rv.abs_nonneg],
+              name="hg0"),
+        claim(0 <= norm_g, because=[rv.integral_nonneg_ae, "hg0"], name="hnorm"),
+        claim(0 <= c, because=[rv.div_nonneg, "hnorm", "hα"], name="hc"),
+        claim(c < rv.measure(K),
+              because=[rv.of_real_lt, rv.measure_real_def, "hc", "hKne", "hKc'"], name="hcK"),
+        claim(pl.Forall(x, pl.Implies(rv.mem(x, K), pl.Exists(rho, pl.And(
+            0 < rho, _avg(x, rho))))), name="hKsub", note="K ⊆ {Mf > α}",
+            proof=pl.proof(
+                fix(x, assume={"hx": rv.mem(x, K)}),
+                claim(rv.mem(x, E_a), because=["hKE", "hx"]),
+                pl.conclude(because=[rv.mem_set_of, "hKsub_2"]),
+            )),
+        claim(alpha * rv.measure(K) <= 8 * norm_g,
+              because=[splitting, "hf", "hg", "hα", "hKc", "hKsub"], note="theorem 6"),
+        claim(alpha * c < alpha * rv.measure(K), because=[rv.mul_lt_mul_left, "hcK", "hα"]),
+        claim(alpha * c == 8 * norm_g, because=[rv.mul_div_cancel, rv.ne_of_gt, "hα"]),
+        pl.conclude(note="8∫|g| = α·c < α|K| ≤ 8∫|g| is impossible"),
+    )
+
+
+level_set_bound = pl.Theorem(
+    "maximal_level_set_bound", [f, alpha],
+    assumptions={"hf": rv.locally_integrable(f), "hg": rv.integrable(rv.cut(f, alpha / 2)),
+                 "hα": alpha > 0},
+    conclusion=rv.vol(rv.level_set(f, alpha))
+    <= rv.of_real(8 * rv.l1_norm(rv.cut(f, alpha / 2)) / alpha),
+    proof=_level_bound_proof(),
+)
+
 THEOREMS = [vitali_finite, disjoint_integrals, covering_bound, maximal_inequality, weak_type,
-            splitting]
+            splitting, level_set_open, level_set_bound]
 
 if __name__ == "__main__":
     import sys

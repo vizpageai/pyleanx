@@ -209,6 +209,50 @@ def cut(f: Any, beta: object) -> Expr:
                     (*_ALL, "Mathlib.Algebra.Notation.Indicator")), above(f, beta), f)
 
 
+def level_set(f: Any, lam: object) -> Expr:
+    """{Mf > α}: the points x having an interval [x − ρ, x + ρ] on which the average of |f|
+    exceeds α (``setOf fun x => ∃ ρ, 0 < ρ ∧ α |[x−ρ, x+ρ]| < ∫ |f|``)."""
+    from .binders import symbol
+    from .expr import And, Exists, _lift
+    from .terms import apply, fun
+    from .types import Real as _R
+
+    tex = r"\{M" + f.to_latex() + " > " + _lift(lam).to_latex() + r"\}"
+    tex = tex.replace("{", "{{").replace("}", "}}") + "{0:.0}"
+    rho = symbol("ρ", _R)
+    return apply(_c("setOf", tex), fun(lambda t: Exists(rho, And(
+        0 < rho, average_exceeds(f, lam, t, rho))), _R))  # type: ignore[operator]
+
+
+def dist(a: object, b: object) -> Expr:
+    """|a − b|, the distance on ℝ (``dist a b``)."""
+    return _app("dist", "|{0} - {1}|", a, b)
+
+
+def is_open(S: object) -> Expr:  # noqa: N803
+    """S is open."""
+    return _app("IsOpen", r"{0} \text{{ is open}}", S)
+
+
+def ae_nonneg_on(g: object, S: object) -> Expr:  # noqa: N803
+    """0 ≤ g almost everywhere on S."""
+    from .terms import apply, const
+
+    vol = const("MeasureTheory.volume", imports=_ALL, latex="")
+    ae = apply(const("MeasureTheory.ae", imports=_ALL, latex=""),
+               apply(const("MeasureTheory.Measure.restrict", imports=_ALL, latex=""), vol, S))
+    return apply(_c("Filter.EventuallyLE", r"0 \le {2} \text{{ a.e. on }} S"), ae, 0, g)
+
+
+def ae_subset(A: object, B: object) -> Expr:  # noqa: N803
+    """A ⊆ B up to a null set."""
+    from .terms import apply, const
+
+    ae = apply(const("MeasureTheory.ae", imports=_ALL, latex=""),
+               const("MeasureTheory.volume", imports=_ALL, latex=""))
+    return apply(_c("Filter.EventuallyLE", r"{1} \subseteq {2} \text{{ a.e.}}"), ae, A, B)
+
+
 def locally_integrable(f: object) -> Expr:
     """f is locally integrable (integrable on every compact set)."""
     return _app("MeasureTheory.LocallyIntegrable", r"{0} \in L^1_{{\mathrm{{loc}}}}", f)
@@ -349,6 +393,30 @@ set_integral_mono = lemma("MeasureTheory.setIntegral_mono",
                           "Mathlib.MeasureTheory.Integral.Bochner.Set",
                           label="monotonicity of the integral")
 smul_eq_mul = lemma("smul_eq_mul", "Mathlib.Algebra.Group.Defs", label="a • b = ab")
+is_open_iff = lemma("Metric.isOpen_iff", "Mathlib.Topology.MetricSpace.Pseudo.Defs",
+                    label="a set is open iff it contains an interval around each point")
+mem_set_of = lemma("Set.mem_setOf_eq", "Mathlib.Data.Set.Defs", label="definition of the set")
+mem_ball = lemma("Metric.mem_ball'", "Mathlib.Topology.MetricSpace.Pseudo.Defs",
+                 label="y ∈ (x − δ, x + δ) iff |x − y| < δ")
+dist_comm = lemma("dist_comm", "Mathlib.Topology.MetricSpace.Pseudo.Defs",
+                  label="|x − y| = |y − x|")
+interval_in_interval = lemma("Metric.closedBall_subset_closedBall'",
+                             "Mathlib.Topology.MetricSpace.Pseudo.Defs",
+                             label="[x − ρ, x + ρ] ⊆ [y − ρ', y + ρ'] when ρ + |x − y| ≤ ρ'")
+subset_ae = lemma("HasSubset.Subset.eventuallyLE", "Mathlib.MeasureTheory.Measure.MeasureSpace",
+                  label="a subset is a subset almost everywhere")
+set_integral_mono_set = lemma("MeasureTheory.setIntegral_mono_set",
+                              "Mathlib.MeasureTheory.Integral.Bochner.Set",
+                              label="a larger set has a larger integral of a nonnegative function")
+div_pos = lemma("div_pos", "Mathlib.Algebra.Order.GroupWithZero.Basic",
+                label="a quotient of positive numbers is positive")
+open_inner_regular = lemma("IsOpen.exists_lt_isCompact", "Mathlib.MeasureTheory.Measure.Regular",
+                           label="inner regularity: an open set contains compact sets of almost "
+                                 "its measure")
+compact_finite_measure = lemma("IsCompact.measure_lt_top",
+                               "Mathlib.MeasureTheory.Measure.Typeclasses.Finite",
+                               label="a compact set has finite measure")
+not_le = lemma("not_le", "Mathlib.Order.Defs.LinearOrder", label="¬(a ≤ b) iff b < a")
 mul_nonneg = lemma("mul_nonneg", "Mathlib.Algebra.Order.Ring.Defs",
                    label="a product of nonnegative numbers is nonnegative")
 sum_le_sum = lemma("Finset.sum_le_sum", _FINSET, label="termwise comparison of sums")
