@@ -236,22 +236,76 @@ def ennreal(a: object) -> Expr:
     return of_real(a)
 
 
+def _lint_latex(lam: Any, dom: Any = None) -> str:
+    """The display of ∫ body dx (over ``dom``) as a format template with hidden slots."""
+    from .render.latex import latex_name
+
+    var = latex_name(lam.vars[0].name)
+    body = lam.body.to_latex()
+    sub = "_{" + dom.to_latex() + "}" if dom is not None else ""
+    tex = chr(92) + "int" + sub + " " + body + " " + chr(92) + ", d" + var
+    return tex.replace("{", "{{").replace("}", "}}") + "{0:.0}{1:.0}"
+
+
 def lintegral(body: Any, within: object = None) -> Expr:
-    """∫⁻ x, body(x) (or over a set): the integral of a [0, ∞]-valued function."""
-    from .binders import symbol
+    """∫ body(x) dx over ℝ or over a set, for a [0, ∞]-valued function (``∫⁻``)."""
     from .terms import apply, const, fun
 
-    x = symbol("x", Real)
     lam = fun(body, Real)
-    del x
+    vol = const("MeasureTheory.volume", imports=_ALL, latex="")
     if within is None:
-        return apply(const("MeasureTheory.lintegral", imports=_ALL,
-                           latex=r"\int^{{-}} {1}{0:.0}"),
-                     const("MeasureTheory.volume", imports=_ALL, latex=""), lam)
+        return apply(const("MeasureTheory.lintegral", imports=_ALL, latex=_lint_latex(lam)),
+                     vol, lam)
     restrict = apply(const("MeasureTheory.Measure.restrict", imports=_ALL, latex=""),
-                     const("MeasureTheory.volume", imports=_ALL, latex=""), within)
+                     vol, within)
     return apply(const("MeasureTheory.lintegral", imports=_ALL,
-                       latex=r"\int^{{-}}_{{S}} {1}{0:.0}"), restrict, lam)
+                       latex=_lint_latex(lam, within)), restrict, lam)
+
+
+def Ioi(a: object) -> Expr:  # noqa: N802 - Mathlib's name
+    """(a, ∞)."""
+    return _app("Set.Ioi", r"({0}, \infty)", a)
+
+
+def Iio(b: object) -> Expr:  # noqa: N802
+    """(−∞, b)."""
+    return _app("Set.Iio", r"(-\infty, {0})", b)
+
+
+def Ioo(a: object, b: object) -> Expr:  # noqa: N802
+    """(a, b)."""
+    return _app("Set.Ioo", "({0}, {1})", a, b)
+
+
+def Ioc(a: object, b: object) -> Expr:  # noqa: N802
+    """(a, b]."""
+    return _app("Set.Ioc", "({0}, {1}]", a, b)
+
+
+def indicator(S: object, g: object) -> Expr:  # noqa: N803
+    """g·1_S, the function equal to g on S and 0 elsewhere."""
+    return _app("Set.indicator", r"{1} \mathbf{{1}}_{{{0}}}{*}", S, g)
+
+
+def interval_integrable(g: object, a: object, b: object) -> Expr:
+    """g is integrable on [a, b]."""
+    from .terms import const
+
+    return _app("IntervalIntegrable", r"{0} \text{{ is integrable on }} [{2}, {3}]", g,
+                const("MeasureTheory.volume", imports=_ALL, latex=""), a, b)
+
+
+def lintegral_nested(body: Any, within: object, inside: object) -> Expr:
+    """∫ over ``within`` for Lebesgue measure restricted to ``inside`` (∫⁻)."""
+    from .terms import apply, const, fun
+
+    lam = fun(body, Real)
+    vol = const("MeasureTheory.volume", imports=_ALL, latex="")
+    restrict = const("MeasureTheory.Measure.restrict", imports=_ALL, latex="")
+    mu = apply(restrict, apply(restrict, vol, inside), within)
+    dom = _app("Inter.inter", r"{0} \cap {1}", within, inside)
+    return apply(const("MeasureTheory.lintegral", imports=_ALL, latex=_lint_latex(lam, dom)),
+                 mu, lam)
 
 
 def dist(a: object, b: object) -> Expr:
@@ -458,6 +512,58 @@ rpow_nonneg = lemma("Real.rpow_nonneg", _POW, label="t^r ≥ 0 for t ≥ 0")
 sub_zero = lemma("sub_zero", "Mathlib.Algebra.Group.Basic", label="a − 0 = a")
 of_real_mul = lemma("ENNReal.ofReal_mul", "Mathlib.Basic.ENNReal.Real",
                     label="ab as an element of [0, ∞] is a·b for a ≥ 0")
+_ORD = "Mathlib.Order.Interval.Set.Basic"
+set_lintegral_congr = lemma("MeasureTheory.setLIntegral_congr_fun",
+                            "Mathlib.MeasureTheory.Integral.Lebesgue.Basic",
+                            label="integrals of functions equal on the set are equal")
+set_lintegral_mono = lemma("MeasureTheory.setLIntegral_mono'",
+                           "Mathlib.MeasureTheory.Integral.Lebesgue.Basic",
+                           label="monotonicity of the integral on a set")
+lintegral_indicator = lemma("MeasureTheory.lintegral_indicator",
+                            "Mathlib.MeasureTheory.Integral.Lebesgue.Basic",
+                            label="the integral of g·1_S is the integral of g over S")
+restrict_restrict = lemma("MeasureTheory.Measure.restrict_restrict",
+                          "Mathlib.MeasureTheory.Measure.Restrict",
+                          label="restricting twice restricts to the intersection")
+measurable_Ioi = lemma("measurableSet_Ioi", "Mathlib.MeasureTheory.Constructions.BorelSpace.Order",
+                       label="(a, ∞) is measurable")
+measurable_Iio = lemma("measurableSet_Iio", "Mathlib.MeasureTheory.Constructions.BorelSpace.Order",
+                       label="(−∞, b) is measurable")
+measurable_Ioo = lemma("measurableSet_Ioo", "Mathlib.MeasureTheory.Constructions.BorelSpace.Order",
+                       label="(a, b) is measurable")
+iio_inter_ioi = lemma("Set.Iio_inter_Ioi", _ORD, label="(−∞, b) ∩ (a, ∞) = (a, b)")
+ioo_sub_ioc = lemma("Set.Ioo_subset_Ioc_self", _ORD, label="(a, b) ⊆ (a, b]")
+mem_Ioi = lemma("Set.mem_Ioi", _ORD, label="t ∈ (a, ∞) iff a < t")
+mem_Iio = lemma("Set.mem_Iio", _ORD, label="t ∈ (−∞, b) iff t < b")
+of_real_integral = lemma("MeasureTheory.ofReal_integral_eq_lintegral_ofReal",
+                         "Mathlib.MeasureTheory.Integral.Bochner.Basic",
+                         label="for g ≥ 0 integrable, ∫g in [0, ∞] is ∫ of g in [0, ∞]")
+rpow_interval_integrable = lemma("intervalIntegral.intervalIntegrable_rpow'",
+                                 "Mathlib.Analysis.SpecialFunctions.Integrability.Basic",
+                                 label="t^r is integrable on bounded intervals for r > −1")
+interval_integrable_Ioc = lemma("intervalIntegrable_iff_integrableOn_Ioc_of_le",
+                                "Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic",
+                                label="integrable on [a, b] means integrable on (a, b]")
+integrable_on_mono = lemma("MeasureTheory.IntegrableOn.mono_set",
+                           "Mathlib.MeasureTheory.Integral.IntegrableOn",
+                           label="integrable on a set, so on a subset")
+integrable_const_mul = lemma("MeasureTheory.Integrable.const_mul",
+                             "Mathlib.MeasureTheory.Function.L1Space.Integrable",
+                             label="a constant multiple of an integrable function is integrable")
+ae_on_set = lemma("MeasureTheory.ae_restrict_of_forall_mem",
+                  "Mathlib.MeasureTheory.Measure.Restrict",
+                  label="what holds on all of S holds a.e. on S")
+integral_ioc_ioo = lemma("MeasureTheory.integral_Ioc_eq_integral_Ioo",
+                         "Mathlib.MeasureTheory.Integral.Bochner.Set",
+                         label="endpoints do not matter")
+interval_integral_ioc = lemma("intervalIntegral.integral_of_le",
+                              "Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic",
+                              label="∫_a^b = ∫ over (a, b] for a ≤ b")
+interval_const_mul = lemma("intervalIntegral.integral_const_mul",
+                           "Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic",
+                           label="a constant comes out of the integral")
+mul_zero = lemma("mul_zero", "Mathlib.Algebra.GroupWithZero.Defs", label="a·0 = 0")
+of_real_zero = lemma("ENNReal.ofReal_zero", "Mathlib.Basic.ENNReal.Real", label="0 in [0, ∞]")
 mul_nonneg = lemma("mul_nonneg", "Mathlib.Algebra.Order.Ring.Defs",
                    label="a product of nonnegative numbers is nonnegative")
 sum_le_sum = lemma("Finset.sum_le_sum", _FINSET, label="termwise comparison of sums")
