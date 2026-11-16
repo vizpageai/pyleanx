@@ -187,7 +187,7 @@ def abs_fun(f: Any) -> Expr:
     from .terms import fun
     from .types import Real as _R
 
-    return fun(lambda t: abs_(f(t)), _R)
+    return fun(lambda ζ: abs_(f(ζ)), _R)
 
 
 def above(f: Any, beta: object) -> Expr:
@@ -198,7 +198,7 @@ def above(f: Any, beta: object) -> Expr:
 
     tex = (r"\{" + "|" + f.to_latex() + r"| > " + _lift(beta).to_latex() + r"\}")
     tex = tex.replace("{", "{{").replace("}", "}}") + "{0:.0}"
-    return apply(_c("setOf", tex), fun(lambda t: beta < abs_(f(t)), _R))  # type: ignore[operator]
+    return apply(_c("setOf", tex), fun(lambda ζ: beta < abs_(f(ζ)), _R))  # type: ignore[operator]
 
 
 def cut(f: Any, beta: object) -> Expr:
@@ -220,8 +220,8 @@ def level_set(f: Any, lam: object) -> Expr:
     tex = r"\{M" + f.to_latex() + " > " + _lift(lam).to_latex() + r"\}"
     tex = tex.replace("{", "{{").replace("}", "}}") + "{0:.0}"
     rho = symbol("ρ", _R)
-    return apply(_c("setOf", tex), fun(lambda t: Exists(rho, And(
-        0 < rho, average_exceeds(f, lam, t, rho))), _R))  # type: ignore[operator]
+    return apply(_c("setOf", tex), fun(lambda ζ: Exists(rho, And(
+        0 < rho, average_exceeds(f, lam, ζ, rho))), _R))  # type: ignore[operator]
 
 
 def rpow(x: object, y: object) -> Expr:
@@ -564,6 +564,11 @@ interval_const_mul = lemma("intervalIntegral.integral_const_mul",
                            label="a constant comes out of the integral")
 mul_zero = lemma("mul_zero", "Mathlib.Algebra.GroupWithZero.Defs", label="a·0 = 0")
 of_real_zero = lemma("ENNReal.ofReal_zero", "Mathlib.Basic.ENNReal.Real", label="0 in [0, ∞]")
+integral_const_mul = lemma("MeasureTheory.integral_const_mul",
+                           "Mathlib.MeasureTheory.Integral.Bochner.Basic",
+                           label="a constant comes out of the integral")
+mul_le_mul_left_ennreal = lemma("mul_le_mul_left'", "Mathlib.Algebra.Order.Monoid.Unbundled.Basic",
+                                label="multiply both sides of an inequality by w ≥ 0")
 mul_nonneg = lemma("mul_nonneg", "Mathlib.Algebra.Order.Ring.Defs",
                    label="a product of nonnegative numbers is nonnegative")
 sum_le_sum = lemma("Finset.sum_le_sum", _FINSET, label="termwise comparison of sums")

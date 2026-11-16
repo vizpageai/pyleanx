@@ -240,7 +240,69 @@ inner_t_integral = pl.Theorem(
     proof=_inner_proof(),
 )
 
-THEOREMS = [inner_integral, weight, powers, inner_t_integral]
+# -----------------------------------------------------------------------------------------
+# 9d. The bound at a fixed level t: the weight times the level-set bound is one integral
+# -----------------------------------------------------------------------------------------
+# p t^(p-1) * 8 (int |g_t|) / t = int 8p t^(p-2) |g_t(x)| dx   (in [0, oo]), g_t = f 1{|f| > t/2}
+
+f = pl.symbol("f", rv.RFun)
+
+
+def _g(tt: object) -> pl.Expr:
+    return rv.cut(f, tt / 2)
+
+
+def _level_proof() -> pl.Tactic:
+    claim, chain = pl.claim, pl.chain
+    g = _g(t)
+    norm_g = rv.l1_norm(g)
+    c = 8 * p * rp(t, p - 2)
+    xx = pl.symbol("x", pl.Real)
+    return pl.proof(
+        claim(rv.ae_nonneg(rv.abs_fun(g)), because=[rv.everywhere_ae, rv.abs_nonneg], name="hg0"),
+        claim(0 <= norm_g, because=[rv.integral_nonneg_ae, "hg0"], name="hI"),
+        claim(rv.of_real(8 * norm_g / t) == rv.of_real(8 / t * norm_g), name="hform",
+              note="8I/t = (8/t)I"),
+        claim(rv.of_real(p * rp(t, p - 1)) * rv.of_real(8 / t * norm_g)
+              == rv.of_real(c * norm_g), because=[weight, "hp", "ht", "hI"], name="hw",
+              note="lemma 9b"),
+        claim(pl.integral(lambda w: c * pl.abs(g(w))) == c * norm_g,
+              because=rv.integral_const_mul, name="hconst"),
+        claim(rv.integrable(rv.abs_fun(g)), because=[rv.integrable_abs, "hg"], name="hgi"),
+        claim(rv.integrable(pl.fun(lambda w: c * pl.abs(g(w)), pl.Real)),
+              because=[rv.integrable_const_mul, "hgi"], name="hci"),
+        claim(0 <= t, name="ht0"),
+        claim(0 <= rp(t, p - 2), because=[rv.rpow_nonneg, "ht0"], name="htp"),
+        claim(0 <= 8 * p, name="h8p"),
+        claim(0 <= c, because=[rv.mul_nonneg, "h8p", "htp"], name="hc"),
+        claim(pl.Forall(xx, 0 <= c * pl.abs(g(xx))), name="hpt",
+              proof=pl.proof(
+                  pl.fix(xx),
+                  claim(0 <= pl.abs(g(xx)), because=rv.abs_nonneg, name="hpt_abs"),
+                  pl.conclude(because=[rv.mul_nonneg, "hc", "hpt_abs"]),
+              )),
+        claim(rv.ae_nonneg(pl.fun(lambda w: c * pl.abs(g(w)), pl.Real)),
+              because=[rv.everywhere_ae, "hpt"], name="hcnn"),
+        claim(rv.of_real(pl.integral(lambda w: c * pl.abs(g(w))))
+              == rv.lintegral(lambda w: rv.of_real(c * pl.abs(g(w)))),
+              because=[rv.of_real_integral, "hci", "hcnn"], name="hlin"),
+        chain(rv.of_real(p * rp(t, p - 1)) * rv.of_real(8 * norm_g / t),
+              ("=", rv.of_real(p * rp(t, p - 1)) * rv.of_real(8 / t * norm_g), "hform"),
+              ("=", rv.of_real(c * norm_g), "hw"),
+              ("=", rv.of_real(pl.integral(lambda w: c * pl.abs(g(w)))), "hconst"),
+              ("=", rv.lintegral(lambda w: rv.of_real(c * pl.abs(g(w)))), "hlin")),
+    )
+
+
+level_integral = pl.Theorem(
+    "maximal_level_integral", [f, p, t],
+    assumptions={"hp": 1 < p, "ht": 0 < t, "hg": rv.integrable(_g(t))},
+    conclusion=rv.of_real(p * rp(t, p - 1)) * rv.of_real(8 * rv.l1_norm(_g(t)) / t)
+    == rv.lintegral(lambda w: rv.of_real(8 * p * rp(t, p - 2) * pl.abs(_g(t)(w)))),
+    proof=_level_proof(),
+)
+
+THEOREMS = [inner_integral, weight, powers, inner_t_integral, level_integral]
 
 if __name__ == "__main__":
     import sys

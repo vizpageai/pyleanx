@@ -166,7 +166,7 @@ class Expr:
 
     def __getattr__(self, name: str) -> Expr:
         # Only reached when normal lookup fails: structure fields of a structure-typed term.
-        if name.startswith("_"):
+        if name.startswith("_") or name == "vars":  # `vars` is PyLeanX's binder attribute
             raise AttributeError(name)
         sort = object.__getattribute__(self, "sort")
         if isinstance(sort, LeanType) and sort.kind in ("struct", "prod"):

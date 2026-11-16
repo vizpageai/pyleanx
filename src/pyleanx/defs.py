@@ -27,7 +27,7 @@ from typing import Any
 from ._origin import Origin, caller_origin, resolve_annotations
 from .binders import check_scope
 from .errors import ScopeError, SortError
-from .expr import Expr, Var, _lift, iter_subexprs, make_var
+from .expr import Expr, Quant, Var, _lift, iter_subexprs, make_var
 from .names import validate_identifier, validate_qualified_name
 from .terms import Apply, Const
 from .types import UNKNOWN, Fn, LeanType, Sort, _intern
@@ -85,7 +85,8 @@ def _expr_defs(e: Expr) -> list[_Def]:
                 out.extend(_sort_defs(v.sort))
         if isinstance(sub, Ascribe):
             out.extend(_sort_defs(sub.sort))
-        quant_vars = getattr(sub, "vars", None)
+        # only binders have .vars (on other terms, attribute access builds a field projection)
+        quant_vars = sub.vars if isinstance(sub, Quant) else None
         if quant_vars and not isinstance(sub, (Lam, BigOp)):
             for v in quant_vars:
                 out.extend(_sort_defs(v.sort))
