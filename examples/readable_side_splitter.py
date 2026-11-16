@@ -9,7 +9,8 @@ similar triangles are proportional.
 
 The textbook form AD/DB = AE/EC (the parallel splits the two sides proportionally) follows
 for D, E strictly inside the sides: segment addition gives AB = AD + DB and AC = AE + EC,
-so AD/(AD + DB) = AE/(AE + EC), and componendo gives AD/DB = AE/EC.
+so flipping AD/AB = AE/AC gives (AD + DB)/AD = (AE + EC)/AE, i.e.
+1 + DB/AD = 1 + EC/AE; subtract 1 and flip back.
 
 Compare examples/side_splitter.py (coordinates) and examples/side_splitter_vectors.py
 (vectors): same theorem, machine-style proofs.
@@ -41,7 +42,8 @@ side_splitter = pl.Theorem(
     ),
 )
 
-dist = geo.dist
+AD, DB, AB = geo.dist(A, D), geo.dist(D, B), geo.dist(A, B)
+AE, EC, AC = geo.dist(A, E), geo.dist(E, C), geo.dist(A, C)
 
 side_splitter_parts = pl.Theorem(
     "side_splitter_parts", [A, B, C, D, E],
@@ -51,21 +53,24 @@ side_splitter_parts = pl.Theorem(
         "hE": geo.strictly_between(E, A, C),
         "hP": geo.parallel(geo.line(D, E), geo.line(B, C)),
     },
-    conclusion=dist(A, D) / dist(D, B) == dist(A, E) / dist(E, C),
+    conclusion=AD / DB == AE / EC,
     proof=pl.proof(
-        pl.claim(geo.on_segment(D, A, B), because=pl.ref("Sbtw.wbtw")("hD"), name="hD'"),
-        pl.claim(geo.on_segment(E, A, C), because=pl.ref("Sbtw.wbtw")("hE"), name="hE'"),
-        pl.claim(dist(A, D) / dist(A, B) == dist(A, E) / dist(A, C), because=side_splitter,
-                 name="split", note="the side-splitter theorem (similar triangles)"),
-        pl.claim(dist(A, D) + dist(D, B) == dist(A, B), because=geo.dist_add_dist("hD'"),
-                 name="hAB", note="segment addition: AD + DB = AB"),
-        pl.claim(dist(A, E) + dist(E, C) == dist(A, C), because=geo.dist_add_dist("hE'"),
-                 name="hAC", note="segment addition: AE + EC = AC"),
-        pl.claim(dist(A, D) / (dist(A, D) + dist(D, B)) == dist(A, E) / (dist(A, E) + dist(E, C)),
-                 because=["split", "hAB", "hAC"], name="hsum"),
-        pl.claim(dist(D, B) > 0, because=[geo.between_dist_pos, "hD"], name="hDB"),
-        pl.claim(dist(E, C) > 0, because=[geo.between_dist_pos, "hE"], name="hEC"),
-        pl.conclude(because=[geo.componendo, "hsum", "hDB", "hEC"]),
+        pl.claim(geo.angle(A, B, C) == geo.angle(A, D, E), because=geo.corresponding_angles),
+        pl.claim(geo.angle(B, C, A) == geo.angle(D, E, A), because=geo.corresponding_angles),
+        pl.claim(geo.similar((A, B, C), (A, D, E)), because=geo.similar_AA),
+        pl.claim(AD / AB == AE / AC, because=geo.similar_sides, name="ratio"),
+        pl.claim(AB / AD == AC / AE, because=[geo.flip_ratio, "ratio"], name="flipped"),
+        pl.claim(AB == AD + DB, because=[geo.segment_addition, "hD"], name="hAB"),
+        pl.claim(AC == AE + EC, because=[geo.segment_addition, "hE"], name="hAC"),
+        pl.claim((AD + DB) / AD == (AE + EC) / AE, because=["flipped", "hAB", "hAC"],
+                 name="sub", note="substitute AB = AD + DB and AC = AE + EC"),
+        pl.claim(AD > 0, because=[geo.between_dist_pos, "hD"], name="hAD"),
+        pl.claim(AE > 0, because=[geo.between_dist_pos, "hE"], name="hAE"),
+        pl.claim((AD + DB) / AD == 1 + DB / AD, because=[geo.split_fraction, "hAD"], name="s1"),
+        pl.claim((AE + EC) / AE == 1 + EC / AE, because=[geo.split_fraction, "hAE"], name="s2"),
+        pl.claim(DB / AD == EC / AE, because=["sub", "s1", "s2"], name="rest",
+                 note="subtract 1 from both sides"),
+        pl.conclude(because=[geo.flip_ratio, "rest"]),
     ),
 )
 

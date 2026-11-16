@@ -53,3 +53,13 @@ def test_notebook_cells_use_only_helper_names(lecture):
     for name in ("show", "draw", "check", "kite", "isosceles_median", "exercise_1",
                  "exercise_4", "explore_kite", "figure_isosceles_right"):
         assert name in code and hasattr(lecture, name)
+
+
+def test_products_of_lengths_print_with_a_dot():
+    import pyleanx as pl
+    from pyleanx import geometry as geo
+
+    A, B, C = geo.points("A B C")
+    t = pl.Theorem("t", [A, B, C],
+                   conclusion=geo.dist(A, B) * geo.dist(A, C) == geo.dist(A, C) * geo.dist(A, B))
+    assert "|AB| · |AC|" in str(t.prose())

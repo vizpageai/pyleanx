@@ -458,7 +458,7 @@ theorem PyLeanX.Geometry.sbtw_dist_pos {V P : Type*} [NormedAddCommGroup V]
     [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {B C D : P}
     (hD : Sbtw ℝ B D C) : 0 < dist B D ∧ 0 < dist D C :=
   ⟨dist_pos.2 hD.left_ne, dist_pos.2 hD.ne_right⟩
-""", *_BIS, label="D is strictly between B and C")
+""", *_BIS, label="a point strictly inside a segment is at positive distance from both ends")
 
 #: Componendo: a/(a + b) = c/(c + d) with b, d > 0 and a, c ≥ 0  ⟹  a/b = c/d.
 componendo = library_fact("PyLeanX.Algebra.componendo", """
@@ -471,6 +471,30 @@ theorem PyLeanX.Algebra.componendo {a b c d : ℝ} (ha : 0 ≤ a) (hb : 0 < b) (
 dist_add_dist = lemma("Wbtw.dist_add_dist", "Mathlib.Analysis.Normed.Affine.Convex",
                       label="distances add along a segment")
 
+#: Segment addition postulate: D on segment AB  ⟹  AB = AD + DB (D may be strictly between).
+segment_addition = library_fact("PyLeanX.Geometry.segment_addition", """
+theorem PyLeanX.Geometry.segment_addition {V P : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {A B D : P}
+    (hD : Wbtw ℝ A D B) : dist A B = dist A D + dist D B :=
+  (hD.dist_add_dist).symm
+""", *_BIS, label="segment addition")
+
+#: Flip both ratios: a/b = c/d  ⟹  b/a = d/c.
+flip_ratio = library_fact("PyLeanX.Algebra.flip_ratio", """
+theorem PyLeanX.Algebra.flip_ratio {a b c d : ℝ} (h : a / b = c / d) : b / a = d / c := by
+  rw [← inv_div a b, ← inv_div c d, h]
+""", *_BIS, label="flip both ratios")
+
+#: Split a fraction: 0 < a  ⟹  (a + b)/a = 1 + b/a.
+split_fraction = library_fact("PyLeanX.Algebra.split_fraction", """
+theorem PyLeanX.Algebra.split_fraction {a b : ℝ} (ha : 0 < a) : (a + b) / a = 1 + b / a := by
+  rw [add_div, div_self ha.ne']
+""", *_BIS, label="split the fraction")
+
+#: Cross-multiplication: a/b = c/d  ⟺  a·d = c·b (for b, d ≠ 0; cite b > 0, d > 0).
+cross_multiply = lemma("div_eq_div_iff", "Mathlib.Algebra.Order.Field.Basic",
+                       label="cross-multiplication")
+
 # The textbook catalogue (chapters: angles, triangles, congruence, similarity, parallels,
 # right triangles, midpoints, circles, quadrilaterals): ``geo.sss``, ``geo.thales``, …
 from ._geometry_textbook import *  # noqa: E402, F403
@@ -479,6 +503,7 @@ LEMMAS = collect_lemmas(globals())
 
 __all__ = ["Point", "point", "points", "dist", "angle", "line", "parallel", "on_segment",
            "collinear", "triangle", "similar", "strictly_between", "extend_beyond",
+           "segment_addition", "cross_multiply", "flip_ratio", "split_fraction",
            "congruent", "midpoint", "right_angle", "on_circle", "parallelogram",
            "is_midpoint", "opposite_sides", "same_side", "concyclic",
            "LEMMAS", "VERIFIED_MATHLIB",

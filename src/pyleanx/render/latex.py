@@ -254,6 +254,11 @@ class _Latex:
         first = _leftmost(e.rhs)
         rhs_paren = rhs.startswith(r"\left(")
         juxtapose = (isinstance(first, (Var, App)) or rhs_paren) and not rhs.startswith("-")
+        # |a| |b| reads badly: put a dot next to absolute values and norms
+        bars = ("|", r"\lvert", r"\left|", r"\|", r"\left\|")
+        ends = ("|", r"\rvert", r"\right|")
+        if rhs.startswith(bars) or lhs.rstrip().endswith(ends):
+            juxtapose = False
         sep = " " if juxtapose else r" \cdot "
         return f"{lhs}{sep}{rhs}", 70
 

@@ -807,7 +807,8 @@ class Justify(Tactic):
         h = (" [" + ", ".join(fs) + "]") if fs else ""
         simp_args = fs + [f"-{a}" for a in self.avoid]
         hs = (" [" + ", ".join(simp_args) + "]") if simp_args else ""
-        close = ("first | assumption | exact Ne.symm ‹_› | rfl | omega | fun_prop | positivity | "
+        close = ("first | assumption | exact Ne.symm ‹_› | exact ne_of_gt ‹_› | "
+                 "exact Sbtw.wbtw ‹_› | rfl | omega | fun_prop | positivity | "
                  "linarith | (simp_all; done)")
         # side conditions left by applying one cited fact may be closed by another cited fact
         # ("by A, since B"), possibly for every element of a set ("∀ i ∈ s, …")
