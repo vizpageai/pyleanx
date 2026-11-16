@@ -243,7 +243,8 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - Display: templates ending in `{*}` name a function and are applied to further arguments ((f·1_S)(y)).
 - [x] Theorem 7, {Mf > α} is open (let J = ∫_I|f|, δ = (J − α|I|)/(4α); the interval of radius ρ + δ around any y with |x − y| < δ still has average > α). Verified (537 s alone).
 - [x] Theorem 8, μ{Mf > α} ≤ 8∫|f·1{|f|>α/2}|/α on the whole level set, no finiteness assumption (openness + inner regularity of open sets + theorem 6). Verified.
-- Next: theorem 9, p∫₀^∞ t^{p−1}μ{Mf > t} dt ≤ C_p∫|f|^p (Tonelli, ∫₀^{2|f|} t^{p−2}), i.e. ‖Mf‖_p ≤ C_p‖f‖_p by layer cake; then Calderón–Zygmund.
+- [x] `examples/marcinkiewicz.py` lemmas 9a ∫₀^{2a} t^{p−2} = (2a)^{p−1}/(p−1), 9b the weight p t^{p−1}·(8/t)I = 8p t^{p−2} I in [0, ∞], 9c (2a)^{p−1}a = 2^{p−1}a^p — written proofs, verified. `rv.rpow` (real exponents), `rv.lintegral`.
+- Next: theorem 9 proper (level-set bound per t, Tonelli on (0,∞)×ℝ, inner t-integral, constants), i.e. ‖Mf‖_p ≤ C_p‖f‖_p via layer cake; then Calderón–Zygmund.
 
 ### Harmonic analysis as in a textbook (2026-11-13)
 - [x] `pyleanx/harmonic.py` (generated from Lean checked in the pinned Mathlib): 8 shipped definitions (`PyLeanX.Harmonic.coeff` = `fourierCoeffOn` on [−π, π], `ft` = `𝓕`, `ift` = `𝓕⁻`, `gauss`, `L2`, `integrable_on_circle`, `coeff_sq_sum`, `mean_square`) and 18 facts (coefficient/transform integral formulas, linearity, integration by parts, Bessel, Parseval, Riemann–Lebesgue ×2, Gaussian, inversion, inverse transform at 0, small algebra).

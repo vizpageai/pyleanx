@@ -224,6 +224,36 @@ def level_set(f: Any, lam: object) -> Expr:
         0 < rho, average_exceeds(f, lam, t, rho))), _R))  # type: ignore[operator]
 
 
+def rpow(x: object, y: object) -> Expr:
+    """x^y with a real exponent (``Real.rpow``, written ``x ^ y``)."""
+    from .expr import BinOp, _lift
+
+    return BinOp("pow", _lift(x), _lift(y), Real)
+
+
+def ennreal(a: object) -> Expr:
+    """A real number a ≥ 0 as an element of [0, ∞] (``ENNReal.ofReal a``)."""
+    return of_real(a)
+
+
+def lintegral(body: Any, within: object = None) -> Expr:
+    """∫⁻ x, body(x) (or over a set): the integral of a [0, ∞]-valued function."""
+    from .binders import symbol
+    from .terms import apply, const, fun
+
+    x = symbol("x", Real)
+    lam = fun(body, Real)
+    del x
+    if within is None:
+        return apply(const("MeasureTheory.lintegral", imports=_ALL,
+                           latex=r"\int^{{-}} {1}{0:.0}"),
+                     const("MeasureTheory.volume", imports=_ALL, latex=""), lam)
+    restrict = apply(const("MeasureTheory.Measure.restrict", imports=_ALL, latex=""),
+                     const("MeasureTheory.volume", imports=_ALL, latex=""), within)
+    return apply(const("MeasureTheory.lintegral", imports=_ALL,
+                       latex=r"\int^{{-}}_{{S}} {1}{0:.0}"), restrict, lam)
+
+
 def dist(a: object, b: object) -> Expr:
     """|a − b|, the distance on ℝ (``dist a b``)."""
     return _app("dist", "|{0} - {1}|", a, b)
@@ -417,6 +447,17 @@ compact_finite_measure = lemma("IsCompact.measure_lt_top",
                                "Mathlib.MeasureTheory.Measure.Typeclasses.Finite",
                                label="a compact set has finite measure")
 not_le = lemma("not_le", "Mathlib.Order.Defs.LinearOrder", label="¬(a ≤ b) iff b < a")
+_POW = "Mathlib.Analysis.SpecialFunctions.Pow.Real"
+_INTS = "Mathlib.Analysis.SpecialFunctions.Integrals.Basic"
+integral_rpow = lemma("integral_rpow", _INTS, label="∫_a^b t^r dt = (b^{r+1} − a^{r+1})/(r+1)")
+or_inl = lemma("Or.inl", "Mathlib.Order.Basic", label="the first alternative")
+zero_rpow = lemma("Real.zero_rpow", _POW, label="0^r = 0 for r ≠ 0")
+rpow_add_one = lemma("Real.rpow_add_one", _POW, label="t^{r+1} = t^r·t for t ≠ 0")
+mul_rpow = lemma("Real.mul_rpow", _POW, label="(ab)^r = a^r b^r for a, b ≥ 0")
+rpow_nonneg = lemma("Real.rpow_nonneg", _POW, label="t^r ≥ 0 for t ≥ 0")
+sub_zero = lemma("sub_zero", "Mathlib.Algebra.Group.Basic", label="a − 0 = a")
+of_real_mul = lemma("ENNReal.ofReal_mul", "Mathlib.Basic.ENNReal.Real",
+                    label="ab as an element of [0, ∞] is a·b for a ≥ 0")
 mul_nonneg = lemma("mul_nonneg", "Mathlib.Algebra.Order.Ring.Defs",
                    label="a product of nonnegative numbers is nonnegative")
 sum_le_sum = lemma("Finset.sum_le_sum", _FINSET, label="termwise comparison of sums")
