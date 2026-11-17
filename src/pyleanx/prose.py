@@ -267,7 +267,15 @@ class Prose:
         out.extend(_lines(self.steps, "", 0, True, True))
         if self.avoid:
             out.append("\nWithout using: " + ", ".join(f"`{a}`" for a in self.avoid) + ".")
-        out.append("\n" + (self.status.strip() or "*Not yet checked by Lean.*"))
+        status: list[str] = []
+        for line in self.status.strip().splitlines():
+            line = line.strip()
+            if line.startswith("• "):  # explanations of a rejection: a list, not code
+                if status and not status[-1].startswith("- "):
+                    status.append("")
+                line = "- " + line[2:]
+            status.append(line)
+        out.append("\n" + ("\n".join(status) or "*Not yet checked by Lean.*"))
         return "\n".join(out)
 
     def _repr_markdown_(self) -> str:

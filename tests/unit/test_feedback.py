@@ -102,3 +102,15 @@ def test_a_failed_step_without_a_reason_gets_suggestions():
     assert any("similar_AA" in s for s in suggest_facts("△BAC ∼ △CAD"))
     A, B, C = geo.points("A B C")
     assert geo  # domain loaded
+
+
+def test_notebook_display_of_explanations_and_sanity_reports():
+    thm = pl.Theorem("nb", [x, y], assumptions={"hx": x > 0}, conclusion=x * y >= 0,
+                     proof=pl.proof(pl.claim(x * y >= 0, because="hx", name="h1"),
+                                    pl.conclude(because="h1")))
+    res = VerificationResult(theorem="nb", status=Status.REJECTED, diagnostics=[Diagnostic(
+        "error", "linarith failed\n⊢ False", span_kind="tactic",
+        span_label="step 1: have h1 : x * y ≥ 0 := by")])
+    md = thm.prose(res).to_markdown()
+    assert "\n- Step 1" in md and "    •" not in md  # a list, not an indented code block
+    assert thm.sanity_check()._repr_markdown_().startswith("❌ The statement looks false")

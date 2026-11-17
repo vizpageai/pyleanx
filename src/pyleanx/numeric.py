@@ -247,6 +247,12 @@ class SanityReport:
     def ok(self) -> bool:
         return not self.findings
 
+    def _repr_markdown_(self) -> str:  # Jupyter
+        if self.findings:
+            return "\n\n".join(f"❌ {f}" for f in self.findings)
+        mark = "⚠️" if self.note else "✓"
+        return f"{mark} {self}"
+
     def __str__(self) -> str:
         if self.findings:
             return "\n".join(str(f) for f in self.findings)
