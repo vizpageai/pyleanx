@@ -81,3 +81,5 @@ def test_pythagoras_from_similar_triangles_renders():
     # it must not cite Mathlib's Pythagoras (that would be circular)
     assert "dist_sq_eq_dist_sq_add_dist_sq" not in src
     assert "△BAC ∼ △CAD" in prose and "|AC|² + |BC|² = |AB|²" in prose
+    # the altitude is constructed in the proof, not assumed
+    assert "PyLeanX.Geometry.altitude_foot" in src and len(ps.pythagoras.assumptions) == 2

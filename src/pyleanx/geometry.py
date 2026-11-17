@@ -505,6 +505,52 @@ theorem PyLeanX.Geometry.angle_on_segment {V P : Type*} [NormedAddCommGroup V]
   ⟨h.angle_eq_left C, (sbtw_comm.mp h).angle_eq_left C⟩
 """, *_GEO_FACT_IMPORTS, label="D lies on segment AB, so it is on ray AB and on ray BA")
 
+#: In a right triangle (right angle at C) the foot D of the altitude from C lies strictly
+#: between A and B, and CD ⊥ AB. D is the point of AB at the fraction
+#: t = |CA|²/(|CA|² + |CB|²) of the way from A to B.
+altitude_foot = library_fact("PyLeanX.Geometry.altitude_foot", """
+theorem PyLeanX.Geometry.altitude_foot {V P : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {A B C : P}
+    (hABC : ¬ Collinear ℝ {A, B, C}) (hC : EuclideanGeometry.angle A C B = Real.pi / 2) :
+    ∃ D : P, Sbtw ℝ A D B ∧ EuclideanGeometry.angle A D C = Real.pi / 2 ∧
+      EuclideanGeometry.angle B D C = Real.pi / 2 := by
+  have hAB : A ≠ B := ne₁₂_of_not_collinear hABC
+  have hAC : A ≠ C := ne₁₃_of_not_collinear hABC
+  have hBC : B ≠ C := ne₂₃_of_not_collinear hABC
+  have hwz : inner ℝ (A -ᵥ C) (B -ᵥ C) = 0 :=
+    (InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two _ _).mpr hC
+  have hzw : inner ℝ (B -ᵥ C) (A -ᵥ C) = 0 := by rw [real_inner_comm]; exact hwz
+  have hw0 : 0 < ‖A -ᵥ C‖ := norm_pos_iff.mpr (vsub_ne_zero.mpr hAC)
+  have hz0 : 0 < ‖B -ᵥ C‖ := norm_pos_iff.mpr (vsub_ne_zero.mpr hBC)
+  have hden : 0 < ‖A -ᵥ C‖ ^ 2 + ‖B -ᵥ C‖ ^ 2 := by positivity
+  have hden' : ‖A -ᵥ C‖ ^ 2 + ‖B -ᵥ C‖ ^ 2 ≠ 0 := hden.ne'
+  set t : ℝ := ‖A -ᵥ C‖ ^ 2 / (‖A -ᵥ C‖ ^ 2 + ‖B -ᵥ C‖ ^ 2) with ht
+  have ht0 : 0 < t := div_pos (pow_pos hw0 2) hden
+  have ht1 : t < 1 := by
+    rw [ht, div_lt_one hden]
+    have := pow_pos hz0 2
+    linarith
+  have hBA : B -ᵥ A = (B -ᵥ C) - (A -ᵥ C) := (vsub_sub_vsub_cancel_right B A C).symm
+  have hCA : C -ᵥ A = -(A -ᵥ C) := (neg_vsub_eq_vsub_rev A C).symm
+  refine ⟨AffineMap.lineMap A B t, ?_, ?_, ?_⟩
+  · exact sbtw_iff_mem_image_Ioo_and_ne.mpr ⟨⟨t, ⟨ht0, ht1⟩, rfl⟩, hAB⟩
+  · rw [EuclideanGeometry.angle, ← InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two,
+      AffineMap.lineMap_apply, vsub_vadd_eq_vsub_sub, vsub_vadd_eq_vsub_sub, vsub_self, hBA, hCA]
+    simp only [zero_sub, inner_neg_left, inner_neg_right, real_inner_smul_left,
+      real_inner_smul_right, inner_sub_left, inner_sub_right, hwz, hzw]
+    simp only [real_inner_self_eq_norm_sq]
+    rw [ht]
+    first | (field_simp; ring) | field_simp
+  · rw [EuclideanGeometry.angle, ← InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two,
+      AffineMap.lineMap_apply, vsub_vadd_eq_vsub_sub, vsub_vadd_eq_vsub_sub, hBA, hCA]
+    simp only [zero_sub, inner_neg_left, inner_neg_right, real_inner_smul_left,
+      real_inner_smul_right, inner_sub_left, inner_sub_right, hwz, hzw]
+    simp only [real_inner_self_eq_norm_sq]
+    rw [ht]
+    first | (field_simp; ring) | field_simp
+""", *_GEO_FACT_IMPORTS, "Mathlib.Analysis.InnerProductSpace.Basic",
+    label="the foot of the altitude from the right angle lies strictly between A and B")
+
 #: △abc ∼ △a'b'c' (abc a triangle)  ⟹  b'a'/ba = b'c'/bc: the sides from the vertex b.
 similar_sides_at = library_fact("PyLeanX.Geometry.similar_sides_at", """
 theorem PyLeanX.Geometry.similar_sides_at {V₁ V₂ P₁ P₂ : Type*} [NormedAddCommGroup V₁]

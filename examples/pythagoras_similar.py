@@ -1,10 +1,11 @@
 """Pythagoras' theorem from similar triangles, as a PyLeanX written proof checked by Lean.
 
-In triangle ABC with a right angle at C, drop the altitude from C; its foot D lies strictly
-between A and B, and CD ⊥ AB. Perpendicular lines are stated as right angles:
-``geo.right_angle(A, D, C)`` is ∠ADC = π/2, i.e. CD ⊥ AB at D.
+In triangle ABC with a right angle at C, AC² + BC² = AB².
 
 Proof (as in a geometry course):
+  * Let D be the foot of the altitude from C: D lies strictly between A and B, and CD ⊥ AB.
+    (Perpendicular lines are stated as right angles: ``geo.right_angle(A, D, C)`` is
+    ∠ADC = π/2, i.e. CD ⊥ AB at D.)
   * △BAC ∼ △CAD: they share the angle at A, and both have a right angle (at C and at D).
     So AC/AB = AD/AC, i.e. AC² = AD·AB.
   * △ABC ∼ △CBD: they share the angle at B, and both have a right angle.
@@ -31,6 +32,10 @@ ang = geo.angle
 def _proof() -> pl.Tactic:
     claim = pl.claim
     return pl.proof(
+        pl.choose(D, such_that=pl.And(geo.strictly_between(D, A, B), geo.right_angle(A, D, C),
+                                      geo.right_angle(B, D, C)),
+                  because=[geo.altitude_foot, "hABC", "hC"], names="hD hAD hBD",
+                  note="let D be the foot of the altitude from C"),
         claim(geo.triangle(B, A, C), because="hABC", name="hBAC"),
         claim(AB > 0, because=[geo.triangle_sides_pos, "hABC"], name="hAB0"),
         claim(AC > 0, because=[geo.triangle_sides_pos, "hABC"], name="hAC0"),
@@ -77,13 +82,10 @@ def _proof() -> pl.Tactic:
 
 
 pythagoras = pl.Theorem(
-    "pythagoras_similar_triangles", [A, B, C, D],
+    "pythagoras_similar_triangles", [A, B, C],
     assumptions={
         "hABC": geo.triangle(A, B, C),
         "hC": geo.right_angle(A, C, B),          # AC ⊥ BC
-        "hD": geo.strictly_between(D, A, B),     # D is on the hypotenuse
-        "hAD": geo.right_angle(A, D, C),         # CD ⊥ AB
-        "hBD": geo.right_angle(B, D, C),
     },
     conclusion=AC ** 2 + BC ** 2 == AB ** 2,
     proof=_proof(),
