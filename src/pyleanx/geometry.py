@@ -495,15 +495,36 @@ theorem PyLeanX.Algebra.split_fraction {a b : ℝ} (ha : 0 < a) : (a + b) / a = 
 cross_multiply = lemma("div_eq_div_iff", "Mathlib.Algebra.Order.Field.Basic",
                        label="cross-multiplication")
 
-#: D strictly between A and B  ⟹  ∠DAC = ∠BAC (Mathlib's ``Sbtw.angle_eq_left``; C explicit).
-angle_along_ray = lemma("Sbtw.angle_eq_left", _ANGLE,
-                        label="sliding a point along a ray does not change the angle")
-#: D strictly between A and B  ⟺  D strictly between B and A.
-between_reverse = lemma("sbtw_comm", _BETWEEN, label="betweenness does not depend on the order")
-#: D strictly between A and B  ⟹  D ≠ A, and D ≠ B.
-between_ne_left = lemma("Sbtw.ne_left", _BETWEEN, label="a point strictly between A and B is not A")
-between_ne_right = lemma("Sbtw.ne_right", _BETWEEN,
-                         label="a point strictly between A and B is not B")
+#: D strictly between A and B  ⟹  ∠DAC = ∠BAC and ∠DBC = ∠ABC (D is on rays AB and BA).
+angle_on_segment = library_fact("PyLeanX.Geometry.angle_on_segment", """
+theorem PyLeanX.Geometry.angle_on_segment {V P : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {A B D : P}
+    (h : Sbtw ℝ A D B) (C : P) :
+    EuclideanGeometry.angle D A C = EuclideanGeometry.angle B A C ∧
+      EuclideanGeometry.angle D B C = EuclideanGeometry.angle A B C :=
+  ⟨h.angle_eq_left C, (sbtw_comm.mp h).angle_eq_left C⟩
+""", *_GEO_FACT_IMPORTS, label="D lies on segment AB, so it is on ray AB and on ray BA")
+
+#: △abc ∼ △a'b'c' (abc a triangle)  ⟹  b'a'/ba = b'c'/bc: the sides from the vertex b.
+similar_sides_at = library_fact("PyLeanX.Geometry.similar_sides_at", """
+theorem PyLeanX.Geometry.similar_sides_at {V₁ V₂ P₁ P₂ : Type*} [NormedAddCommGroup V₁]
+    [NormedAddCommGroup V₂] [InnerProductSpace ℝ V₁] [InnerProductSpace ℝ V₂]
+    [MetricSpace P₁] [MetricSpace P₂] [NormedAddTorsor V₁ P₁] [NormedAddTorsor V₂ P₂]
+    {a b c : P₁} {a' b' c' : P₂} (h : Similar ![a, b, c] ![a', b', c'])
+    (hT : ¬ Collinear ℝ {a, b, c}) :
+    dist b' a' / dist b a = dist b' c' / dist b c := by
+  have hba : b ≠ a := (ne₁₂_of_not_collinear hT).symm
+  have hbc : b ≠ c := ne₂₃_of_not_collinear hT
+  obtain ⟨r, hr, hd⟩ := similar_iff_exists_pos_dist_eq.mp h
+  have h1 : dist b a = r * dist b' a' := by simpa using hd 1 0
+  have h2 : dist b c = r * dist b' c' := by simpa using hd 1 2
+  have ha : dist b' a' ≠ 0 := by
+    intro h0; apply hba; rw [← dist_eq_zero, h1, h0, mul_zero]
+  have hc : dist b' c' ≠ 0 := by
+    intro h0; apply hbc; rw [← dist_eq_zero, h2, h0, mul_zero]
+  rw [h1, h2]
+  field_simp
+""", *_GEO_FACT_IMPORTS, label="similar triangles have proportional sides")
 
 # The textbook catalogue (chapters: angles, triangles, congruence, similarity, parallels,
 # right triangles, midpoints, circles, quadrilaterals): ``geo.sss``, ``geo.thales``, …

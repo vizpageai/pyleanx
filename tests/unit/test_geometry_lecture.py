@@ -77,7 +77,7 @@ def test_pythagoras_from_similar_triangles_renders():
         sys.path.remove(str(examples))
     src = ps.pythagoras.to_lean()
     prose = str(ps.pythagoras.prose())
-    assert "sorry" not in src and "Sbtw.angle_eq_left" in src
+    assert "sorry" not in src and "PyLeanX.Geometry.similar_sides_at" in src
     # it must not cite Mathlib's Pythagoras (that would be circular)
     assert "dist_sq_eq_dist_sq_add_dist_sq" not in src
-    assert "△ACB ∼ △ADC" in prose and "|AC|² + |BC|² = |AB|²" in prose
+    assert "△BAC ∼ △CAD" in prose and "|AC|² + |BC|² = |AB|²" in prose

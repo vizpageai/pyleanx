@@ -5,10 +5,10 @@ between A and B, and CD ⊥ AB. Perpendicular lines are stated as right angles:
 ``geo.right_angle(A, D, C)`` is ∠ADC = π/2, i.e. CD ⊥ AB at D.
 
 Proof (as in a geometry course):
-  * △ACB ∼ △ADC: both have a right angle (at C and at D), and ∠CBA = ∠DCA because each is
-    π/2 − ∠A (angle sums, and ∠CAD = ∠CAB since D lies on ray AB). So AD/AC = AC/AB,
-    i.e. AC² = AD·AB.
-  * △BCA ∼ △BDC in the same way, so BC² = DB·AB.
+  * △BAC ∼ △CAD: they share the angle at A, and both have a right angle (at C and at D).
+    So AC/AB = AD/AC, i.e. AC² = AD·AB.
+  * △ABC ∼ △CBD: they share the angle at B, and both have a right angle.
+    So BC/BA = BD/BC, i.e. BC² = BD·BA.
   * Adding, AC² + BC² = (AD + DB)·AB = AB², by segment addition.
 
 It does not cite Mathlib's Pythagoras (``geo.pythagoras_iff``), which would be circular.
@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import pyleanx as pl
 from pyleanx import geometry as geo
-from pyleanx.analysis import pi
 
 A, B, C, D = geo.points("A B C D")
 AB, AC, BC = geo.dist(A, B), geo.dist(A, C), geo.dist(B, C)
@@ -32,53 +31,38 @@ ang = geo.angle
 def _proof() -> pl.Tactic:
     claim = pl.claim
     return pl.proof(
-        # ---- the facts about the figure
-        claim(A != C, because=[geo.distinct_ac, "hABC"], name="hAC"),
-        claim(B != C, because=[geo.distinct_bc, "hABC"], name="hBC"),
-        claim(D != A, because=[geo.between_ne_left, "hD"], name="hDA"),
-        claim(D != B, because=[geo.between_ne_right, "hD"], name="hDB"),
-        claim(geo.strictly_between(D, B, A), because=[geo.between_reverse, "hD"], name="hD'"),
-        claim(geo.triangle(A, C, B), because="hABC", name="hACB"),
-        claim(geo.triangle(B, C, A), because="hABC", name="hBCA"),
+        claim(geo.triangle(B, A, C), because="hABC", name="hBAC"),
         claim(AB > 0, because=[geo.triangle_sides_pos, "hABC"], name="hAB0"),
         claim(AC > 0, because=[geo.triangle_sides_pos, "hABC"], name="hAC0"),
-        claim(BC > 0, because=[geo.triangle_sides_pos, "hBCA"], name="hBC0"),
-        claim(BA > 0, because=[geo.triangle_sides_pos, "hBCA"], name="hBA0"),
-        # ---- △ACB ∼ △ADC
-        claim(ang(D, A, C) == ang(B, A, C), because=[geo.angle_along_ray, "hD"], name="hA",
+        claim(BC > 0, because=[geo.triangle_sides_pos, "hBAC"], name="hBC0"),
+        claim(BA > 0, because=[geo.triangle_sides_pos, "hBAC"], name="hBA0"),
+        # ---- △BAC ∼ △CAD: common angle at A, right angles at C and D
+        claim(ang(D, A, C) == ang(B, A, C), because=[geo.angle_on_segment, "hD"], name="hA",
               note="D lies on ray AB"),
         claim(ang(C, A, D) == ang(D, A, C), because=geo.angle_comm, name="hA'"),
-        claim(ang(A, C, B) + ang(C, B, A) + ang(B, A, C) == pi(),
-              because=[geo.angle_sum, "hAC"], name="sum1", note="angle sum in △ACB"),
-        claim(ang(A, D, C) + ang(D, C, A) + ang(C, A, D) == pi(),
-              because=[geo.angle_sum, "hDA"], name="sum2", note="angle sum in △ADC"),
-        claim(ang(A, C, B) == ang(A, D, C), because=["hC", "hAD"], name="r1",
+        claim(ang(B, A, C) == ang(C, A, D), because=["hA", "hA'"], name="a1",
+              note="the common angle at A"),
+        claim(ang(A, C, B) == ang(A, D, C), because=["hC", "hAD"], name="a2",
               note="both are right angles"),
-        claim(ang(C, B, A) == ang(D, C, A), because=["sum1", "sum2", "hC", "hAD", "hA", "hA'"],
-              name="r2", note="both are π/2 − ∠A"),
-        claim(geo.similar((A, C, B), (A, D, C)), because=[geo.similar_AA, "hACB", "r1", "r2"],
+        claim(geo.similar((B, A, C), (C, A, D)), because=[geo.similar_AA, "hBAC", "a1", "a2"],
               name="sim1"),
-        claim(AD / AC == AC / AB, because=[geo.similar_sides, "sim1", "hACB"], name="ratio1",
-              note="similar triangles have proportional sides"),
-        claim(AD * AB == AC * AC, because=[geo.cross_multiply, "ratio1"], name="h1"),
-        # ---- △BCA ∼ △BDC
-        claim(ang(D, B, C) == ang(A, B, C), because=[geo.angle_along_ray, "hD'"], name="hB",
+        claim(AC / AB == AD / AC, because=[geo.similar_sides_at, "sim1", "hBAC"],
+              name="ratio1"),
+        claim(AC * AC == AD * AB, because=[geo.cross_multiply, "ratio1"], name="h1"),
+        # ---- △ABC ∼ △CBD: common angle at B, right angles at C and D
+        claim(ang(D, B, C) == ang(A, B, C), because=[geo.angle_on_segment, "hD"], name="hB",
               note="D lies on ray BA"),
         claim(ang(C, B, D) == ang(D, B, C), because=geo.angle_comm, name="hB'"),
+        claim(ang(A, B, C) == ang(C, B, D), because=["hB", "hB'"], name="b1",
+              note="the common angle at B"),
         claim(ang(B, C, A) == ang(A, C, B), because=geo.angle_comm, name="hC'"),
-        claim(ang(B, C, A) + ang(C, A, B) + ang(A, B, C) == pi(),
-              because=[geo.angle_sum, "hBC"], name="sum3", note="angle sum in △BCA"),
-        claim(ang(B, D, C) + ang(D, C, B) + ang(C, B, D) == pi(),
-              because=[geo.angle_sum, "hDB"], name="sum4", note="angle sum in △BDC"),
-        claim(ang(B, C, A) == ang(B, D, C), because=["hC'", "hC", "hBD"], name="r3",
+        claim(ang(B, C, A) == ang(B, D, C), because=["hC'", "hC", "hBD"], name="b2",
               note="both are right angles"),
-        claim(ang(C, A, B) == ang(D, C, B), because=["sum3", "sum4", "r3", "hB", "hB'"],
-              name="r4", note="both are π/2 − ∠B"),
-        claim(geo.similar((B, C, A), (B, D, C)), because=[geo.similar_AA, "hBCA", "r3", "r4"],
+        claim(geo.similar((A, B, C), (C, B, D)), because=[geo.similar_AA, "hABC", "b1", "b2"],
               name="sim2"),
-        claim(BD / BC == BC / BA, because=[geo.similar_sides, "sim2", "hBCA"], name="ratio2",
-              note="similar triangles have proportional sides"),
-        claim(BD * BA == BC * BC, because=[geo.cross_multiply, "ratio2"], name="h2"),
+        claim(BC / BA == BD / BC, because=[geo.similar_sides_at, "sim2", "hABC"],
+              name="ratio2"),
+        claim(BC * BC == BD * BA, because=[geo.cross_multiply, "ratio2"], name="h2"),
         # ---- add the two
         claim(BA == AB, because=geo.dist_comm, name="hBA"),
         claim(BD == DB, because=geo.dist_comm, name="hBD'"),
