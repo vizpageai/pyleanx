@@ -1,5 +1,9 @@
 # Roadmap and status
 
+Current planning review: [reusable mathematical foundations and textbook authoring](foundations.md).
+See the [2026-11-17 review evidence](#foundation-review-2026-11-17) for current local checks;
+the dated implementation entries below are historical records.
+
 Last updated: 2026-11-06 (first implementation session).
 
 ## Environment used for this session
@@ -329,3 +333,43 @@ explained; to investigate on an idle machine before claiming batch speedups).
 2. Make the benchmark's retrieval proposer (bank lemmas, `constructor`, `use` witnesses) solve the 4 unsolved baseline problems; plug in an LLM proposer.
 3. Independent replay check (`lean4checker`) for adversarial settings.
 4. From the Vlasov–Maxwell case study: external Lake dependencies (cite and `infoview` a library such as OAI), then vector sorts, function variables with `fun`, named definitions.
+
+## Foundation review (2026-11-17)
+
+Scope: repository assessment and an implementation plan requested by the user; no new
+runtime feature or milestone is claimed complete. The plan is in [foundations.md](foundations.md).
+Existing edits to geometry, examples and notebooks were preserved.
+
+The earliest recorded unfinished delivery gate remains release/CI validation (M4/M9).
+Historical "not a git repository", missing-LaTeX and missing-vector statements above
+describe earlier sessions and are superseded by the current source/checkout. Remote
+CI status was not checked in this review, and publication is not part of this request.
+
+Current environment: Python `3.13.14`, PyLeanX `0.1.0.dev0`, Lean `4.34.1`
+(commit `5045d0056413266e57c625dcd7c365b10e377c52`), Mathlib
+`d13f23b723b8a846827a245b89c10fc7d3f11612`, pytest `9.2.0`, ruff `0.17.4`,
+lean-interact `0.11.6`. The prebuilt Mathlib cache is present; no rebuild or download
+was needed. Commands below use `.venv/Scripts/python.exe` on Windows.
+
+| Command | Result |
+|---|---|
+| `python --version` | Python 3.13.14, exit 0 |
+| `python -m pyleanx doctor` | All checks passed, pinned Lean/Mathlib available, exit 0 |
+| `python -m pytest tests/unit -q` | 354 passed in 13.82 s, exit 0 |
+| `python -m ruff check .` | All checks passed, exit 0 |
+| `python -m pytest tests/unit/test_docs.py -q` (after adding the plan/navigation) | 11 passed in 1.80 s, exit 0 |
+| `python -m pytest tests/integration/test_lean_basics.py::test_examples_scripts_batch tests/integration/test_lean_negative.py tests/integration/test_lean_axiom_audit.py -q` | Real pinned Lean: 18 passed in 525.25 s, exit 0 |
+| `python -m mkdocs build --strict --site-dir .pyleanx-review-site` (after adding the roadmap anchor) | Built in 5.28 s, exit 0; generated review output removed |
+| `git diff --check` | Passed, exit 0 |
+
+The integration selection covers the core example batch, false/invalid/missing proofs,
+mixed batch attribution, timeout/environment errors, direct/transitive `sorry`, raw
+tactic policy, audit spoofing, foreign/native axioms and cache invalidation. The full
+domain/chapter integration suite, cross-platform CI and fresh-install gate were not
+rerun; this review does not certify every existing domain example.
+
+Implementation priorities: bind readable verification status to the exact theorem/proof;
+consolidate shared sets/maps and settings; add exact statement contracts to curated
+facts; separate domain proof strategies; compose existing theorem objects into chapters;
+expand domains through reusable acceptance chapters. New packs must keep final pinned
+Lean checking and transitive axiom auditing authoritative.

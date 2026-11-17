@@ -45,6 +45,7 @@ nav:
   - Background:
       - Trust model: security.md
       - Architecture: architecture.md
+      - Mathematical foundations plan: foundations.md
       - Stability and versioning: stability.md
       - Troubleshooting: troubleshooting.md
       - Roadmap and test evidence: roadmap.md
