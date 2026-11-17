@@ -40,6 +40,22 @@ Generated from the docstrings. For a guided overview with examples, see the
     options:
       members: [verify_all]
 
+::: pyleanx.backend.repl_check
+    options:
+      members: [check_all]
+
+::: pyleanx.numeric
+    options:
+      members: [sanity_check, SanityReport, Finding]
+
+::: pyleanx.diagnose
+    options:
+      members: [explain_failure, suggest_facts]
+
+::: pyleanx.fact_search
+    options:
+      members: [fact, search_facts]
+
 ::: pyleanx.backend.audit
     options:
       members: [AxiomPolicy]

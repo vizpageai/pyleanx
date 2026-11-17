@@ -906,7 +906,7 @@ class Justify(Tactic):
         if not self.avoid:  # aesop's and grind's simp sets cannot be restricted here
             alts.append("(aesop; done)")
             alts.append("grind")
-        return alts
+        return list(dict.fromkeys(alts))  # an alternative tried twice cannot succeed twice
 
     def alternatives(self) -> list[str]:
         core = self._core()

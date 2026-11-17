@@ -120,6 +120,19 @@ results = pl.verify_all([thm1, thm2], project=None, use_cache=True, timeout=None
 `cache_hit`, `fingerprint`, `policy`, `raw_tactics_used`. Methods: `summary()`,
 `to_dict()`, `to_json()`, `from_dict()`.
 
+While writing, check in a persistent Lean process (seconds after the first call; see
+[Fast feedback and natural steps](tutorials/natural-proofs.md)):
+
+```python
+res = thm.check()                     # or pl.check_all([thm1, thm2], project=None, timeout=None)
+thm.sanity_check()                    # random samples, no Lean; finds false steps
+pl.explain_failure(thm, res)          # why a step was not accepted, in the proof's words
+```
+
+`check` runs the same Lean source with the same audit and policy as `verify_all`; its results
+have `backend="repl"` and are not cached. At most two import environments are kept per
+process (`pyleanx.backend.repl_check.MAX_IMPORT_SETS`); the process is stopped at exit.
+
 ## Interactive sessions (M5; `pip install 'pyleanx[interactive]'`)
 
 ```python
@@ -343,12 +356,18 @@ See the tutorial [Writing proofs like a mathematician](tutorials/written-proofs.
 | `because=thm` / `pl.cite(thm)` (a proved `pl.Theorem`) | the cited theorem and its proof are emitted first and re-checked; unproved → error; a failed cited proof rejects its citers |
 | `pl.Theorem(…, avoid=[lemmas])` | `simp [-lemma]` in gap fillers, plus a Lean check that fails if the proof term refers to them |
 | `thm.prose(result=None)`, `pl.prose(thm, result)` | the proof as numbered, nested steps (text / Jupyter) |
+| `pl.similarly("h1", exchange=(A, B), name="h2")`, `replace={x: e}` | the step `h1` again with the substitution (statement, reasons, sub-proof); hypotheses renamed to the exchanged ones |
+| `because="AA similarity"` (any reason containing a space) | the fact with that description (`pl.fact`, `pl.search_facts`); unclear descriptions are refused with candidates |
 
 The gap filler uses cited facts directly, applies them (discharging side conditions from the
 context), uses one half of a cited `∧`/`↔`, and tries `simp`/`norm_num`/`linarith`/
 `nlinarith`/`omega`/`ring`/`field_simp`/`push_cast`/`fun_prop`/`positivity`/splitting `∧`,
 also after unfolding `pl.let` definitions and introducing `∀` variables; each attempt must
-close the step.
+close the step. Matching that unfolds only reducible definitions is tried first, so a fact
+that does not fit fails at once; facts may be cited in either orientation, a lemma may be
+applied to two cited facts, and notation that a textbook does not distinguish (∠ABC/∠CBA,
+|AB|/|BA|, betweenness and triangle vertex order, the distinct vertices of a triangle) is
+handled for you.
 
 High-school plane geometry: `geo` has a chapter-by-chapter catalogue of citable facts
 (congruence, CPCTC, similarity, parallel lines, right triangles, midpoints, circles,

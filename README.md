@@ -45,10 +45,50 @@ theorem square_identity (x y : Real) :
 #print axioms square_identity
 ```
 
-> **Status: alpha (0.1.0 in preparation).** Milestones M0–M8 are implemented and tested
-> against real Lean; release engineering (M9) is in progress. See [docs/roadmap.md](docs/roadmap.md) for test evidence
-> and known limitations. The API may still change in 0.x releases
-> ([stability policy](docs/stability.md)).
+> **Status: alpha (0.1.0).** The Python API, Lean code generation, verification with axiom
+> audit, written proofs and the domain libraries are implemented and tested against real Lean.
+> See [docs/roadmap.md](docs/roadmap.md) for test evidence and known limitations. The API may
+> still change in 0.x releases ([stability policy](docs/stability.md)).
+
+## Write proofs like a textbook
+
+A proof is a list of steps, each with its reason in words; Lean checks every one.
+
+```python
+from pyleanx import geometry as geo
+
+pythagoras = pl.Theorem(
+    "pythagoras", [A, B, C],
+    assumptions={"hABC": geo.triangle(A, B, C), "hC": geo.right_angle(A, C, B)},
+    conclusion=AC**2 + BC**2 == AB**2,
+    proof=pl.proof(
+        pl.choose(D, such_that=pl.And(geo.strictly_between(D, A, B),
+                                      geo.right_angle(A, D, C), geo.right_angle(B, D, C)),
+                  because=["drop the altitude to the hypotenuse", "hABC", "hC"],
+                  names="hD hAD hBD"),
+        pl.claim(AC**2 == AD * AB, because=[leg_rule, "hABC", "hC", "hD", "hAD"], name="h1"),
+        pl.similarly("h1", exchange=(A, B), name="h2"),          # BC² = BD·BA
+        pl.claim(AB == AD + DB, because=["segment addition", "hD"], name="hseg"),
+        pl.chain(AC**2 + BC**2, ("=", AD * AB + BD * BA, ["h1", "h2"]),
+                 ("=", (AD + DB) * AB, geo.dist_comm), ("=", AB**2, "hseg"))))
+
+print(pythagoras.prose(pythagoras.check()))   # numbered steps, ✔ Checked by Lean
+```
+
+* **Reasons in words**: `because="AA similarity"` finds the fact; unclear wording is refused
+  with the candidates, never guessed.
+* **Fast feedback**: `thm.check()` keeps Lean running and re-checks in seconds;
+  `thm.sanity_check()` finds a false step on random numbers before Lean runs.
+* **Failures in the proof's words**: "Step 3, “…”: Lean could not justify it. Still to
+  show: … Hint: …".
+* **What a textbook leaves implicit** (∠ABC = ∠CBA, |AB| = |BA|, distinct vertices, the order of
+  a triangle's vertices) is supplied for you, and checked.
+
+See [examples/pythagoras_similar.py](examples/pythagoras_similar.py),
+[examples/euclid_book1.py](examples/euclid_book1.py), the harmonic analysis series
+([singular integrals](examples/singular_integrals.py),
+[Calderón–Zygmund](examples/calderon_zygmund.py), [Hilbert transform](examples/hilbert_transform.py)),
+and the tutorial [Fast feedback and natural steps](docs/tutorials/natural-proofs.md).
 
 ## What "verified" means
 
@@ -100,6 +140,9 @@ Mathlib; nothing is rebuilt from source.
 | [examples/implication.py](examples/implication.py) | P → P; a>0 ∧ b>0 ⇒ a+b>0 | `intro`/`exact`, `linarith` |
 | [examples/bad_proof.py](examples/bad_proof.py) | false claim / wrong tactic | must be rejected |
 | [examples/ai_batch.py](examples/ai_batch.py) | candidate proofs incl. LLM text | batch + JSON |
+| [examples/pythagoras_similar.py](examples/pythagoras_similar.py) | Pythagoras by similar triangles | written proof |
+| [examples/euclid_book1.py](examples/euclid_book1.py) | Euclid I: angle sums, exterior angle, midsegment | written proofs |
+| [examples/calderon_zygmund.py](examples/calderon_zygmund.py) | the Calderón–Zygmund decomposition | written proofs |
 
 ```bash
 pyleanx show-lean examples/square_identity.py
