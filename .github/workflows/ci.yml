@@ -73,6 +73,15 @@ jobs:
         run: pytest tests -q -rfE --durations=15
       - name: Every example script
         run: python scripts/run_examples.py
+      - name: Naturalness benchmark (every written proof, with Lean)
+        run: python benchmarks/naturalness.py --lean
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark
+          path: |
+            docs/benchmark.md
+            benchmarks/lean_results.json
 
   package:
     name: build + clean install
