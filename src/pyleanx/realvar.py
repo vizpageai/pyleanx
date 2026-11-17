@@ -20,6 +20,7 @@ from typing import Any
 
 from ._domain import collect_lemmas, lemma
 from .expr import Expr
+from .proofs import library_fact
 from .types import Fn, Nat, Real, lean_type
 
 _VITALI = "Mathlib.MeasureTheory.Covering.Vitali"
@@ -636,5 +637,91 @@ mul_nonneg = lemma("mul_nonneg", "Mathlib.Algebra.Order.Ring.Defs",
                    label="a product of nonnegative numbers is nonnegative")
 sum_le_sum = lemma("Finset.sum_le_sum", _FINSET, label="termwise comparison of sums")
 mul_sum = lemma("Finset.mul_sum", _FINSET, label="a constant factor comes out of a sum")
+
+
+# =========================================================================================
+# Lebesgue differentiation (for the Calderón–Zygmund decomposition)
+# =========================================================================================
+
+_DENSITY = ("Mathlib.MeasureTheory.Covering.DensityTheorem",
+            "Mathlib.MeasureTheory.Measure.Lebesgue.EqHaar",
+            "Mathlib.MeasureTheory.Integral.Average")
+
+
+def _zero_plus() -> Expr:
+    from .terms import apply, const
+
+    ioi = apply(const("Set.Ioi", imports=_DENSITY, latex=""), 0)
+    return apply(const("nhdsWithin", imports=_DENSITY, latex=""), 0, ioi)
+
+
+def tendsto_zero_plus(body: Any, limit: object) -> Expr:
+    """body(r) → limit as r → 0⁺ (``Filter.Tendsto (fun r => …) (𝓝[>] 0) (𝓝 limit)``)."""
+    from .expr import _lift
+    from .terms import apply, const, fun
+
+    lam = fun(body, Real)
+    lim = _lift(limit)
+    nhds = apply(const("nhds", imports=_DENSITY, latex=""), lim)
+    tex = (lam.body.to_latex() + r" \to " + lim.to_latex() + r" \text{ as } "
+           + lam.vars[0].name + r" \to 0^+")
+    tex = tex.replace("{", "{{").replace("}", "}}") + "{0:.0}{1:.0}{2:.0}"
+    return apply(_c("Filter.Tendsto", tex, _DENSITY), lam, _zero_plus(), nhds)
+
+
+def eventually_zero_plus(body: Any) -> Expr:
+    """body(r) holds for all small r > 0 (``∀ᶠ r in 𝓝[>] 0, …``)."""
+    from .terms import apply, fun
+
+    lam = fun(body, Real)
+    tex = (lam.body.to_latex() + r" \text{ for all small } " + lam.vars[0].name + " > 0")
+    tex = tex.replace("{", "{{").replace("}", "}}") + "{0:.0}{1:.0}"
+    return apply(_c("Filter.Eventually", tex, _DENSITY), lam, _zero_plus())
+
+
+def almost_every(body: Any) -> Expr:
+    """body(x) for almost every x ∈ ℝ (``∀ᵐ x, …``)."""
+    from .terms import apply, const, fun
+
+    ae_ = apply(const("MeasureTheory.ae", imports=_DENSITY, latex=""),
+                const("MeasureTheory.volume", imports=_DENSITY, latex=""))
+    lam = fun(body, Real)
+    tex = (r"\text{for a.e. } " + lam.vars[0].name + ": " + lam.body.to_latex())
+    tex = tex.replace("{", "{{").replace("}", "}}") + "{0:.0}{1:.0}"
+    return apply(_c("Filter.Eventually", tex, _DENSITY), lam, ae_)
+
+
+#: Lebesgue's differentiation theorem in textbook form (a restatement of Mathlib's
+#: ``IsUnifLocDoublingMeasure.ae_tendsto_average``, proved in Lean below).
+lebesgue_differentiation = library_fact("PyLeanX.Real.lebesgue_differentiation", """
+theorem PyLeanX.Real.lebesgue_differentiation {f : ℝ → ℝ}
+    (hf : MeasureTheory.LocallyIntegrable f) :
+    ∀ᵐ x, Filter.Tendsto (fun r => (∫ y in Metric.closedBall x r, |f y|) /
+        MeasureTheory.volume.real (Metric.closedBall x r)) (nhdsWithin 0 (Set.Ioi 0))
+      (nhds |f x|) := by
+  have hg : MeasureTheory.LocallyIntegrable (fun y => |f y|) := by
+    simpa [Real.norm_eq_abs] using MeasureTheory.locallyIntegrableOn_univ.1
+      (MeasureTheory.LocallyIntegrableOn.norm
+        (MeasureTheory.LocallyIntegrable.locallyIntegrableOn hf Set.univ))
+  filter_upwards [IsUnifLocDoublingMeasure.ae_tendsto_average MeasureTheory.volume hg 1] with x hx
+  have := hx (fun _ => x) id Filter.tendsto_id
+    (eventually_nhdsWithin_of_forall fun r (hr : 0 < r) => by
+      simp [Metric.mem_closedBall, one_mul, le_of_lt hr])
+  refine this.congr' ?_
+  filter_upwards [self_mem_nhdsWithin] with r hr
+  simp only [id, MeasureTheory.setAverage_eq, smul_eq_mul]
+  rw [div_eq_inv_mul]
+""", *_DENSITY, label="Lebesgue's differentiation theorem: for a.e. x the averages of |f| over "
+    "[x − r, x + r] tend to |f(x)| as r → 0⁺")
+le_of_tendsto = lemma("le_of_tendsto", _DENSITY[0],
+                      label="a limit of numbers ≤ α is ≤ α")
+eventually_of_pos = lemma("eventually_nhdsWithin_of_forall", _DENSITY[0],
+                          label="what holds for every r > 0 holds for all small r > 0")
+div_le_iff = lemma("div_le_iff₀", "Mathlib.Algebra.Order.GroupWithZero.Basic",
+                   label="b/c ≤ a iff b ≤ ac for c > 0")
+mem_interval = lemma("Metric.mem_closedBall'", "Mathlib.Topology.MetricSpace.Pseudo.Defs",
+                     label="a ∈ [c − r, c + r] iff |c − a| ≤ r")
+ae_mono = lemma("Filter.Eventually.mono", "Mathlib.Order.Filter.Basic",
+                label="what follows pointwise from an a.e. statement holds a.e.")
 
 LEMMAS = collect_lemmas(globals())

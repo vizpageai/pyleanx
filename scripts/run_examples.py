@@ -52,6 +52,7 @@ CASES: dict[str, tuple[list[str], int]] = {
     "singular_integrals": (RUN, 0),  # Stein ch. I §1: covering, maximal function
     "marcinkiewicz": (RUN, 0),  # the Lp bound for the maximal function
     "hilbert_transform": (RUN, 0),  # the Hilbert transform on L2
+    "calderon_zygmund": (RUN, 0),  # the Calderón–Zygmund decomposition
 }
 
 # Examples deliberately not run here, with the reason (each must be run by hand).

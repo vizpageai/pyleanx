@@ -62,6 +62,10 @@ see [docs/stability.md](docs/stability.md)).
   theorem without a proof is an error, and a failed cited proof rejects exactly the theorems
   that cite it. The bank records citations as dependencies and makes loaded theorems
   citable. Example `using_cauchy_integral.py`: ∮_{|z|=2} z²/(z − 1) dz = 2πi.
+- The Calderón–Zygmund decomposition on ℝ (`examples/calderon_zygmund.py`): with
+  Ω = {Mf > α}, Ω is open, |Ω| ≤ 8‖f·1{|f|>α/2}‖₁/α, |f| ≤ α a.e. off Ω, and every interval
+  meeting ℝ ∖ Ω has average ≤ 2α — written proofs verified by Lean. Lebesgue's
+  differentiation theorem in textbook form ships in `pyleanx.realvar`, with its Lean proof.
 - The Hilbert transform on L²(ℝ) (`pyleanx.hilbert`, `examples/hilbert_transform.py`):
   Hf = 𝓕⁻(−i sgn ξ·𝓕f) as a shipped definition; written proofs, verified by Lean, that
   ‖Hf‖₂ = ‖f‖₂ and H(Hf) = −f (via Plancherel and the a.e. calculus of L²).

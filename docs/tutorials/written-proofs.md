@@ -303,7 +303,8 @@ in a statement is emitted into the Lean file like a cited fact.
 
 Not available, because Mathlib lacks them at the pinned version: Fejér/Dirichlet kernels and
 summability, the Hardy–Littlewood maximal inequality, Riesz–Thorin and Marcinkiewicz
-interpolation, the Hilbert transform, Calderón–Zygmund theory.
+interpolation, the Hilbert transform, Calderón–Zygmund theory (the last three are proved
+here as written proofs; see below).
 
 ## Singular integrals: real-variable methods as written proofs
 
@@ -320,7 +321,9 @@ Lᵖ bound (Stein Thm I.1(c)): p∫₀^∞ t^{p−1}μ{Mf > t} dt ≤ (8p·2^{p�
 is ‖Mf‖_p^p by the layer-cake formula; the proof integrates theorem 8 over t and swaps the
 order of integration (Tonelli), as in the book. `examples/hilbert_transform.py` defines the
 Hilbert transform on L²(ℝ) by Hf = 𝓕⁻(m·𝓕f), m(ξ) = −i sgn ξ, and proves ‖Hf‖₂ = ‖f‖₂ and
-H(Hf) = −f from Plancherel.
+H(Hf) = −f from Plancherel. `examples/calderon_zygmund.py` proves the Calderón–Zygmund
+decomposition via the maximal function (ch. I §3): off Ω = {Mf > α}, |f| ≤ α almost everywhere
+(by Lebesgue's differentiation theorem), and every interval meeting ℝ ∖ Ω has average ≤ 2α.
 
 ## Abstract structures: "let G be a group"
 

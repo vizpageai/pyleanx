@@ -250,7 +250,11 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [x] `pyleanx/hilbert.py`: L²(ℝ) (`MeasureTheory.Lp ℂ 2 volume`), shipped definitions of the symbol m(ξ) = −i sgn ξ, the operator F ↦ m·F on L² (|m| ≤ 1 keeps it in L²) and Hf = 𝓕⁻(m·𝓕f); vocabulary for 𝓕, 𝓕⁻, a.e. statements; Mathlib facts (Plancherel `Lp.norm_fourier_eq`, inversion on L², `Lp.ext`, `MemLp.coeFn_toLp`, …).
 - [x] `examples/hilbert_transform.py` (Stein, *Singular Integrals* ch. II §1): 10 |m(ξ)| = 1 and m(ξ)² = −1 for ξ ≠ 0; 11 ‖m·F‖₂ = ‖F‖₂; 12 m·(m·F) = −F; 13 ‖Hf‖₂ = ‖f‖₂; 14 H(Hf) = −f. All six written proofs verified (standard axioms only).
 - Finding: state a cited lemma in its own orientation (‖𝓕(𝓕⁻G)‖ = ‖𝓕⁻G‖); the reversed claim timed out in `isDefEq` on Lp terms.
-- Next: the Calderón–Zygmund decomposition; weak (1,1) for the Hilbert transform.
+- [x] `pyleanx/realvar.py`: Lebesgue's differentiation theorem in textbook form as a shipped fact (`PyLeanX.Real.lebesgue_differentiation`: for a.e. x the averages of |f| over [x − r, x + r] tend to |f(x)| as r → 0⁺), proved in Lean from `IsUnifLocDoublingMeasure.ae_tendsto_average`; vocabulary for limits as r → 0⁺, "for all small r > 0", "for a.e. x".
+- [x] `examples/calderon_zygmund.py` (Stein, *Singular Integrals* ch. I §3): 15 an interval meeting ℝ ∖ {Mf > α} has average ≤ 2α; 16 |f| ≤ α a.e. off {Mf > α}; 17 the decomposition (Ω = {Mf > α} open, |Ω| ≤ 8‖f·1{|f|>α/2}‖₁/α, |f| ≤ α a.e. off Ω, intervals meeting ℝ ∖ Ω have average ≤ 2α). All three verified (standard axioms only).
+- Not yet: writing Ω as a disjoint union of intervals (components / Whitney cubes).
+- Finding: the gap filler does not apply a lemma to two hypotheses (`exact le_of_tendsto hlim hev`); cite the applied lemma `rv.le_of_tendsto("hlim", "hev")`.
+- Next: weak (1,1) for the Hilbert transform (needs principal-value integrals).
 
 ### Harmonic analysis as in a textbook (2026-11-13)
 - [x] `pyleanx/harmonic.py` (generated from Lean checked in the pinned Mathlib): 8 shipped definitions (`PyLeanX.Harmonic.coeff` = `fourierCoeffOn` on [−π, π], `ft` = `𝓕`, `ift` = `𝓕⁻`, `gauss`, `L2`, `integrable_on_circle`, `coeff_sq_sum`, `mean_square`) and 18 facts (coefficient/transform integral formulas, linearity, integration by parts, Bessel, Parseval, Riemann–Lebesgue ×2, Gaussian, inversion, inverse transform at 0, small algebra).
