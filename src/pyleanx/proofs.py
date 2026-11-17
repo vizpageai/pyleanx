@@ -809,10 +809,20 @@ class Justify(Tactic):
         hs = (" [" + ", ".join(simp_args) + "]") if simp_args else ""
         # A textbook does not distinguish ∠ACB from ∠BCA, "D between A and B" from "D between
         # B and A", or triangle ABC from triangle BAC; neither do the side conditions here.
-        close = ("first | assumption | exact Ne.symm ‹_› | exact ne_of_gt ‹_› | "
-                 "exact Sbtw.wbtw ‹_› | rfl | omega | fun_prop | positivity | linarith | "
+        close = ("first | assumption | exact Ne.symm ‹_› | "
+                 # the vertices of a triangle are distinct
+                 "(with_reducible exact ne₁₂_of_not_collinear ‹_›) | "
+                 "(with_reducible exact (ne₁₂_of_not_collinear ‹_›).symm) | "
+                 "(with_reducible exact ne₁₃_of_not_collinear ‹_›) | "
+                 "(with_reducible exact (ne₁₃_of_not_collinear ‹_›).symm) | "
+                 "(with_reducible exact ne₂₃_of_not_collinear ‹_›) | "
+                 "(with_reducible exact (ne₂₃_of_not_collinear ‹_›).symm) | "
+                 "exact Eq.symm ‹_› | "
+                 "exact ne_of_gt ‹_› | exact Sbtw.wbtw ‹_› | rfl | omega | fun_prop | "
+                 "positivity | linarith | "
                  "(rw [EuclideanGeometry.angle_comm]; assumption) | "
                  "(apply sbtw_comm.mp; assumption) | "
+
                  "(convert ‹¬ Collinear ℝ _› using 2; ext; "
                  "simp only [Set.mem_insert_iff, Set.mem_singleton_iff]; tauto) | "
                  "(simp_all; done)")
@@ -824,6 +834,15 @@ class Justify(Tactic):
             close += "".join(f" | exact {f} | (intros; exact {f}) | (apply {f} <;> assumption)"
                              f" | (intros; apply {f})" for f in side)
         alts = ["assumption", "contradiction"]
+        # Cheap first: matching with reducible unfolding only fails at once on a mismatch.
+        # (Unrestricted matching of, say, ∠ACB against π/3 unfolds `angle` and `Real.pi`, or
+        # {B, A, C} against {A, B, C} unfolds set literals, until Lean's time budget for the
+        # whole step is gone; then no later alternative can run.)
+        alts += [f"(with_reducible exact {f})" for f in fs]
+        alts += [f"(with_reducible exact ({f}).symm)" for f in fs if " " not in f]
+        lemmas0 = [f for f, t in zip(fs, self.facts, strict=True) if not isinstance(t, Expr)]
+        alts += [f"((with_reducible apply {f}); all_goals ({close}))" for f in lemmas0]
+        alts += [f"linarith{h}", f"(simp only [EuclideanGeometry.angle_comm] at *; linarith{h})"]
         alts += [f"exact {f}" for f in fs]
         alts += [f"exact ({f}).symm" for f in fs if " " not in f]  # a cited equation, reversed
         # a conjunction A ∧ B ∧ … from its parts, cited in order
@@ -835,8 +854,17 @@ class Justify(Tactic):
                  for proj in (".1", ".2", ".2.1", ".2.2", ".1.1", ".1.2")]
         lemmas = [f for f, t in zip(fs, self.facts, strict=True) if not isinstance(t, Expr)]
         alts += [f"(apply {f}; all_goals ({close}))" for f in lemmas]
-        # a cited lemma applied to another cited fact ("by L, since h")
-        alts += [f"exact {f} {g}" for f in lemmas for g in fs if g != f and " " not in g]
+        # a cited lemma applied to another cited fact ("by L, since h"). Matching with
+        # reducible unfolding only is tried first, in both orientations, so a fact stated the
+        # other way round (A ≠ C for C ≠ A) fails at once instead of unfolding definitions.
+        args = [g for g in fs if " " not in g]
+        alts += [f"(with_reducible exact {f} {g})" for f in lemmas for g in args if g != f]
+        alts += [f"(with_reducible exact ({f} {g}).symm)" for f in lemmas for g in args
+                 if g != f]
+        # ... and to two cited facts, in either order ("by L, from h₁ and h₂")
+        alts += [f"exact {f} {g} {k}" for f in lemmas for g in args for k in args
+                 if len({f, g, k}) == 3]
+        alts += [f"exact {f} {g}" for f in lemmas for g in args if g != f]
         # rewriting with a cited equation, then tidying up
         alts += [f"(rw [{f}]; done)" for f in lemmas]
         alts += [f"(rw [{f}]; simp{hs}; done)" for f in lemmas]
@@ -855,13 +883,19 @@ class Justify(Tactic):
         alts += [f"(convert {f} using {d}; ext; simp only [Set.mem_insert_iff, "
                  f"Set.mem_singleton_iff]; tauto)" for f in fs if " " not in f for d in (2, 1)]
         alts += ["rfl", "ring1", "omega", "positivity", "fun_prop", f"linarith{h}",
+                 # ∠ABC = ∠CBA, as in any textbook
+                 f"(simp only [EuclideanGeometry.angle_comm] at *; linarith{h})",
                  "(congr 1; ring1)", "(push_cast; ring1)",
                  f"(norm_num{hs}; done)", f"(simp{hs}; done)", f"(simp{hs}; ring1)",
                  f"nlinarith{h}", "(field_simp; done)", "(field_simp; ring1)",
                  f"(simp_all{hs}; done)",
-                 f"(constructor; all_goals ({close}))"]
-        if not self.avoid:  # aesop's simp set cannot be restricted here
+                 f"(constructor; all_goals ({close}))",
+                 # |AB| = |BA|, as in any textbook
+                 "(simp only [dist_comm] at *; first | assumption | linarith | ring1 | "
+                 "(simp_all; done))"]
+        if not self.avoid:  # aesop's and grind's simp sets cannot be restricted here
             alts.append("(aesop; done)")
+            alts.append("grind")
         return alts
 
     def alternatives(self) -> list[str]:
@@ -1085,6 +1119,11 @@ def _facts(because: object) -> tuple[Term, ...]:
             out.append(Name(f.name))
         elif isinstance(f, Let):
             out.append(Name(f.eq_name))
+        elif isinstance(f, str) and " " in f.strip():
+            # a description ("AA similarity"): names never contain spaces
+            from .fact_search import fact
+
+            out.append(_term(fact(f)))
         else:
             out.append(_term(f))
     return tuple(out)
@@ -1717,3 +1756,192 @@ def _const_names(roots: Iterable[Any]) -> set[str]:
             names.add(e.name)
         stack.extend(e.children())
     return names
+
+
+# =====================================================================================
+# "Similarly": an earlier step again, with variables exchanged
+# =====================================================================================
+
+
+@dataclass(frozen=True)
+class Similarly(Tactic):
+    """Placeholder for :func:`similarly`, resolved when the proof is attached to a theorem."""
+
+    ref: str = ""
+    mapping: tuple[tuple[Any, Any], ...] = ()  # (Var, Expr) pairs, applied simultaneously
+    name: str = ""
+    note: str = ""
+
+    def canonical(self) -> Any:
+        return ["similarly", self.ref, [[v.canonical(), e.canonical()] for v, e in self.mapping],
+                self.name]
+
+
+def similarly(ref: object, *, exchange: object = None, replace: object = None,
+              name: str = "", note: str = "") -> Similarly:
+    """*Similarly* (by symmetry): the step named ``ref`` again, with variables exchanged.
+
+        pl.claim(AC ** 2 == AD * AB, because=[leg_rule, "hABC", "hC", "hD", "hAD"], name="h1"),
+        pl.similarly("h1", exchange=(A, B), name="h2"),        # BC² = BD·BA
+
+    ``exchange=(A, B)`` (or a list of pairs) swaps variables; ``replace={x: e}`` maps them
+    one way. The new step has the earlier statement, reasons and sub-proof with the
+    substitution applied; a cited hypothesis is replaced by the one stating the exchanged
+    fact when there is one (``hAD`` -> ``hBD``). Lean checks the resulting step in full.
+    """
+    from .expr import Var, _lift
+
+    if isinstance(ref, Claim):
+        ref = ref.name
+    if not isinstance(ref, str) or not ref:
+        raise TacticError("pl.similarly needs the name of an earlier step "
+                          "(pl.claim(..., name=...))")
+    pairs: list[tuple[Any, Any]] = []
+    if exchange is not None:
+        ex = list(exchange) if isinstance(exchange, list) else [exchange]
+        for pair in ex:
+            if not (isinstance(pair, tuple) and len(pair) == 2
+                    and all(isinstance(v, Var) for v in pair)):
+                raise TacticError("pl.similarly(exchange=(A, B)): pairs of variables")
+            a, b = pair
+            pairs += [(a, b), (b, a)]
+    if replace is not None:
+        if not isinstance(replace, dict) or not all(isinstance(v, Var) for v in replace):
+            raise TacticError("pl.similarly(replace={x: e}): a dict from variables to terms")
+        pairs += [(v, _lift(e)) for v, e in replace.items()]
+    if not pairs:
+        raise TacticError("pl.similarly needs exchange=(A, B) or replace={x: e}")
+    if name:
+        validate_identifier(name, "pl.similarly name")
+    return Similarly(ref=ref, mapping=tuple(pairs), name=name, note=note, origin=caller_origin())
+
+
+def _exchanged_words(mapping: tuple[tuple[Any, Any], ...]) -> str:
+    from .prose import plain
+
+    seen: set[int] = set()
+    parts = []
+    for v, e in mapping:
+        if v.uid in seen:
+            continue
+        back = any(getattr(y, "uid", None) == v.uid and x.uid == getattr(e, "uid", None)
+                   for x, y in mapping)
+        if back:
+            seen.update({v.uid, e.uid})
+            parts.append(f"{plain(v)} and {plain(e)} exchanged")
+        else:
+            parts.append(f"{plain(e)} in place of {plain(v)}")
+    return ", ".join(parts)
+
+
+def _subst_tactic(t: Any, mapping: dict[int, Any], rename: dict[str, str]) -> Any:
+    """``t`` with the substitution applied to every expression and renamed hypotheses."""
+    import dataclasses
+
+    from .binders import substitute
+
+    if isinstance(t, Expr):
+        return substitute(t, mapping)
+    if isinstance(t, (LibraryFact, TheoremRef)):
+        return t
+    if isinstance(t, Name):
+        return Name(rename[t.name], t.imports, label=t.label) if t.name in rename else t
+    if isinstance(t, TermApp):
+        return TermApp(_subst_tactic(t.fn, mapping, rename),
+                       tuple(_subst_tactic(a, mapping, rename) for a in t.args))
+    if isinstance(t, tuple):
+        return tuple(_subst_tactic(x, mapping, rename) for x in t)
+    if isinstance(t, Tactic) and dataclasses.is_dataclass(t):
+        changes = {}
+        for f in dataclasses.fields(t):
+            if f.name in ("origin", "name", "vars"):
+                continue
+            old = getattr(t, f.name)
+            new = _subst_tactic(old, mapping, rename)
+            if new is not old:
+                changes[f.name] = new
+        return dataclasses.replace(t, **changes) if changes else t
+    return t
+
+
+def _names_in(t: Any) -> set[str]:
+    out: set[str] = set()
+    for term in iter_terms(t):
+        if isinstance(term, Name) and not isinstance(term, (LibraryFact, TheoremRef)):
+            out.add(term.name)
+        elif isinstance(term, TermApp):
+            out |= {a.name for a in term.args if isinstance(a, Name)}
+    return out
+
+
+def _contains_similarly(t: Any) -> bool:
+    if isinstance(t, Similarly):
+        return True
+    if isinstance(t, Claim):
+        return t.proof is not None and _contains_similarly(t.proof)
+    if isinstance(t, CaseSplit):
+        return any(_contains_similarly(c.body) for c in t.cases)
+    if isinstance(t, Tactic):
+        return any(_contains_similarly(x) for x in t.sub_tactics())
+    return False
+
+
+def resolve_similarly(t: Tactic | None, hyps: dict[str, Expr]) -> Tactic | None:
+    """Replace :func:`similarly` placeholders by the exchanged earlier steps."""
+    from dataclasses import replace as dc_replace
+
+    from .binders import substitute
+
+    if t is None or not _contains_similarly(t):
+        return t
+
+    def block(t: Tactic, scope: dict[str, Expr], claims: dict[str, Claim]) -> Tactic:
+        scope, claims = dict(scope), dict(claims)
+        out: list[Tactic] = []
+        for s in _flatten(t):
+            if isinstance(s, Similarly):
+                src = claims.get(s.ref)
+                if src is None:
+                    raise TacticError(f"pl.similarly: no earlier step named {s.ref!r} in scope")
+                mapping = {v.uid: e for v, e in s.mapping}
+                rename: dict[str, str] = {}
+                for n in _names_in(src):
+                    if n not in scope:
+                        continue
+                    p, q = scope[n], substitute(scope[n], mapping)
+                    if p._key() == q._key():
+                        continue
+                    other = next((m for m, r in scope.items() if r._key() == q._key()), None)
+                    if other is not None:
+                        rename[n] = other
+                new = _subst_tactic(src, mapping, rename)
+                note = s.note or "similarly, with " + _exchanged_words(s.mapping)
+                s = dc_replace(new, name=s.name, note=note, origin=s.origin)
+            if isinstance(s, Claim):
+                if s.proof is not None:
+                    s = dc_replace(s, proof=block(s.proof, scope, claims))
+                if s.name:
+                    scope[s.name] = s.prop
+                    claims[s.name] = s
+            elif isinstance(s, CaseSplit):
+                s = dc_replace(s, cases=tuple(dc_replace(c, body=block(c.body, scope, claims))
+                                              for c in s.cases))
+            elif isinstance(s, Choose):
+                # "choose D with P ∧ Q, names hP hQ": the named parts are hypotheses now
+                parts, e = [], s.prop
+                for _ in range(len(s.names) - 1):
+                    if getattr(e, "op", None) != "and":
+                        break
+                    parts.append(e.lhs)
+                    e = e.rhs
+                parts.append(e)
+                if len(parts) == len(s.names):
+                    scope.update(zip(s.names, parts, strict=True))
+            elif isinstance(s, Fix):
+                scope.update(dict(s.hyps))
+            out.append(s)
+        if len(out) == 1 and not isinstance(t, Steps):
+            return out[0]
+        return Steps(tactics=tuple(out), origin=t.origin)
+
+    return block(t, dict(hyps), {})

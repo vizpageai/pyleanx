@@ -148,8 +148,9 @@ class Theorem:
             raise TacticError(
                 f"prove() expects a tactic such as pl.ring() or pl.steps(...), got {tactic!r}"
             )
-        from .proofs import with_avoid
+        from .proofs import resolve_similarly, with_avoid
 
+        tactic = resolve_similarly(tactic, {h.name: h.prop for h in self.assumptions})
         self.proof = with_avoid(tactic, self.avoid)
         return self
 
@@ -194,6 +195,27 @@ class Theorem:
         from .backend.subprocess_backend import verify_all
 
         return verify_all([self], project=project, use_cache=use_cache, timeout=timeout)[0]
+
+    def check(self, project: LeanProject | str | None = None, *,
+              timeout: float | None = None) -> VerificationResult:
+        """Fast check in the persistent Lean REPL (seconds after the first run).
+
+        The same Lean source, error attribution and ``#print axioms`` audit as
+        :meth:`verify`; the result says ``backend="repl"`` and is not archived.
+        """
+        from .backend.repl_check import check_all
+
+        return check_all([self], project=project, timeout=timeout)[0]
+
+    def sanity_check(self, samples: int = 300, seed: int = 0) -> Any:
+        """Try the statement and each step on random numbers (no Lean; proves nothing).
+
+        Reports a step that is false on a sample meeting every hypothesis, so a wrong step
+        is found in a second instead of after a Lean run. See :mod:`pyleanx.numeric`.
+        """
+        from .numeric import sanity_check
+
+        return sanity_check(self, samples=samples, seed=seed)
 
     def prose(self, result: VerificationResult | None = None) -> Any:
         """The proof as readable steps (see :func:`pyleanx.prose`)."""

@@ -581,7 +581,17 @@ def prose(thm: Theorem, result: VerificationResult | None = None) -> Prose:
     if result is not None:
         if result.verified:
             axioms = ", ".join(getattr(result, "axioms", ()) or ()) or "none"
-            out.status = f"  ✔ Checked by Lean (axioms: {axioms})."
+            where = (" in the running REPL; .verify() archives it"
+                     if getattr(result, "backend", "") == "repl" else "")
+            out.status = f"  ✔ Checked by Lean{where} (axioms: {axioms})."
         else:
             out.status = f"  ✘ Lean did not accept this proof ({result.status.value})."
+            try:
+                from .diagnose import explain_failure
+
+                why = explain_failure(thm, result)
+            except Exception:  # noqa: BLE001 - the prose must never fail
+                why = []
+            if why:
+                out.status += "".join(f"\n    • {w}" for w in why)
     return out

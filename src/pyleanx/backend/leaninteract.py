@@ -1,7 +1,10 @@
 """Persistent Lean REPL transport via LeanInteract (M5): for interactive sessions only.
 
-Nothing returned from here is ever treated as verification. Sessions turn their
-tactic history into an ordinary proof that the batch backend checks and audits.
+Interactive steps returned from here are never treated as verification: sessions turn
+their tactic history into an ordinary proof that the batch backend checks and audits.
+Whole-file checks (``repl_check``) elaborate the same source as the batch backend and go
+through its classification and ``#print axioms`` audit; they are labelled
+``backend="repl"`` and are not archived.
 
 The only module that imports ``lean_interact``; its API surface used here is
 ``LeanREPLConfig``, ``LocalProject``, ``LeanServer``, ``Command``, ``ProofStep`` and

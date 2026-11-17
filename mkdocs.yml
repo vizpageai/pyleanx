@@ -32,6 +32,7 @@ nav:
       - Your first theorem: tutorials/first-theorem.md
       - Using Mathlib: tutorials/mathlib.md
       - Writing proofs like a mathematician: tutorials/written-proofs.md
+      - Fast feedback and natural steps: tutorials/natural-proofs.md
       - Any Lean vocabulary: tutorials/general.md
       - Libraries beyond Mathlib: tutorials/libraries.md
       - Interactive proving: tutorials/interactive.md
@@ -49,6 +50,7 @@ nav:
       - Stability and versioning: stability.md
       - Troubleshooting: troubleshooting.md
       - Roadmap and test evidence: roadmap.md
+      - Naturalness benchmark: benchmark.md
       - Releasing: releasing.md
 
 markdown_extensions:

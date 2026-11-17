@@ -673,7 +673,7 @@ theorem PyLeanX.Geometry.proportional_sides {V₁ V₂ P₁ P₂ : Type*} [Norme
   have h2 : dist b c = r * dist b' c' := by simpa using hd 1 2
   rw [h1, h2]
   ring
-""", *_GEO_FACT_IMPORTS, label="similar triangles have proportional sides")
+""", *_GEO_FACT_IMPORTS, label="corresponding sides of similar triangles are proportional")
 
 #: △abc ∼ △a'b'c' (abc a triangle)  ⟹  b'a'/ba = b'c'/bc: the sides from the vertex b.
 similar_sides_at = library_fact("PyLeanX.Geometry.similar_sides_at", """
@@ -694,7 +694,8 @@ theorem PyLeanX.Geometry.similar_sides_at {V₁ V₂ P₁ P₂ : Type*} [NormedA
     intro h0; apply hbc; rw [← dist_eq_zero, h2, h0, mul_zero]
   rw [h1, h2]
   field_simp
-""", *_GEO_FACT_IMPORTS, label="similar triangles have proportional sides")
+""", *_GEO_FACT_IMPORTS,
+    label="similar triangles have proportional sides (as ratios from the second vertex)")
 
 # The textbook catalogue (chapters: angles, triangles, congruence, similarity, parallels,
 # right triangles, midpoints, circles, quadrilaterals): ``geo.sss``, ``geo.thales``, …

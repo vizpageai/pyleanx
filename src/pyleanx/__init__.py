@@ -23,6 +23,7 @@ from .backend.audit import DEFAULT_POLICY, STANDARD_AXIOMS, AxiomPolicy
 from .backend.cache import ResultCache
 from .backend.interface import Diagnostic, Status, VerificationResult
 from .backend.leaninteract import shutdown_repls as shutdown_sessions
+from .backend.repl_check import check_all
 from .backend.subprocess_backend import verify_all
 from .bank import (
     BankEntry,
@@ -36,6 +37,7 @@ from .binders import free_vars, prop_symbol, symbol, symbols
 
 # ---- general Lean vocabulary (M11-M13): any type, fun, ∑/∫, definitions, structured proofs
 from .defs import define, define_type, mk, structure  # noqa: E402
+from .diagnose import explain_failure
 from .errors import (
     IdentifierError,
     LiteralError,
@@ -79,6 +81,7 @@ from .expr import (
 from .expr import abs_ as abs  # noqa: A001 - intentional mathematical name
 from .expr import max_ as max  # noqa: A001
 from .expr import min_ as min  # noqa: A001
+from .fact_search import fact, search_facts
 from .faithful import SameStatement, same_statement  # noqa: E402
 from .infoview import DeclView, infoview
 from .libs import add_library, build_library, list_libraries, remove_library  # noqa: E402
@@ -125,6 +128,7 @@ from .proofs import (  # noqa: E402
     ring,
     rw,
     show,
+    similarly,
     simp,
     steps,
     suffices,
@@ -194,7 +198,8 @@ __all__ = [
     "constructor", "assumption", "linarith", "nlinarith", "norm_num", "simp", "intro", "exact",
     "apply", "rw", "rewrite", "rev", "use", "steps", "branches", "raw_tactic", "ref", "hyp",
     # verification
-    "verify_all", "VerificationResult", "Status", "Diagnostic", "AxiomPolicy",
+    "verify_all", "check_all", "explain_failure", "fact", "search_facts",
+    "VerificationResult", "Status", "Diagnostic", "AxiomPolicy",
     "DEFAULT_POLICY", "STANDARD_AXIOMS", "LeanProject", "find_project", "ResultCache",
     "render_module", "mathlib", "ProofSession", "StepResult", "Goals", "shutdown_sessions",
     # theorem bank (M7)
@@ -209,7 +214,7 @@ __all__ = [
     # structured proofs
     "auto", "have", "calc", "show", "obtain", "cases", "induction", "unfold", "ext", "proof",
     "claim", "conclude", "let", "prose", "Prose", "fix", "assume", "take", "choose",
-    "suppose_not", "case", "cases_on", "induction_on", "chain", "suffices",
+    "suppose_not", "similarly", "case", "cases_on", "induction_on", "chain", "suffices",
     "type_param", "cite",
     # libraries, bindings, faithfulness
     "lib", "add_library", "build_library", "list_libraries", "remove_library",

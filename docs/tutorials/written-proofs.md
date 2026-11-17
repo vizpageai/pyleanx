@@ -4,6 +4,11 @@ A proof in a textbook is a list of statements, each with a reason: *"Let ε > 0.
 with |aₙ − A| < ε/2 for n ≥ N₁ … Hence |aₙ + bₙ − (A + B)| < ε."* PyLeanX lets you write
 exactly that, in any area of mathematics, and Lean checks every step.
 
+While writing, check with `thm.check()` (seconds after the first run), catch false steps
+with `thm.sanity_check()`, cite facts by description (`because="AA similarity"`) and
+repeat a step by symmetry with `pl.similarly`: see
+[Fast feedback and natural steps](natural-proofs.md).
+
 ```python
 import pyleanx as pl
 from pyleanx import numbers as nt
