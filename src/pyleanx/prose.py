@@ -51,7 +51,7 @@ if TYPE_CHECKING:
 _SUP = str.maketrans("0123456789+-n", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻ⁿ")
 _SUB = str.maketrans("0123456789nikm", "₀₁₂₃₄₅₆₇₈₉ₙᵢₖₘ")
 _SYMBOLS = {
-    "angle": "∠", "parallel": "∥", "sim": "∼", "triangle": "△", "neg": "¬", "in": "∈",
+    "angle": "∠", "parallel": "∥", "perp": "⊥", "sim": "∼", "triangle": "△", "neg": "¬", "in": "∈",
     "notin": "∉", "forall": "∀", "exists": "∃", "le": "≤", "leq": "≤", "ge": "≥", "geq": "≥",
     "ne": "≠", "neq": "≠", "cdot": "·", "times": "×", "mapsto": "↦", "to": "→", "pi": "π",
     "Longrightarrow": "⟹", "Rightarrow": "⇒", "iff": "⟺", "land": "∧", "lor": "∨",

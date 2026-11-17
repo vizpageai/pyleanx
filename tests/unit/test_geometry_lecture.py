@@ -82,4 +82,15 @@ def test_pythagoras_from_similar_triangles_renders():
     assert "dist_sq_eq_dist_sq_add_dist_sq" not in src
     assert "△BAC ∼ △CAD" in prose and "|AC|² + |BC|² = |AB|²" in prose
     # the altitude is constructed in the proof, not assumed
-    assert "PyLeanX.Geometry.altitude_foot" in src and len(ps.pythagoras.assumptions) == 2
+    assert "theorem PyLeanX.Geometry.altitude " in src and len(ps.pythagoras.assumptions) == 2
+
+
+def test_perpendicular_lines_and_points_on_a_line():
+    import pyleanx as pl
+    from pyleanx import geometry as geo
+
+    A, B, C, D = geo.points("A B C D")
+    t = pl.Theorem("t", [A, B, C, D], assumptions={"h": geo.on_line(D, geo.line(A, B))},
+                   conclusion=geo.perpendicular(geo.line(C, D), geo.line(A, B)))
+    assert "D lies on line AB" in str(t.prose()) and "CD ⊥ AB" in str(t.prose())
+    assert "Submodule.IsOrtho (AffineSubspace.direction" in t.to_lean()

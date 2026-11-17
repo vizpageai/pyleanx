@@ -71,10 +71,11 @@ see [docs/stability.md](docs/stability.md)).
 - Pythagoras' theorem from similar triangles (`examples/pythagoras_similar.py`): the altitude
   to the hypotenuse gives △BAC ∼ △CAD and △ABC ∼ △CBD (a common angle and a right angle), so
   AC² = AD·AB and BC² = BD·BA — a written proof verified by Lean, without Mathlib's Pythagoras.
-  The altitude CD is constructed in the proof (`geo.altitude_foot`: in a right triangle the foot
-  of the altitude lies strictly between A and B and CD ⊥ AB); the theorem assumes only a
-  triangle with a right angle at C. Perpendicular lines are stated as right angles
-  (`geo.right_angle(A, D, C)`). New shipped facts `geo.angle_on_segment` (D on segment AB lies on rays AB and BA) and
+  The altitude CD is drawn in the proof: `geo.altitude` (any triangle has a point D on line AB
+  with CD ⊥ AB), `geo.foot_right_angles`, `geo.foot_between` (acute angles at A and B put the
+  foot strictly between A and B) and `geo.right_triangle_acute`; the theorem assumes only a
+  triangle with a right angle at C. New predicates `geo.perpendicular(l₁, l₂)` (orthogonal
+  directions) and `geo.on_line(p, l)`. Right angles are still written (`geo.right_angle(A, D, C)`). New shipped facts `geo.angle_on_segment` (D on segment AB lies on rays AB and BA) and
   `geo.similar_sides_at` (proportional sides from a vertex).
 - The intervals of an open set and the Calderón–Zygmund intervals (`examples/cz_intervals.py`):
   endpoints sup{y ≤ x : y ∉ U} and inf{y ≥ x : y ∉ U}, intervals that meet coincide, and every

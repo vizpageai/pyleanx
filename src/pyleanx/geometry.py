@@ -139,6 +139,28 @@ def parallel(l1: object, l2: object) -> Expr:
     return apply(_c("AffineSubspace.Parallel", (_AFFINE,), r"{0} \parallel {1}"), l1, l2)
 
 
+_ORTHO = "Mathlib.Analysis.InnerProductSpace.Orthogonal"
+
+
+def perpendicular(l1: object, l2: object) -> Expr:
+    """``l1 ⊥ l2`` for lines: their directions are orthogonal (Mathlib's
+    ``l1.direction ⟂ l2.direction``)."""
+    from .terms import apply
+
+    def direction(ln: object) -> Any:
+        return apply(_c("AffineSubspace.direction", (_AFFINE,), "{0}"), ln)
+
+    return apply(_c("Submodule.IsOrtho", (_ORTHO,), r"{0} \perp {1}"), direction(l1),
+                 direction(l2))
+
+
+def on_line(p: object, ln: object) -> Expr:
+    """``p`` lies on the line ``ln`` (``p ∈ line[ℝ, a, b]``)."""
+    from .terms import apply
+
+    return apply(_c("Membership.mem", (_AFFINE,), r"{1} \text{{ lies on line }} {0}"), ln, p)
+
+
 def on_segment(p: object, a: object, b: object) -> Expr:
     """``p`` lies on the segment ``ab`` (endpoints allowed; Mathlib's ``Wbtw ℝ a p b``)."""
     from .terms import apply
@@ -251,7 +273,8 @@ _GEO_FACT_IMPORTS = (_SIMILAR, _ANGLE, _BETWEEN, _AFFINE, _COLLINEAR)
 corresponding_angles = library_fact(
     "PyLeanX.Geometry.corresponding_angles", """
     theorem PyLeanX.Geometry.corresponding_angles {V P : Type*} [NormedAddCommGroup V]
-        [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {A B C D E : P}
+        [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    {A B C D E : P}
         (hABC : ¬ Collinear ℝ {A, B, C}) (hD : Wbtw ℝ A D B) (hE : Wbtw ℝ A E C)
         (hP : (line[ℝ, D, E]).Parallel line[ℝ, B, C]) :
         EuclideanGeometry.angle A B C = EuclideanGeometry.angle A D E ∧
@@ -447,7 +470,8 @@ theorem PyLeanX.Geometry.bisector_parallel {V : Type*} [NormedAddCommGroup V]
 #: 0 < AB and 0 < AC in a triangle ABC.
 triangle_sides_pos = library_fact("PyLeanX.Geometry.triangle_sides_pos", """
 theorem PyLeanX.Geometry.triangle_sides_pos {V P : Type*} [NormedAddCommGroup V]
-    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {A B C : P}
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    {A B C : P}
     (hABC : ¬ Collinear ℝ {A, B, C}) : 0 < dist A B ∧ 0 < dist A C :=
   ⟨dist_pos.2 (ne₁₂_of_not_collinear hABC), dist_pos.2 (ne₁₃_of_not_collinear hABC)⟩
 """, *_BIS, label="the sides of a triangle have positive length")
@@ -505,51 +529,111 @@ theorem PyLeanX.Geometry.angle_on_segment {V P : Type*} [NormedAddCommGroup V]
   ⟨h.angle_eq_left C, (sbtw_comm.mp h).angle_eq_left C⟩
 """, *_GEO_FACT_IMPORTS, label="D lies on segment AB, so it is on ray AB and on ray BA")
 
-#: In a right triangle (right angle at C) the foot D of the altitude from C lies strictly
-#: between A and B, and CD ⊥ AB. D is the point of AB at the fraction
-#: t = |CA|²/(|CA|² + |CB|²) of the way from A to B.
-altitude_foot = library_fact("PyLeanX.Geometry.altitude_foot", """
-theorem PyLeanX.Geometry.altitude_foot {V P : Type*} [NormedAddCommGroup V]
-    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P] {A B C : P}
-    (hABC : ¬ Collinear ℝ {A, B, C}) (hC : EuclideanGeometry.angle A C B = Real.pi / 2) :
-    ∃ D : P, Sbtw ℝ A D B ∧ EuclideanGeometry.angle A D C = Real.pi / 2 ∧
-      EuclideanGeometry.angle B D C = Real.pi / 2 := by
+#: The altitude from C in any triangle ABC, and when its foot lies inside AB.
+altitude = library_fact("PyLeanX.Geometry.altitude", """
+theorem PyLeanX.Geometry.altitude {V P : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    {A B C : P} (hABC : ¬ Collinear ℝ {A, B, C}) :
+    ∃ D : P, D ∈ line[ℝ, A, B] ∧ (line[ℝ, C, D]).direction ⟂ (line[ℝ, A, B]).direction := by
   have hAB : A ≠ B := ne₁₂_of_not_collinear hABC
+  have hu : 0 < ‖B -ᵥ A‖ := norm_pos_iff.mpr (vsub_ne_zero.mpr hAB.symm)
+  have hu' : ‖B -ᵥ A‖ ^ 2 ≠ 0 := pow_ne_zero 2 hu.ne'
+  refine ⟨AffineMap.lineMap A B (inner ℝ (C -ᵥ A) (B -ᵥ A) / ‖B -ᵥ A‖ ^ 2),
+    AffineMap.lineMap_mem_affineSpan_pair _ _ _, ?_⟩
+  rw [direction_affineSpan, direction_affineSpan, vectorSpan_pair, vectorSpan_pair,
+    Submodule.isOrtho_span]
+  intro u hu v hv
+  rw [Set.mem_singleton_iff] at hu hv
+  subst hu hv
+  rw [AffineMap.lineMap_apply, vsub_vadd_eq_vsub_sub, ← neg_vsub_eq_vsub_rev B A]
+  simp only [inner_neg_right, inner_sub_left, real_inner_smul_left]
+  rw [real_inner_self_eq_norm_sq]
+  field_simp
+  ring
+""", *_GEO_FACT_IMPORTS, _ORTHO,
+    label="every triangle has an altitude: a point D on line AB with CD ⊥ AB")
+
+foot_right_angles = library_fact("PyLeanX.Geometry.foot_right_angles", """
+theorem PyLeanX.Geometry.foot_right_angles {V P : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    {A B C D : P} (hD : D ∈ line[ℝ, A, B])
+    (h : (line[ℝ, C, D]).direction ⟂ (line[ℝ, A, B]).direction) :
+    EuclideanGeometry.angle A D C = Real.pi / 2 ∧
+      EuclideanGeometry.angle B D C = Real.pi / 2 := by
+  have hCD : C -ᵥ D ∈ (line[ℝ, C, D]).direction :=
+    AffineSubspace.vsub_mem_direction (left_mem_affineSpan_pair _ _ _)
+      (right_mem_affineSpan_pair _ _ _)
+  have hA : A -ᵥ D ∈ (line[ℝ, A, B]).direction :=
+    AffineSubspace.vsub_mem_direction (left_mem_affineSpan_pair _ _ _) hD
+  have hB : B -ᵥ D ∈ (line[ℝ, A, B]).direction :=
+    AffineSubspace.vsub_mem_direction (right_mem_affineSpan_pair _ _ _) hD
+  constructor
+  · rw [EuclideanGeometry.angle, ← InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two,
+      real_inner_comm]
+    exact h.inner_eq hCD hA
+  · rw [EuclideanGeometry.angle, ← InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two,
+      real_inner_comm]
+    exact h.inner_eq hCD hB
+""", *_GEO_FACT_IMPORTS, _ORTHO,
+    label="CD ⊥ AB at D makes right angles at D")
+
+foot_between = library_fact("PyLeanX.Geometry.foot_between", """
+theorem PyLeanX.Geometry.foot_between {V P : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    {A B C D : P} (hAB : A ≠ B) (hD : D ∈ line[ℝ, A, B])
+    (h : (line[ℝ, C, D]).direction ⟂ (line[ℝ, A, B]).direction)
+    (hA : EuclideanGeometry.angle C A B < Real.pi / 2)
+    (hB : EuclideanGeometry.angle C B A < Real.pi / 2) : Sbtw ℝ A D B := by
+  obtain ⟨t, rfl⟩ := mem_affineSpan_pair_iff_exists_lineMap_eq.mp hD
+  have hCD : C -ᵥ AffineMap.lineMap A B t ∈ (line[ℝ, C, AffineMap.lineMap A B t]).direction :=
+    AffineSubspace.vsub_mem_direction (left_mem_affineSpan_pair _ _ _)
+      (right_mem_affineSpan_pair _ _ _)
+  have hBA : B -ᵥ A ∈ (line[ℝ, A, B]).direction :=
+    AffineSubspace.vsub_mem_direction (right_mem_affineSpan_pair _ _ _)
+      (left_mem_affineSpan_pair _ _ _)
+  have h0 := h.inner_eq hCD hBA
+  rw [AffineMap.lineMap_apply, vsub_vadd_eq_vsub_sub, inner_sub_left, real_inner_smul_left,
+    real_inner_self_eq_norm_sq] at h0
+  have hpA : 0 < inner ℝ (C -ᵥ A) (B -ᵥ A) := not_le.mp fun hn =>
+    absurd (InnerProductGeometry.inner_nonpos_iff_pi_div_two_le_angle.mp hn) (not_le.mpr hA)
+  have hpB : 0 < inner ℝ (C -ᵥ B) (A -ᵥ B) := not_le.mp fun hn =>
+    absurd (InnerProductGeometry.inner_nonpos_iff_pi_div_two_le_angle.mp hn) (not_le.mpr hB)
+  rw [← vsub_sub_vsub_cancel_right C B A, ← neg_vsub_eq_vsub_rev B A, inner_neg_right,
+    inner_sub_left, real_inner_self_eq_norm_sq] at hpB
+  have hn : 0 < ‖B -ᵥ A‖ ^ 2 := pow_pos (norm_pos_iff.mpr (vsub_ne_zero.mpr hAB.symm)) 2
+  have ht0 : 0 < t := by nlinarith
+  have ht1 : t < 1 := by nlinarith
+  exact sbtw_iff_mem_image_Ioo_and_ne.mpr ⟨⟨t, ⟨ht0, ht1⟩, rfl⟩, hAB⟩
+""", *_GEO_FACT_IMPORTS, _ORTHO,
+    label="if the angles at A and B are acute, the foot of the altitude lies strictly "
+    "between A and B")
+
+right_triangle_acute = library_fact("PyLeanX.Geometry.right_triangle_acute", """
+theorem PyLeanX.Geometry.right_triangle_acute {V P : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    {A B C : P} (hABC : ¬ Collinear ℝ {A, B, C})
+    (hC : EuclideanGeometry.angle A C B = Real.pi / 2) :
+    EuclideanGeometry.angle C A B < Real.pi / 2 ∧
+      EuclideanGeometry.angle C B A < Real.pi / 2 := by
   have hAC : A ≠ C := ne₁₃_of_not_collinear hABC
   have hBC : B ≠ C := ne₂₃_of_not_collinear hABC
   have hwz : inner ℝ (A -ᵥ C) (B -ᵥ C) = 0 :=
     (InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two _ _).mpr hC
   have hzw : inner ℝ (B -ᵥ C) (A -ᵥ C) = 0 := by rw [real_inner_comm]; exact hwz
-  have hw0 : 0 < ‖A -ᵥ C‖ := norm_pos_iff.mpr (vsub_ne_zero.mpr hAC)
-  have hz0 : 0 < ‖B -ᵥ C‖ := norm_pos_iff.mpr (vsub_ne_zero.mpr hBC)
-  have hden : 0 < ‖A -ᵥ C‖ ^ 2 + ‖B -ᵥ C‖ ^ 2 := by positivity
-  have hden' : ‖A -ᵥ C‖ ^ 2 + ‖B -ᵥ C‖ ^ 2 ≠ 0 := hden.ne'
-  set t : ℝ := ‖A -ᵥ C‖ ^ 2 / (‖A -ᵥ C‖ ^ 2 + ‖B -ᵥ C‖ ^ 2) with ht
-  have ht0 : 0 < t := div_pos (pow_pos hw0 2) hden
-  have ht1 : t < 1 := by
-    rw [ht, div_lt_one hden]
-    have := pow_pos hz0 2
-    linarith
-  have hBA : B -ᵥ A = (B -ᵥ C) - (A -ᵥ C) := (vsub_sub_vsub_cancel_right B A C).symm
-  have hCA : C -ᵥ A = -(A -ᵥ C) := (neg_vsub_eq_vsub_rev A C).symm
-  refine ⟨AffineMap.lineMap A B t, ?_, ?_, ?_⟩
-  · exact sbtw_iff_mem_image_Ioo_and_ne.mpr ⟨⟨t, ⟨ht0, ht1⟩, rfl⟩, hAB⟩
-  · rw [EuclideanGeometry.angle, ← InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two,
-      AffineMap.lineMap_apply, vsub_vadd_eq_vsub_sub, vsub_vadd_eq_vsub_sub, vsub_self, hBA, hCA]
-    simp only [zero_sub, inner_neg_left, inner_neg_right, real_inner_smul_left,
-      real_inner_smul_right, inner_sub_left, inner_sub_right, hwz, hzw]
-    simp only [real_inner_self_eq_norm_sq]
-    rw [ht]
-    first | (field_simp; ring) | field_simp
-  · rw [EuclideanGeometry.angle, ← InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two,
-      AffineMap.lineMap_apply, vsub_vadd_eq_vsub_sub, vsub_vadd_eq_vsub_sub, hBA, hCA]
-    simp only [zero_sub, inner_neg_left, inner_neg_right, real_inner_smul_left,
-      real_inner_smul_right, inner_sub_left, inner_sub_right, hwz, hzw]
-    simp only [real_inner_self_eq_norm_sq]
-    rw [ht]
-    first | (field_simp; ring) | field_simp
-""", *_GEO_FACT_IMPORTS, "Mathlib.Analysis.InnerProductSpace.Basic",
-    label="the foot of the altitude from the right angle lies strictly between A and B")
+  have key : ∀ {X Y : P}, inner ℝ (X -ᵥ C) (Y -ᵥ C) = 0 → X ≠ C →
+      EuclideanGeometry.angle C X Y < Real.pi / 2 := by
+    intro X Y hXY hX
+    have hn : 0 < ‖X -ᵥ C‖ := norm_pos_iff.mpr (vsub_ne_zero.mpr hX)
+    rw [EuclideanGeometry.angle]
+    apply not_le.mp
+    rw [← InnerProductGeometry.inner_nonpos_iff_pi_div_two_le_angle, not_le,
+      ← vsub_add_vsub_cancel Y C X, inner_add_right, real_inner_self_eq_norm_sq,
+      ← neg_vsub_eq_vsub_rev X C, inner_neg_left, hXY, norm_neg]
+    simp only [neg_zero, zero_add]
+    exact pow_pos hn 2
+  exact ⟨key hwz hAC, key hzw hBC⟩
+""", *_GEO_FACT_IMPORTS, _ORTHO,
+    label="the other two angles of a right triangle are acute")
 
 #: △abc ∼ △a'b'c' (abc a triangle)  ⟹  b'a'/ba = b'c'/bc: the sides from the vertex b.
 similar_sides_at = library_fact("PyLeanX.Geometry.similar_sides_at", """
@@ -580,6 +664,7 @@ LEMMAS = collect_lemmas(globals())
 
 __all__ = ["Point", "point", "points", "dist", "angle", "line", "parallel", "on_segment",
            "collinear", "triangle", "similar", "strictly_between", "extend_beyond",
+           "perpendicular", "on_line",
            "segment_addition", "cross_multiply", "flip_ratio", "split_fraction",
            "congruent", "midpoint", "right_angle", "on_circle", "parallelogram",
            "is_midpoint", "opposite_sides", "same_side", "concyclic",
