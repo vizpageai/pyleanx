@@ -88,3 +88,42 @@ theorem/project imports. `import_mode="mathlib"` emits `import Mathlib` instead.
 - **Agents (M8)**: tactic text → IR (`agent/parse.py`; anything unstructured is a gated
   `RawTactic`); `ProofEnv` wraps a session and keeps a transcript; search and benchmarks
   report `verified` only from batch results.
+
+## Natural proofs (0.1)
+
+```
+ written proof (pl.claim / pl.similarly / because="AA similarity")
+        │ fact_search.py: description → library Name (exact label/name, else ranked,
+        │                 refused when unclear)
+        │ proofs.resolve_similarly: earlier step + substitution, hypotheses renamed
+        ▼
+ Justify (proofs.py): ordered `first | …` alternatives, cheap → expensive
+        ▼
+ render_module ──► same Lean source for both backends
+        │                                         │
+        ▼                                         ▼
+ verify_all (fresh lean process)          backend/repl_check.py: persistent REPL
+   archived, fingerprinted                  imports once ─ preamble (facts, cited
+                                            theorems) once ─ theorems every time;
+                                            messages mapped to file lines
+        │                                         │
+        └──────────── classify() + #print axioms audit + policy ────────┘
+                                   ▼
+                      VerificationResult ── diagnose.py: explanations per step
+ numeric.py: sanity_check (random samples, constructed points; independent of Lean)
+```
+
+- **One source, two processes.** `check_all` sends exactly the text `verify_all` would
+  write to a file, split into an import chunk, a preamble chunk (cached by its text) and the
+  theorems. Messages come back with line numbers relative to each chunk and are shifted to
+  file lines, then `classify` decides as for a batch run. REPL results carry
+  `backend="repl"`, an empty fingerprint, and are never put in the result cache.
+- **Memory.** Each import set keeps a Mathlib environment (several GB) in the REPL process;
+  after `MAX_IMPORT_SETS` the process is restarted, and REPLs are stopped at interpreter
+  exit. A failing REPL is restarted once, then the batch backend checks.
+- **The gap filler's order matters.** Lean's heartbeat budget is per declaration, so one
+  expensive failing alternative can starve the rest. Cheap alternatives (reducible-only
+  matching, linarith after notation normalisation) come first; unrestricted `exact`/`apply`
+  (which may unfold definitions such as `EuclideanGeometry.angle` or set literals) later.
+- **Nothing numeric is trusted.** `sanity_check` and `explain_failure` only advise; a step
+  is accepted only by Lean.
