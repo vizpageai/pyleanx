@@ -70,3 +70,36 @@ def test_chains_are_checked_link_by_link():
                      proof=pl.proof(pl.chain(x ** 2, ("=", x + x), (">", 1))))
     rep = thm.sanity_check()
     assert not rep.ok and "Step 1 looks false" in str(rep)
+
+
+def test_points_the_hypotheses_determine_are_constructed():
+    M, N = geo.points("M N")
+    thm = pl.Theorem("mid", [A, B, C, M, N],
+                     assumptions={"hM": geo.is_midpoint(M, A, B),
+                                  "hN": geo.is_midpoint(N, A, C)},
+                     conclusion=geo.dist(M, N) == geo.dist(B, C) / 3,  # false: it is 1/2
+                     proof=pl.proof(pl.conclude()))
+    rep = thm.sanity_check()
+    assert rep.samples > 0 and "The statement looks false" in str(rep)
+    between = pl.Theorem("bt", [A, B, D], assumptions={"h": geo.strictly_between(D, A, B)},
+                         conclusion=geo.dist(A, D) + geo.dist(D, B) == geo.dist(A, B),
+                         proof=pl.proof(pl.conclude()))
+    rep = between.sanity_check()
+    assert rep.ok and rep.samples == 300
+
+
+def test_cli_sanity_and_facts(tmp_path, capsys):
+    from pyleanx.cli import main
+
+    script = tmp_path / "s.py"
+    script.write_text(
+        "import pyleanx as pl\n"
+        "x = pl.symbol('x', pl.Real)\n"
+        "THEOREMS = [pl.Theorem('f', [x], conclusion=x ** 2 > x, proof=pl.proof(pl.conclude()))]\n",
+        encoding="utf-8")
+    assert main(["sanity", str(script)]) == 1
+    assert "looks false" in capsys.readouterr().out
+    assert main(["facts", "AA", "similarity", "--limit", "2"]) == 0
+    assert "geo.similar_AA" in capsys.readouterr().out
+    assert main(["facts", "--json", "segment", "addition"]) == 0
+    assert '"name": "geo.segment_addition"' in capsys.readouterr().out

@@ -39,6 +39,12 @@ It is instantaneous, needs no Lean, and proves nothing: when no counterexample i
 says so, and when the hypotheses cannot be sampled (an exact right angle, a function, a
 set) it says that nothing was checked.
 
+Points the hypotheses determine are constructed the way one draws the figure: a point
+strictly between A and B is placed on the segment, and a hypothesis `M = midpoint(A, B)`
+(any `variable = expression`) is computed. From the command line,
+`pyleanx sanity script.py` checks every theorem of a script (exit status 1 if a step looks
+false), and `pyleanx facts AA similarity` searches the citable facts.
+
 ## Failures in the words of the proof
 
 When Lean rejects a proof, `thm.prose(res)` explains why under the verdict (also available

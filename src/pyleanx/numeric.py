@@ -181,6 +181,9 @@ def evaluate(e: Expr, env: dict[int, Any]) -> Any:
             return _collinear(_set_points(args[1], env))
         if name == "dist" and len(args) == 2:
             return _dist(evaluate(args[0], env), evaluate(args[1], env))
+        if name == "midpoint" and len(args) == 3 and isinstance(args[0], TypeTerm):
+            (x1, y1), (x2, y2) = _point(evaluate(args[1], env)), _point(evaluate(args[2], env))
+            return ((x1 + x2) / 2, (y1 + y2) / 2)
     if isinstance(e, Quant):
         raise Unsupported("quantifier")
     raise Unsupported(type(e).__name__)
@@ -289,6 +292,44 @@ def _detail(prop: Expr, env: dict[int, Any]) -> str:
     return f": the left side is {_fmt(a)}, the right side {_fmt(b)}"
 
 
+def _construct(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> None:
+    """Place points the hypotheses determine, as one draws a figure: D strictly between A and
+    B goes on the segment; ``M = midpoint(A, B)`` and any ``x = expression`` are computed.
+    (Every hypothesis is still evaluated afterwards; nothing is assumed.)"""
+    for _ in range(2):  # a second pass resolves points defined from constructed points
+        for h in hyps:
+            try:
+                between = (isinstance(h, Apply) and isinstance(h.fn, Const)
+                           and h.fn.name in ("Sbtw", "Wbtw") and len(h.args) == 4
+                           and isinstance(h.args[2], Var))
+                defines = (isinstance(h, Compare) and h.op == "eq"
+                           and isinstance(h.lhs, Var) and h.lhs.uid not in _free_uids(h.rhs))
+                if between:
+                    assert isinstance(h, Apply) and isinstance(h.fn, Const)
+                    a, b = _point(evaluate(h.args[1], env)), _point(evaluate(h.args[3], env))
+                    t = rng.uniform(0.05, 0.95) if h.fn.name == "Sbtw" else rng.random()
+                    p = h.args[2]
+                    assert isinstance(p, Var)
+                    env[p.uid] = (a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]))
+                elif defines:
+                    assert isinstance(h, Compare) and isinstance(h.lhs, Var)
+                    env[h.lhs.uid] = evaluate(h.rhs, env)
+            except (Unsupported, ValueError, ZeroDivisionError, OverflowError):
+                continue
+
+
+def _free_uids(e: Any) -> set[int]:
+    if isinstance(e, Var):
+        return {e.uid}
+    out: set[int] = set()
+    for c in getattr(e, "children", lambda: ())():
+        out |= _free_uids(c)
+    if isinstance(e, Apply):
+        for a in e.args:
+            out |= _free_uids(a)
+    return out
+
+
 def sanity_check(thm: Any, samples: int = 300, seed: int = 0) -> SanityReport:
     """Try the statement and each top-level step on random values (see module docstring)."""
     from .prose import plain
@@ -309,6 +350,7 @@ def sanity_check(thm: Any, samples: int = 300, seed: int = 0) -> SanityReport:
     while rep.samples < samples and tries < samples * 40:
         tries += 1
         env = {v.uid: _sample(s, rng) for v, s in sorts}
+        _construct(hyps, env, rng)
         try:
             if not all(evaluate(h, env) for h in hyps):
                 continue

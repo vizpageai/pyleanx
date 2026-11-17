@@ -100,6 +100,9 @@ First public release. Pinned to Lean `v4.34.1` and Mathlib
   explain rejections step by step; reasons may be descriptions (`because="AA similarity"`,
   `pl.search_facts`, `pl.fact`); `pl.similarly(step, exchange=(A, B))`; a sturdier gap filler
   (cheap matching first, either orientation, two-fact applications, notation symmetry).
+- CLI: `pyleanx sanity script.py` (numeric check of every step, no Lean) and
+  `pyleanx facts <description>` (search the citable facts). The sanity check constructs
+  points the hypotheses determine (a point between two others, `M = midpoint(A, B)`).
 - Euclid Book I propositions as written proofs (`examples/euclid_book1.py`) and a naturalness
   benchmark over the examples (`benchmarks/naturalness.py`, `docs/benchmark.md`).
 - Pythagoras' theorem from similar triangles, as in a textbook (`examples/pythagoras_similar.py`):

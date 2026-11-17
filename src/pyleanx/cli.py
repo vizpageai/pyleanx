@@ -180,6 +180,35 @@ def cmd_show_lean(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_sanity(args: argparse.Namespace) -> int:
+    """Numeric sanity check of a script's theorems (no Lean; exit 1 if a step looks false)."""
+    thms = load_theorems(args.script)
+    reports = [t.sanity_check(samples=args.samples) for t in thms]
+    if args.json:
+        print(json.dumps([{"theorem": r.theorem, "ok": r.ok, "samples": r.samples,
+                           "checked_steps": r.checked_steps, "note": r.note,
+                           "findings": [str(f) for f in r.findings]} for r in reports],
+                         ensure_ascii=False, indent=2))
+    else:
+        for r in reports:
+            print(("✘ " if not r.ok else "· ") + str(r))
+    return 0 if all(r.ok for r in reports) else 1
+
+
+def cmd_facts(args: argparse.Namespace) -> int:
+    """Search the facts of the domain modules by description."""
+    from .fact_search import search_facts
+
+    hits = search_facts(" ".join(args.query), k=args.limit)
+    if args.json:
+        print(json.dumps([{"score": s, "name": n, "label": lab} for s, n, lab in hits],
+                         ensure_ascii=False, indent=2))
+    else:
+        for _, name, label in hits:
+            print(f"{name:40s} {label}")
+    return 0 if hits else 1
+
+
 def cmd_compile(args: argparse.Namespace) -> int:
     thms = load_theorems(args.script)
     proj = _project_from(args)
@@ -463,6 +492,19 @@ def build_parser() -> argparse.ArgumentParser:
             s.add_argument("--allow-raw-tactics", action="store_true",
                            help="permit UNTRUSTED pl.raw_tactic text (screened + audited)")
         s.set_defaults(func=func)
+
+    s = sub.add_parser("sanity", help="try a (trusted) script's theorems on random numbers "
+                       "(no Lean)")
+    s.add_argument("script")
+    s.add_argument("--samples", type=int, default=300)
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_sanity)
+
+    s = sub.add_parser("facts", help="find citable facts by description")
+    s.add_argument("query", nargs="+")
+    s.add_argument("--limit", type=int, default=8)
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_facts)
 
     s = sub.add_parser("cache", help="inspect or clear the verified-result cache")
     s.add_argument("action", choices=["stats", "clear"])
