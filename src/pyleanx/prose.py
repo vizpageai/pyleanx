@@ -100,7 +100,9 @@ def latex_text(s: str) -> str:
                 num, i = _group(s, i)
                 den, i = _group(s, i)
                 n, d = latex_text(num), latex_text(den)
-                out.append(f"{n if _atomic(n) else f'({n})'}/{d if _atomic(d) else f'({d})'}")
+                # a denominator like 2t is a product: 2/(2t), not 2/2t
+                d_ok = _atomic(d) and not re.fullmatch(r"\d+[^\d(|].*", d)
+                out.append(f"{n if _atomic(n) else f'({n})'}/{d if d_ok else f'({d})'}")
             elif cmd == "sqrt":
                 arg, i = _group(s, i)
                 a = latex_text(arg)

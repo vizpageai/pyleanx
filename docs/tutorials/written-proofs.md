@@ -325,7 +325,8 @@ H(Hf) = −f from Plancherel. `examples/calderon_zygmund.py` proves the Calderó
 decomposition via the maximal function (ch. I §3): off Ω = {Mf > α}, |f| ≤ α almost everywhere
 (by Lebesgue's differentiation theorem), and every interval meeting ℝ ∖ Ω has average ≤ 2α. `examples/hilbert_kernel.py` proves the
 kernel estimates used on the bad part: if b has mean zero on I = [y₀ − t, y₀ + t], then
-|∫_I b(y)/(x − y) dy| ≤ (2t/|x − y₀|²)∫_I|b| for |x − y₀| > 2t.
+|∫_I b(y)/(x − y) dy| ≤ (2t/|x − y₀|²)∫_I|b| for |x − y₀| > 2t, and integrates it (Hörmander):
+∫_{|x−y₀|>2t} |∫_I b(y)/(x − y) dy| dx ≤ 2∫_I|b|.
 
 ## Abstract structures: "let G be a group"
 

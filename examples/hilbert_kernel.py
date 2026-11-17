@@ -12,6 +12,8 @@ I = [y₀ − t, y₀ + t]:
         ∫_I b(y)/(x − y) dy = ∫_I (b(y)/(x − y) − b(y)/(x − y₀)) dy.
     20. Decay away from I: if ∫_I b = 0 and |x − y₀| > 2t, then
         |∫_I b(y)/(x − y) dy| ≤ (2t/|x − y₀|²) ∫_I |b|.
+    21. Hörmander's estimate: away from 2I, the integral of |∫_I b(y)/(x − y) dy| is at most
+        2∫_I |b|. Integrate 20 over |x − y₀| > 2t, using ∫_{|x−y₀|>s} dx/(x − y₀)² = 2/s.
 
 Run:  python examples/hilbert_kernel.py
 """
@@ -173,7 +175,84 @@ decay = pl.Theorem(
     proof=_decay_proof(),
 )
 
-THEOREMS = [kernel_smooth, cancellation, decay]
+
+# -----------------------------------------------------------------------------------------
+# 21. Hörmander's estimate: the bad part is integrable away from 2I
+# -----------------------------------------------------------------------------------------
+# Integrate 20 over S = {|x − y₀| > 2t}: with A = ∫_I |b|,
+#   ∫_S |∫_I b(y)/(x − y) dy| dx ≤ 2tA ∫_S dx/(x − y₀)² = 2tA · 2/(2t) = 2A.
+# The left side is a [0, ∞]-valued integral, so no integrability has to be proved for it.
+
+S = rv.pred_set(lambda u: 2 * t < pl.abs(u - y0), pl.Real)
+
+
+def _hormander_proof() -> pl.Tactic:
+    claim, fix = pl.claim, pl.fix
+    u = pl.symbol("u", pl.Real)
+    A = pl.integral(lambda w: pl.abs(b(w)), within=I)
+    C = 2 * t * A
+    k = lambda p: 1 / (p - y0) ** 2  # noqa: E731
+    Ck = lambda p: C * k(p)  # noqa: E731
+    return pl.proof(
+        claim(2 * t > 0, because="ht", name="h2t"),
+        claim(rv.measurable(S), because=rv.outside_measurable, name="hS"),
+        claim(rv.measurable(I), because=rv.interval_measurable, name="hI"),
+        claim(A >= 0, because=[rv.set_integral_nonneg, "hI"], name="hA"),
+        claim(C >= 0, because=[rv.mul_nonneg, "h2t", "hA"], name="hC"),
+        claim(pl.Forall(x, pl.Implies(rv.mem(x, S), rv.of_real(pl.abs(_bk(x)))
+                                      <= rv.of_real(Ck(x)))),
+              name="hpt", note="theorem 20 at each x with |x − y₀| > 2t",
+              proof=pl.proof(
+                  fix(x, assume={"hx": rv.mem(x, S)}),
+                  claim(2 * t < pl.abs(x - y0), because="hx", name="hxo"),
+                  claim(pl.abs(_bk(x)) <= 2 * t / pl.abs(x - y0) ** 2 * A,
+                        because=[decay, "hb", "ht", "hxo", "hmean"], name="hd",
+                        note="theorem 20"),
+                  claim(2 * t / pl.abs(x - y0) ** 2 * A == Ck(x), because=rv.sq_abs,
+                        name="heq"),
+                  pl.conclude(because=[rv.of_real_le, "hd", "heq"]),
+              )),
+        claim(rv.lintegral(lambda p: rv.of_real(pl.abs(_bk(p))), within=S)
+              <= rv.lintegral(lambda p: rv.of_real(Ck(p)), within=S),
+              because=[rv.set_lintegral_mono, "hS", "hpt"], name="hmono"),
+        claim(rv.integrable_on(pl.fun(k, pl.Real), S),
+              because=[rv.integrable_inv_sq_outside, "h2t"], name="hk"),
+        claim(rv.integrable_on(pl.fun(Ck, pl.Real), S),
+              because=[rv.integrable_const_mul, "hk"], name="hCk"),
+        claim(pl.Forall(u, 0 <= Ck(u)), name="hnn0",
+              proof=pl.proof(fix(u), pl.conclude(because=[rv.mul_nonneg, "hC"]))),
+        claim(rv.ae_nonneg_on(pl.fun(Ck, pl.Real), S), because=[rv.everywhere_ae, "hnn0"],
+              name="hnn"),
+        claim(rv.of_real(pl.integral(Ck, within=S))
+              == rv.lintegral(lambda p: rv.of_real(Ck(p)), within=S),
+              because=[rv.of_real_integral, "hCk", "hnn"], name="hofr",
+              note="the same integral taken in [0, ∞]: the integrand is integrable and ≥ 0"),
+        claim(pl.integral(Ck, within=S) == C * pl.integral(k, within=S),
+              because=rv.integral_const_mul, name="hcm"),
+        claim(pl.integral(k, within=S) == 2 / (2 * t),
+              because=[rv.integral_inv_sq_outside, "h2t"], name="hval"),
+        claim(C * pl.integral(k, within=S) == C * (2 / (2 * t)), because="hval", name="hsub"),
+        claim(t != 0, because=[rv.ne_of_gt, "ht"], name="ht0"),
+        claim(C * (2 / (2 * t)) == 2 * A, because="ht0", name="halg"),
+        claim(pl.integral(Ck, within=S) == 2 * A, because=["hcm", "hsub", "halg"],
+              name="htot"),
+        pl.chain(rv.lintegral(lambda p: rv.of_real(pl.abs(_bk(p))), within=S),
+                 ("<=", rv.lintegral(lambda p: rv.of_real(Ck(p)), within=S), "hmono"),
+                 ("=", rv.of_real(pl.integral(Ck, within=S)), "hofr"),
+                 ("=", rv.of_real(2 * A), "htot")),
+    )
+
+
+hormander = pl.Theorem(
+    "hilbert_kernel_hormander", [b, y0, t],
+    assumptions={"hb": rv.integrable_on(b, I), "ht": t > 0,
+                 "hmean": pl.integral(lambda w: b(w), within=I) == 0},
+    conclusion=rv.lintegral(lambda p: rv.of_real(pl.abs(_bk(p))), within=S)
+    <= rv.of_real(2 * pl.integral(lambda w: pl.abs(b(w)), within=I)),
+    proof=_hormander_proof(),
+)
+
+THEOREMS = [kernel_smooth, cancellation, decay, hormander]
 
 if __name__ == "__main__":
     results = pl.verify_all(THEOREMS, timeout=3600)

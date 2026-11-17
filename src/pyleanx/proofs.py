@@ -637,7 +637,7 @@ class Auto(Tactic):
 
         h = (" [" + ", ".join(render_term(t) for t in self.hints) + "]") if self.hints else ""
         alts = ["rfl", "ring1", f"(norm_num{h}; done)", f"(simp{h}; done)", f"linarith{h}",
-                "positivity", f"nlinarith{h}", "(field_simp; ring1)"]
+                "positivity", f"nlinarith{h}", "(field_simp; done)", "(field_simp; ring1)"]
         if self.aesop:
             alts.append("(aesop; done)")
         if self.library_search:
@@ -847,7 +847,7 @@ class Justify(Tactic):
         alts += ["rfl", "ring1", "omega", "positivity", "fun_prop", f"linarith{h}",
                  "(congr 1; ring1)", "(push_cast; ring1)",
                  f"(norm_num{hs}; done)", f"(simp{hs}; done)", f"(simp{hs}; ring1)",
-                 f"nlinarith{h}", "(field_simp; ring1)", f"(simp_all{hs}; done)",
+                 f"nlinarith{h}", "(field_simp; done)", "(field_simp; ring1)", f"(simp_all{hs}; done)",
                  f"(constructor; all_goals ({close}))"]
         if not self.avoid:  # aesop's simp set cannot be restricted here
             alts.append("(aesop; done)")

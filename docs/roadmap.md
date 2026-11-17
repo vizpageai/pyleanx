@@ -255,7 +255,9 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - Not yet: writing Ω as a disjoint union of intervals (components / Whitney cubes).
 - Finding: the gap filler does not apply a lemma to two hypotheses (`exact le_of_tendsto hlim hev`); cite the applied lemma `rv.le_of_tendsto("hlim", "hev")`.
 - [x] `examples/hilbert_kernel.py` (Stein ch. II §2–3, the bad part of the weak (1,1) proof): 18 |1/(x−y) − 1/(x−y₀)| ≤ 2|y−y₀|/|x−y₀|² when 2|y−y₀| ≤ |x−y₀|; 19 if ∫_I b = 0 and x ∉ I, ∫_I b(y)/(x−y) dy = ∫_I (b(y)/(x−y) − b(y)/(x−y₀)) dy; 20 if moreover |x−y₀| > 2t, |∫_I b(y)/(x−y) dy| ≤ (2t/|x−y₀|²)∫_I|b|. All verified (standard axioms only) on the first run. New shipped facts `kernel_integrable`, `abs_integral_le`.
-- Next: integrate theorem 20 over |x − y₀| > 2t (∫_{|u|>s} du/u² = 2/s), then weak (1,1) for the Hilbert transform (needs principal-value integrals).
+- [x] Theorem 21, Hörmander's estimate for the bad part: ∫_{|x−y₀|>2t} |∫_I b(y)/(x−y) dy| dx ≤ 2∫_I|b| (a [0, ∞]-valued integral, so no integrability of x ↦ ∫_I b(y)/(x−y) dy is needed). Shipped facts ∫_{(s,∞)} du/u² = 1/s, ∫_{|x−y₀|>s} dx/(x−y₀)² = 2/s (via `integral_comp_abs` and translation invariance) and its integrability. Verified (standard axioms only).
+- Engine: the gap filler also tries `field_simp` alone (it failed when `field_simp` closed the goal before `ring1`). Prose: a denominator like 2t is bracketed, 2/(2t).
+- Next: weak (1,1) for the Hilbert transform: sum theorem 21 over the Calderón–Zygmund intervals (needs the disjoint-interval decomposition of Ω) and relate the kernel 1/x to H (principal-value integrals).
 
 ### Harmonic analysis as in a textbook (2026-11-13)
 - [x] `pyleanx/harmonic.py` (generated from Lean checked in the pinned Mathlib): 8 shipped definitions (`PyLeanX.Harmonic.coeff` = `fourierCoeffOn` on [−π, π], `ft` = `𝓕`, `ift` = `𝓕⁻`, `gauss`, `L2`, `integrable_on_circle`, `coeff_sq_sum`, `mean_square`) and 18 facts (coefficient/transform integral formulas, linearity, integration by parts, Bessel, Parseval, Riemann–Lebesgue ×2, Gaussian, inversion, inverse transform at 0, small algebra).

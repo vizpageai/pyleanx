@@ -782,4 +782,67 @@ real_dist = lemma("Real.dist_eq", _SETINT, label="the distance from a to b is |a
 mul_le_mul_right = lemma("mul_le_mul_of_nonneg_right", _SETINT,
                           label="b·a ≤ c·a when b ≤ c and a ≥ 0")
 
+
+_IMPROPER = ("Mathlib.Analysis.SpecialFunctions.ImproperIntegrals",
+             "Mathlib.MeasureTheory.Measure.Lebesgue.Integral", "Mathlib.MeasureTheory.Group.Integral",
+             _SETINT)
+
+#: ∫_{(s, ∞)} du/u² = 1/s.
+integral_inv_sq_Ioi = library_fact("PyLeanX.Real.integral_inv_sq_Ioi", """
+theorem PyLeanX.Real.integral_inv_sq_Ioi {s : ℝ} (hs : 0 < s) :
+    ∫ u in Set.Ioi s, 1 / u ^ 2 = 1 / s := by
+  have hcongr : Set.EqOn (fun u : ℝ => 1 / u ^ 2) (fun u => u ^ (-2 : ℝ)) (Set.Ioi s) := by
+    intro u hu
+    have hu0 : 0 < u := lt_trans hs hu
+    simp only [Real.rpow_neg hu0.le, one_div]
+    norm_cast
+  rw [MeasureTheory.setIntegral_congr_fun measurableSet_Ioi hcongr,
+    integral_Ioi_rpow_of_lt (by norm_num) hs]
+  norm_num [Real.rpow_neg_one]
+""", *_IMPROPER, label="∫_(s, ∞) du/u² = 1/s")
+
+#: ∫_{|x − y₀| > s} dx/(x − y₀)² = 2/s.
+integral_inv_sq_outside = library_fact("PyLeanX.Real.integral_inv_sq_outside", """
+theorem PyLeanX.Real.integral_inv_sq_outside {y0 s : ℝ} (hs : 0 < s) :
+    ∫ x in {x | s < |x - y0|}, 1 / (x - y0) ^ 2 = 2 / s := by
+  set g : ℝ → ℝ := (Set.Ioi s).indicator (fun u => 1 / u ^ 2) with hg
+  have hm : MeasurableSet {x : ℝ | s < |x - y0|} :=
+    measurableSet_lt measurable_const (by fun_prop)
+  have h1 : ∫ x in {x | s < |x - y0|}, 1 / (x - y0) ^ 2 = ∫ x, g |x - y0| := by
+    rw [← MeasureTheory.integral_indicator hm]
+    congr 1
+    ext x
+    simp [g, Set.indicator, sq_abs]
+  have h2 : ∫ x, g |x - y0| = ∫ x, g |x| :=
+    MeasureTheory.integral_sub_right_eq_self (fun x => g |x|) y0
+  have h3 : ∫ x in Set.Ioi (0:ℝ), g x = ∫ u in Set.Ioi s, 1 / u ^ 2 := by
+    rw [hg, MeasureTheory.setIntegral_indicator measurableSet_Ioi, Set.Ioi_inter_Ioi,
+      max_eq_right hs.le]
+  rw [h1, h2, integral_comp_abs, h3, PyLeanX.Real.integral_inv_sq_Ioi hs]
+  ring
+""", *_IMPROPER, label="∫ over |x − y₀| > s of dx/(x − y₀)² is 2/s",
+    requires=[integral_inv_sq_Ioi])
+
+#: 1/(x − y₀)² is integrable on {|x − y₀| > s}.
+integrable_inv_sq_outside = library_fact("PyLeanX.Real.integrable_inv_sq_outside", """
+theorem PyLeanX.Real.integrable_inv_sq_outside {y0 s : ℝ} (hs : 0 < s) :
+    MeasureTheory.IntegrableOn (fun x => 1 / (x - y0) ^ 2) {x | s < |x - y0|} := by
+  apply MeasureTheory.Integrable.of_integral_ne_zero
+  rw [PyLeanX.Real.integral_inv_sq_outside hs]
+  positivity
+""", *_IMPROPER, label="1/(x − y₀)² is integrable on |x − y₀| > s",
+    requires=[integral_inv_sq_outside])
+
+#: {x | s < |x − y₀|} is measurable.
+outside_measurable = library_fact("PyLeanX.Real.outside_measurable", """
+theorem PyLeanX.Real.outside_measurable (y0 s : ℝ) : MeasurableSet {x : ℝ | s < |x - y0|} :=
+  measurableSet_lt measurable_const (by fun_prop)
+""", *_IMPROPER, label="{x : |x − y₀| > s} is measurable")
+
+of_real_le = lemma("ENNReal.ofReal_le_ofReal", _SETINT,
+                   label="a ≤ b gives a ≤ b in [0, ∞]")
+set_integral_nonneg = lemma("MeasureTheory.setIntegral_nonneg", _SETINT,
+                            label="the integral of a function ≥ 0 is ≥ 0")
+sq_abs = lemma("sq_abs", _SETINT, label="|a|² = a²")
+
 LEMMAS = collect_lemmas(globals())

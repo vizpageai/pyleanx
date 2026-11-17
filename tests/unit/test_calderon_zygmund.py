@@ -57,10 +57,24 @@ def test_hilbert_kernel_proofs_render():
         sys.path.remove(str(EXAMPLES))
     assert [t.name for t in hk.THEOREMS] == ["hilbert_kernel_smooth",
                                              "hilbert_kernel_cancellation",
-                                             "hilbert_kernel_decay"]
+                                             "hilbert_kernel_decay",
+                                             "hilbert_kernel_hormander"]
     for thm in hk.THEOREMS:
         assert "sorry" not in thm.to_lean() and "not yet checked by Lean" in str(thm.prose())
     src = hk.decay.to_lean()
     for name in ("hilbert_kernel_smooth", "hilbert_kernel_cancellation",
                  "PyLeanX.Real.kernel_integrable", "PyLeanX.Real.abs_integral_le"):
         assert f"theorem {name}" in src
+    src = hk.hormander.to_lean()
+    for name in ("PyLeanX.Real.integral_inv_sq_Ioi", "PyLeanX.Real.integral_inv_sq_outside",
+                 "PyLeanX.Real.integrable_inv_sq_outside", "hilbert_kernel_decay"):
+        assert f"theorem {name}" in src
+    # dependencies first: the 1/u² integral on (s, ∞) before the one outside an interval
+    assert src.index("theorem PyLeanX.Real.integral_inv_sq_Ioi") < src.index(
+        "theorem PyLeanX.Real.integral_inv_sq_outside")
+
+
+def test_a_denominator_like_2t_is_bracketed():
+    t = pl.symbol("t", pl.Real)
+    prose = str(pl.Theorem("q", [t], conclusion=2 / (2 * t) == 1 / t).prose())
+    assert "2/(2t)" in prose and "1/t" in prose
