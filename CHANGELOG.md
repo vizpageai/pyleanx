@@ -68,15 +68,14 @@ see [docs/stability.md](docs/stability.md)).
   |x − y₀| > 2t, and Hörmander's estimate ∫_{|x−y₀|>2t} |∫_I b(y)/(x−y) dy| dx ≤ 2∫_I|b|
   — written proofs verified by Lean. Shipped facts ∫_{|x−y₀|>s} dx/(x − y₀)² = 2/s.
 - The gap filler tries `field_simp` alone; prose brackets denominators like 2t.
-- Pythagoras' theorem from similar triangles (`examples/pythagoras_similar.py`): the altitude
-  to the hypotenuse gives △BAC ∼ △CAD and △ABC ∼ △CBD (a common angle and a right angle), so
-  AC² = AD·AB and BC² = BD·BA — a written proof verified by Lean, without Mathlib's Pythagoras.
-  The altitude CD is drawn in the proof: `geo.altitude` (any triangle has a point D on line AB
-  with CD ⊥ AB), `geo.foot_right_angles`, `geo.foot_between` (acute angles at A and B put the
-  foot strictly between A and B) and `geo.right_triangle_acute`; the theorem assumes only a
-  triangle with a right angle at C. New predicates `geo.perpendicular(l₁, l₂)` (orthogonal
-  directions) and `geo.on_line(p, l)`. Right angles are still written (`geo.right_angle(A, D, C)`). New shipped facts `geo.angle_on_segment` (D on segment AB lies on rays AB and BA) and
-  `geo.similar_sides_at` (proportional sides from a vertex).
+- Pythagoras' theorem from similar triangles, as in a textbook (`examples/pythagoras_similar.py`):
+  the leg rule AC² = AD·AB (△ABC ∼ △ACD by AA, 2 steps) and Pythagoras (drop the altitude,
+  the leg rule at A and at B, add; 5 steps), both verified by Lean without Mathlib's
+  Pythagoras. Geometry: `geo.perpendicular(l₁, l₂)`, `geo.on_line`, `geo.altitude` (every
+  triangle), `geo.foot_right_angles`, `geo.foot_between`, `geo.right_triangle_acute`,
+  `geo.altitude_to_hypotenuse`, `geo.common_angle`, `geo.proportional_sides`. The gap filler
+  treats ∠ACB/∠BCA, "between A and B"/"between B and A" and the vertex order of a triangle as
+  the same, as a textbook does.
 - The intervals of an open set and the Calderón–Zygmund intervals (`examples/cz_intervals.py`):
   endpoints sup{y ≤ x : y ∉ U} and inf{y ≥ x : y ∉ U}, intervals that meet coincide, and every
   x ∈ {Mf > α} lies in an interval (a, b) ⊆ {Mf > α} with a, b ∉ {Mf > α} and

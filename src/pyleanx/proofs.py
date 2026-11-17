@@ -807,9 +807,15 @@ class Justify(Tactic):
         h = (" [" + ", ".join(fs) + "]") if fs else ""
         simp_args = fs + [f"-{a}" for a in self.avoid]
         hs = (" [" + ", ".join(simp_args) + "]") if simp_args else ""
+        # A textbook does not distinguish ∠ACB from ∠BCA, "D between A and B" from "D between
+        # B and A", or triangle ABC from triangle BAC; neither do the side conditions here.
         close = ("first | assumption | exact Ne.symm ‹_› | exact ne_of_gt ‹_› | "
-                 "exact Sbtw.wbtw ‹_› | rfl | omega | fun_prop | positivity | "
-                 "linarith | (simp_all; done)")
+                 "exact Sbtw.wbtw ‹_› | rfl | omega | fun_prop | positivity | linarith | "
+                 "(rw [EuclideanGeometry.angle_comm]; assumption) | "
+                 "(apply sbtw_comm.mp; assumption) | "
+                 "(convert ‹¬ Collinear ℝ _› using 2; ext; "
+                 "simp only [Set.mem_insert_iff, Set.mem_singleton_iff]; tauto) | "
+                 "(simp_all; done)")
         # side conditions left by applying one cited fact may be closed by another cited fact
         # ("by A, since B"), possibly for every element of a set ("∀ i ∈ s, …")
         side = [f for f, t in zip(fs, self.facts, strict=True)

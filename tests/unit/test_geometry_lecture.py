@@ -77,7 +77,7 @@ def test_pythagoras_from_similar_triangles_renders():
         sys.path.remove(str(examples))
     src = ps.pythagoras.to_lean()
     prose = str(ps.pythagoras.prose())
-    assert "sorry" not in src and "PyLeanX.Geometry.similar_sides_at" in src
+    assert "sorry" not in src and "PyLeanX.Geometry.proportional_sides" in src
     # it must not cite Mathlib's Pythagoras (that would be circular)
     assert "dist_sq_eq_dist_sq_add_dist_sq" not in src
     assert "△BAC ∼ △CAD" in prose and "|AC|² + |BC|² = |AB|²" in prose
@@ -94,3 +94,19 @@ def test_perpendicular_lines_and_points_on_a_line():
                    conclusion=geo.perpendicular(geo.line(C, D), geo.line(A, B)))
     assert "D lies on line AB" in str(t.prose()) and "CD ⊥ AB" in str(t.prose())
     assert "Submodule.IsOrtho (AffineSubspace.direction" in t.to_lean()
+
+
+def test_pythagoras_proof_is_short():
+    import sys
+    from pathlib import Path
+
+    examples = Path(__file__).resolve().parents[2] / "examples"
+    sys.path.insert(0, str(examples))
+    try:
+        import pythagoras_similar as ps
+    finally:
+        sys.path.remove(str(examples))
+    prose = str(ps.pythagoras.prose())
+    assert "the leg rule at A" in prose and "the leg rule at B" in prose
+    assert "  6." not in prose  # five steps
+    assert "  3." not in str(ps.leg_rule.prose())  # two steps

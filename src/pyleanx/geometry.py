@@ -635,6 +635,46 @@ theorem PyLeanX.Geometry.right_triangle_acute {V P : Type*} [NormedAddCommGroup 
 """, *_GEO_FACT_IMPORTS, _ORTHO,
     label="the other two angles of a right triangle are acute")
 
+#: The altitude from the right angle: in a right triangle (right angle at C) it meets the
+#: hypotenuse at a point D strictly between A and B, with right angles at D.
+altitude_to_hypotenuse = library_fact("PyLeanX.Geometry.altitude_to_hypotenuse", """
+theorem PyLeanX.Geometry.altitude_to_hypotenuse {V P : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    {A B C : P} (hABC : ¬ Collinear ℝ {A, B, C})
+    (hC : EuclideanGeometry.angle A C B = Real.pi / 2) :
+    ∃ D : P, Sbtw ℝ A D B ∧ EuclideanGeometry.angle A D C = Real.pi / 2 ∧
+      EuclideanGeometry.angle B D C = Real.pi / 2 := by
+  obtain ⟨D, hD, hperp⟩ := PyLeanX.Geometry.altitude hABC
+  obtain ⟨hA, hB⟩ := PyLeanX.Geometry.right_triangle_acute hABC hC
+  exact ⟨D, PyLeanX.Geometry.foot_between (ne₁₂_of_not_collinear hABC) hD hperp hA hB,
+    PyLeanX.Geometry.foot_right_angles hD hperp⟩
+""", *_GEO_FACT_IMPORTS, _ORTHO, label="drop the altitude from the right angle to the hypotenuse",
+    requires=[altitude, foot_right_angles, foot_between, right_triangle_acute])
+
+#: D on segment AB  ⟹  ∠BAC = ∠CAD (the triangles ABC and ADC share the angle at A).
+common_angle = library_fact("PyLeanX.Geometry.common_angle", """
+theorem PyLeanX.Geometry.common_angle {V P : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    {A B D : P} (h : Sbtw ℝ A D B) (C : P) :
+    EuclideanGeometry.angle B A C = EuclideanGeometry.angle C A D := by
+  rw [EuclideanGeometry.angle_comm C A D]
+  exact (h.angle_eq_left C).symm
+""", *_GEO_FACT_IMPORTS, label="D lies on AB, so the angle at A is common")
+
+#: △abc ∼ △a'b'c'  ⟹  b'a'·bc = b'c'·ba (proportional sides from the vertex b, multiplied out).
+proportional_sides = library_fact("PyLeanX.Geometry.proportional_sides", """
+theorem PyLeanX.Geometry.proportional_sides {V₁ V₂ P₁ P₂ : Type*} [NormedAddCommGroup V₁]
+    [NormedAddCommGroup V₂] [InnerProductSpace ℝ V₁] [InnerProductSpace ℝ V₂]
+    [MetricSpace P₁] [MetricSpace P₂] [NormedAddTorsor V₁ P₁] [NormedAddTorsor V₂ P₂]
+    {a b c : P₁} {a' b' c' : P₂} (h : Similar ![a, b, c] ![a', b', c']) :
+    dist b' a' * dist b c = dist b' c' * dist b a := by
+  obtain ⟨r, hr, hd⟩ := similar_iff_exists_pos_dist_eq.mp h
+  have h1 : dist b a = r * dist b' a' := by simpa using hd 1 0
+  have h2 : dist b c = r * dist b' c' := by simpa using hd 1 2
+  rw [h1, h2]
+  ring
+""", *_GEO_FACT_IMPORTS, label="similar triangles have proportional sides")
+
 #: △abc ∼ △a'b'c' (abc a triangle)  ⟹  b'a'/ba = b'c'/bc: the sides from the vertex b.
 similar_sides_at = library_fact("PyLeanX.Geometry.similar_sides_at", """
 theorem PyLeanX.Geometry.similar_sides_at {V₁ V₂ P₁ P₂ : Type*} [NormedAddCommGroup V₁]
