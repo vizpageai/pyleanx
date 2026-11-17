@@ -80,7 +80,7 @@ def test_pythagoras_from_similar_triangles_renders():
     assert "sorry" not in src and "PyLeanX.Geometry.proportional_sides" in src
     # it must not cite Mathlib's Pythagoras (that would be circular)
     assert "dist_sq_eq_dist_sq_add_dist_sq" not in src
-    assert "△BAC ∼ △CAD" in prose and "|AC|² + |BC|² = |AB|²" in prose
+    assert "△BAC ∼ △CAD" in str(ps.leg_rule.prose()) and "|AC|² + |BC|² = |AB|²" in prose
     # the altitude is constructed in the proof, not assumed
     assert "theorem PyLeanX.Geometry.altitude " in src and len(ps.pythagoras.assumptions) == 2
 
