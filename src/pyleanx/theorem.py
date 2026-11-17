@@ -150,8 +150,9 @@ class Theorem:
             )
         from .proofs import resolve_similarly, with_avoid
 
-        tactic = resolve_similarly(tactic, {h.name: h.prop for h in self.assumptions})
-        self.proof = with_avoid(tactic, self.avoid)
+        resolved = resolve_similarly(tactic, {h.name: h.prop for h in self.assumptions})
+        assert resolved is not None
+        self.proof = with_avoid(resolved, self.avoid)
         return self
 
     # ------------------------------------------------------------------ rendering

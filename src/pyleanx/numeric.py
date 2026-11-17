@@ -94,7 +94,7 @@ def _between(a: Any, p: Any, b: Any, strict: bool) -> bool:
     return -1e-12 <= t <= 1 + 1e-12
 
 
-_FUNCS = {
+_FUNCS: dict[str, Any] = {
     "abs": lambda x: abs(x),
     "min": lambda a, b: min(a, b),
     "max": lambda a, b: max(a, b),

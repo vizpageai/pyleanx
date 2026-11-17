@@ -151,7 +151,7 @@ def finite_measure_ne(E: object) -> Expr:  # noqa: N803
     """μ(E) ≠ ∞."""
     from .terms import const
 
-    return vol(E) != const("Top.top", latex=r"\infty")  # type: ignore[operator]
+    return vol(E) != const("Top.top", latex=r"\infty")
 
 
 def finite_measure(E: object) -> Expr:  # noqa: N803
@@ -160,7 +160,7 @@ def finite_measure(E: object) -> Expr:  # noqa: N803
 
     vol = const("MeasureTheory.volume", imports=_ALL, latex=r"\mu")
     top = const("Top.top", latex=r"\infty")
-    return apply(vol, E) < top  # type: ignore[operator]
+    return apply(vol, E) < top
 
 
 def integrable(f: object) -> Expr:
@@ -199,7 +199,7 @@ def above(f: Any, beta: object) -> Expr:
 
     tex = (r"\{" + "|" + f.to_latex() + r"| > " + _lift(beta).to_latex() + r"\}")
     tex = tex.replace("{", "{{").replace("}", "}}") + "{0:.0}"
-    return apply(_c("setOf", tex), fun(lambda ζ: beta < abs_(f(ζ)), _R))  # type: ignore[operator]
+    return apply(_c("setOf", tex), fun(lambda ζ: beta < abs_(f(ζ)), _R))
 
 
 def cut(f: Any, beta: object) -> Expr:
@@ -222,7 +222,7 @@ def level_set(f: Any, lam: object) -> Expr:
     tex = tex.replace("{", "{{").replace("}", "}}") + "{0:.0}"
     rho = symbol("ρ", _R)
     return apply(_c("setOf", tex), fun(lambda ζ: Exists(rho, And(
-        0 < rho, average_exceeds(f, lam, ζ, rho))), _R))  # type: ignore[operator]
+        0 < rho, average_exceeds(f, lam, ζ, rho))), _R))
 
 
 def rpow(x: object, y: object) -> Expr:
@@ -396,7 +396,7 @@ def average_exceeds(f: Any, lam: object, c: object, r: object) -> Expr:
     from .terms import integral
 
     I = interval(c, r)  # noqa: E741
-    return lam * measure(I) < integral(lambda w: abs_(f(w)), within=I)  # type: ignore[operator]
+    return lam * measure(I) < integral(lambda w: abs_(f(w)), within=I)
 
 
 # =========================================================================================

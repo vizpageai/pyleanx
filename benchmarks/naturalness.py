@@ -2,6 +2,10 @@
 
     python benchmarks/naturalness.py            # static measures, writes docs/benchmark.md
     python benchmarks/naturalness.py --lean     # also checks every proof in the Lean REPL
+    python benchmarks/naturalness.py --lean --only euclid_book1,cz_intervals
+
+Lean results are saved per proof in ``benchmarks/lean_results.json`` with a fingerprint of
+the proof's Lean source; a result for an older source is reported as stale.
 
 For every written proof in the examples it counts
 
@@ -176,26 +180,62 @@ def collect() -> list[tuple[str, str, Theorem]]:
     return out
 
 
-def measure(lean: bool = False) -> list[Row]:
+def measure(lean: bool = False, only: set[str] | None = None) -> list[Row]:
     rows = []
     items = collect()
     for area, mod_name, t in items:
         row = Row(area, mod_name, t.name, 0, {}, 0, 0, contains_raw(t.proof))
         _walk(t.proof, [h.prop for h in t.assumptions], row)
         rows.append(row)
+    saved = _load_results()
     if lean:
         from pyleanx.backend import repl_check
 
         repl_check.MAX_IMPORT_SETS = 1  # one environment at a time: memory, not speed
         by_mod: dict[str, list[int]] = {}
         for i, (_, m, _) in enumerate(items):
-            by_mod.setdefault(m, []).append(i)
+            if only is None or m in only:
+                by_mod.setdefault(m, []).append(i)
         for m, idx in by_mod.items():
             print(f"checking {m} ({len(idx)} proofs) ...", file=sys.stderr, flush=True)
             res = pl.check_all([items[i][2] for i in idx], timeout=3600)
             for i, r in zip(idx, res, strict=True):
-                rows[i].lean = "pass" if r.verified else r.status.value
+                why = "; ".join(d.message.splitlines()[0][:160] for d in r.errors[:2])
+                saved[items[i][2].name] = {"status": "pass" if r.verified else r.status.value,
+                                           "fingerprint": _fp(items[i][2]), "why": why}
+            _save_results(saved)  # after every module: a stopped run keeps what it checked
+    for (_, _, t), row in zip(items, rows, strict=True):
+        got = saved.get(t.name)
+        if got is not None:
+            # a result for an older version of the proof is shown as stale
+            row.lean = got["status"] if got.get("fingerprint") == _fp(t) else "stale"
     return rows
+
+
+RESULTS = ROOT / "benchmarks" / "lean_results.json"
+
+
+def _fp(t: Theorem) -> str:
+    """The proof's identity: its Lean source (so engine changes make results stale)."""
+    import hashlib
+
+    return hashlib.sha256(t.to_lean().encode()).hexdigest()[:16]
+
+
+def _load_results() -> dict:
+    import json
+
+    try:
+        return json.loads(RESULTS.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_results(data: dict) -> None:
+    import json
+
+    text = json.dumps(data, indent=1, sort_keys=True, ensure_ascii=False)
+    RESULTS.write_text(text + "\n", encoding="utf-8")
 
 
 def report(rows: list[Row]) -> str:
@@ -237,7 +277,13 @@ def report(rows: list[Row]) -> str:
 
 
 if __name__ == "__main__":
-    rows = measure(lean="--lean" in sys.argv)
+    only = None
+    if "--only" in sys.argv:
+        only = set(sys.argv[sys.argv.index("--only") + 1].split(","))
+    if "--list" in sys.argv:
+        print(" ".join(dict.fromkeys(m for _, m in SOURCES)))
+        raise SystemExit(0)
+    rows = measure(lean="--lean" in sys.argv, only=only)
     text = report(rows)
     out = ROOT / "docs" / "benchmark.md"
     out.write_text(text, encoding="utf-8", newline="\n")

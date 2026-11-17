@@ -23,8 +23,9 @@ import pyleanx as pl
 from pyleanx import geometry as geo
 from pyleanx.analysis import pi
 
-A, B, C, D, M, N, O = geo.points("A B C D M N O")
+A, B, C, D, M, N, O = geo.points("A B C D M N O")  # noqa: E741
 ang, dist = geo.angle, geo.dist
+ISOSCELES = "the base angles of an isosceles triangle are equal"
 
 equilateral = pl.Theorem(
     "euclid_equilateral_angles", [A, B, C],
@@ -32,9 +33,9 @@ equilateral = pl.Theorem(
                  "h1": dist(A, B) == dist(A, C), "h2": dist(B, A) == dist(B, C)},
     conclusion=ang(A, B, C) == pi() / 3,
     proof=pl.proof(
-        pl.claim(ang(A, B, C) == ang(A, C, B), because=["the base angles of an isosceles triangle are equal", "h1"],
+        pl.claim(ang(A, B, C) == ang(A, C, B), because=[ISOSCELES, "h1"],
                  name="e1"),
-        pl.claim(ang(B, A, C) == ang(B, C, A), because=["the base angles of an isosceles triangle are equal", "h2"],
+        pl.claim(ang(B, A, C) == ang(B, C, A), because=[ISOSCELES, "h2"],
                  name="e2"),
         pl.claim(ang(A, B, C) + ang(B, C, A) + ang(C, A, B) == pi(),
                  because="the angles of a triangle add up to 180°", name="sum"),
@@ -59,7 +60,7 @@ isosceles_right = pl.Theorem(
                  "hiso": dist(C, A) == dist(C, B)},
     conclusion=ang(C, A, B) == pi() / 4,
     proof=pl.proof(
-        pl.claim(ang(C, A, B) == ang(C, B, A), because=["the base angles of an isosceles triangle are equal", "hiso"],
+        pl.claim(ang(C, A, B) == ang(C, B, A), because=[ISOSCELES, "hiso"],
                  name="e"),
         pl.claim(ang(A, B, C) + ang(B, C, A) + ang(C, A, B) == pi(),
                  because="the angles of a triangle add up to 180°", name="sum"),

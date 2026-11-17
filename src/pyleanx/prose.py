@@ -441,14 +441,15 @@ class _Reader:
             return ProseStep("take", text, tex, note), new
         if isinstance(s, Choose):
             vt = ", ".join(v.name for v in s.vars)
-            parts, rest = [], s.prop
+            conj: list[Expr] = []
+            rest = s.prop
             for _ in s.names[:-1]:  # "hφ hlim" names the parts of a conjunction
                 if isinstance(rest, Logic) and rest.op == "and":
-                    parts.append(rest.lhs)
+                    conj.append(rest.lhs)
                     rest = rest.rhs
-            parts.append(rest)
-            if len(parts) == len(s.names):
-                self.hyps.update({n: plain(p) for n, p in zip(s.names, parts, strict=True)})
+            conj.append(rest)
+            if len(conj) == len(s.names):
+                self.hyps.update({n: plain(p) for n, p in zip(s.names, conj, strict=True)})
             else:
                 self.hyps.update({n: plain(s.prop) for n in s.names})
             return ProseStep("choose", f"Choose {vt} such that {plain(s.prop)}",
