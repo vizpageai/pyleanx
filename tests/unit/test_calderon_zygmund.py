@@ -47,3 +47,20 @@ def test_calderon_zygmund_proofs_render():
     for name in ("maximal_level_set_open", "maximal_level_set_bound", "cz_interval_average",
                  "cz_good_part"):
         assert f"theorem {name}" in src
+
+
+def test_hilbert_kernel_proofs_render():
+    sys.path.insert(0, str(EXAMPLES))
+    try:
+        import hilbert_kernel as hk
+    finally:
+        sys.path.remove(str(EXAMPLES))
+    assert [t.name for t in hk.THEOREMS] == ["hilbert_kernel_smooth",
+                                             "hilbert_kernel_cancellation",
+                                             "hilbert_kernel_decay"]
+    for thm in hk.THEOREMS:
+        assert "sorry" not in thm.to_lean() and "not yet checked by Lean" in str(thm.prose())
+    src = hk.decay.to_lean()
+    for name in ("hilbert_kernel_smooth", "hilbert_kernel_cancellation",
+                 "PyLeanX.Real.kernel_integrable", "PyLeanX.Real.abs_integral_le"):
+        assert f"theorem {name}" in src

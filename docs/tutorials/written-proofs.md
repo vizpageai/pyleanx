@@ -323,7 +323,9 @@ order of integration (Tonelli), as in the book. `examples/hilbert_transform.py` 
 Hilbert transform on L²(ℝ) by Hf = 𝓕⁻(m·𝓕f), m(ξ) = −i sgn ξ, and proves ‖Hf‖₂ = ‖f‖₂ and
 H(Hf) = −f from Plancherel. `examples/calderon_zygmund.py` proves the Calderón–Zygmund
 decomposition via the maximal function (ch. I §3): off Ω = {Mf > α}, |f| ≤ α almost everywhere
-(by Lebesgue's differentiation theorem), and every interval meeting ℝ ∖ Ω has average ≤ 2α.
+(by Lebesgue's differentiation theorem), and every interval meeting ℝ ∖ Ω has average ≤ 2α. `examples/hilbert_kernel.py` proves the
+kernel estimates used on the bad part: if b has mean zero on I = [y₀ − t, y₀ + t], then
+|∫_I b(y)/(x − y) dy| ≤ (2t/|x − y₀|²)∫_I|b| for |x − y₀| > 2t.
 
 ## Abstract structures: "let G be a group"
 

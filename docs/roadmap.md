@@ -254,7 +254,8 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [x] `examples/calderon_zygmund.py` (Stein, *Singular Integrals* ch. I §3): 15 an interval meeting ℝ ∖ {Mf > α} has average ≤ 2α; 16 |f| ≤ α a.e. off {Mf > α}; 17 the decomposition (Ω = {Mf > α} open, |Ω| ≤ 8‖f·1{|f|>α/2}‖₁/α, |f| ≤ α a.e. off Ω, intervals meeting ℝ ∖ Ω have average ≤ 2α). All three verified (standard axioms only).
 - Not yet: writing Ω as a disjoint union of intervals (components / Whitney cubes).
 - Finding: the gap filler does not apply a lemma to two hypotheses (`exact le_of_tendsto hlim hev`); cite the applied lemma `rv.le_of_tendsto("hlim", "hev")`.
-- Next: weak (1,1) for the Hilbert transform (needs principal-value integrals).
+- [x] `examples/hilbert_kernel.py` (Stein ch. II §2–3, the bad part of the weak (1,1) proof): 18 |1/(x−y) − 1/(x−y₀)| ≤ 2|y−y₀|/|x−y₀|² when 2|y−y₀| ≤ |x−y₀|; 19 if ∫_I b = 0 and x ∉ I, ∫_I b(y)/(x−y) dy = ∫_I (b(y)/(x−y) − b(y)/(x−y₀)) dy; 20 if moreover |x−y₀| > 2t, |∫_I b(y)/(x−y) dy| ≤ (2t/|x−y₀|²)∫_I|b|. All verified (standard axioms only) on the first run. New shipped facts `kernel_integrable`, `abs_integral_le`.
+- Next: integrate theorem 20 over |x − y₀| > 2t (∫_{|u|>s} du/u² = 2/s), then weak (1,1) for the Hilbert transform (needs principal-value integrals).
 
 ### Harmonic analysis as in a textbook (2026-11-13)
 - [x] `pyleanx/harmonic.py` (generated from Lean checked in the pinned Mathlib): 8 shipped definitions (`PyLeanX.Harmonic.coeff` = `fourierCoeffOn` on [−π, π], `ft` = `𝓕`, `ift` = `𝓕⁻`, `gauss`, `L2`, `integrable_on_circle`, `coeff_sq_sum`, `mean_square`) and 18 facts (coefficient/transform integral formulas, linearity, integration by parts, Bessel, Parseval, Riemann–Lebesgue ×2, Gaussian, inversion, inverse transform at 0, small algebra).

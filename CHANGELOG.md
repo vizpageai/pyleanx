@@ -62,6 +62,10 @@ see [docs/stability.md](docs/stability.md)).
   theorem without a proof is an error, and a failed cited proof rejects exactly the theorems
   that cite it. The bank records citations as dependencies and makes loaded theorems
   citable. Example `using_cauchy_integral.py`: ∮_{|z|=2} z²/(z − 1) dz = 2πi.
+- The Hilbert kernel away from its singularity (`examples/hilbert_kernel.py`): smoothness
+  |1/(x−y) − 1/(x−y₀)| ≤ 2|y−y₀|/|x−y₀|², cancellation against a mean-zero b on
+  I = [y₀ − t, y₀ + t], and the decay |∫_I b(y)/(x−y) dy| ≤ (2t/|x−y₀|²)∫_I|b| for
+  |x − y₀| > 2t — written proofs verified by Lean.
 - The Calderón–Zygmund decomposition on ℝ (`examples/calderon_zygmund.py`): with
   Ω = {Mf > α}, Ω is open, |Ω| ≤ 8‖f·1{|f|>α/2}‖₁/α, |f| ≤ α a.e. off Ω, and every interval
   meeting ℝ ∖ Ω has average ≤ 2α — written proofs verified by Lean. Lebesgue's

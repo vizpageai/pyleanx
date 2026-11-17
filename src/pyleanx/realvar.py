@@ -724,4 +724,62 @@ mem_interval = lemma("Metric.mem_closedBall'", "Mathlib.Topology.MetricSpace.Pse
 ae_mono = lemma("Filter.Eventually.mono", "Mathlib.Order.Filter.Basic",
                 label="what follows pointwise from an a.e. statement holds a.e.")
 
+
+# =========================================================================================
+# The Hilbert kernel 1/x away from its singularity (for singular integrals)
+# =========================================================================================
+
+#: b(y)/(x − y) is integrable over [y₀ − t, y₀ + t] when x lies outside it.
+kernel_integrable = library_fact("PyLeanX.Real.kernel_integrable", """
+theorem PyLeanX.Real.kernel_integrable {b : ℝ → ℝ} {x y0 t : ℝ}
+    (hb : MeasureTheory.IntegrableOn b (Metric.closedBall y0 t)) (hx : t < |x - y0|) :
+    MeasureTheory.IntegrableOn (fun y => b y / (x - y)) (Metric.closedBall y0 t) := by
+  have hc : ContinuousOn (fun y : ℝ => 1 / (x - y)) (Metric.closedBall y0 t) := by
+    intro y hy
+    have hy' : |y - y0| ≤ t := by simpa [Real.dist_eq] using hy
+    have hne : x - y ≠ 0 := by
+      intro h
+      have hxy : x = y := by linarith
+      subst hxy
+      linarith
+    exact (continuousAt_const.div (continuousAt_const.sub continuousAt_id) hne).continuousWithinAt
+  simpa only [mul_one_div] using hb.mul_continuousOn hc (isCompact_closedBall y0 t)
+""", _SETINT, label="b(y)/(x − y) is integrable on I when b is and x lies outside I")
+
+#: |∫_S f| ≤ ∫_S g when |f| ≤ g on S.
+abs_integral_le = library_fact("PyLeanX.Real.abs_integral_le", """
+theorem PyLeanX.Real.abs_integral_le {f g : ℝ → ℝ} {S : Set ℝ}
+    (hS : MeasurableSet S) (hg : MeasureTheory.IntegrableOn g S) (h : ∀ y ∈ S, |f y| ≤ g y) :
+    |∫ y in S, f y| ≤ ∫ y in S, g y := by
+  have := MeasureTheory.norm_integral_le_of_norm_le hg
+    (MeasureTheory.ae_restrict_of_forall_mem hS fun y hy => by
+      rw [Real.norm_eq_abs]
+      exact h y hy)
+  rwa [Real.norm_eq_abs] at this
+""", _SETINT, label="|∫ f| ≤ ∫ g when |f| ≤ g")
+
+triangle = lemma("abs_sub_le", _SETINT, label="the triangle inequality |a − c| ≤ |a − b| + |b − c|")
+abs_pos = lemma("abs_pos", _SETINT, label="|a| > 0 iff a ≠ 0")
+abs_div = lemma("abs_div", _SETINT, label="|a/b| = |a|/|b|")
+abs_mul = lemma("abs_mul", _SETINT, label="|ab| = |a||b|")
+div_le_div_left = lemma("div_le_div_of_nonneg_left", _SETINT,
+                        label="a/b ≤ a/c when 0 < c ≤ b (a smaller denominator)")
+div_le_div_right = lemma("div_le_div_of_nonneg_right", _SETINT,
+                         label="a/c ≤ b/c when a ≤ b and c ≥ 0")
+integral_sub = lemma("MeasureTheory.integral_sub", _SETINT,
+                     label="the integral of a difference is the difference of the integrals")
+integral_div = lemma("MeasureTheory.integral_div", _SETINT,
+                     label="a constant divisor comes out of an integral")
+integral_mul_const = lemma("MeasureTheory.integral_mul_const", _SETINT,
+                           label="a constant factor comes out of an integral")
+integrable_div_const = lemma("MeasureTheory.Integrable.div_const", _SETINT,
+                             label="f/c is integrable when f is")
+integrable_mul_const = lemma("MeasureTheory.Integrable.mul_const", _SETINT,
+                             label="f·c is integrable when f is")
+mem_interval_dist = lemma("Metric.mem_closedBall", _SETINT,
+                          label="y ∈ [c − r, c + r] iff the distance from y to c is ≤ r")
+real_dist = lemma("Real.dist_eq", _SETINT, label="the distance from a to b is |a − b|")
+mul_le_mul_right = lemma("mul_le_mul_of_nonneg_right", _SETINT,
+                          label="b·a ≤ c·a when b ≤ c and a ≥ 0")
+
 LEMMAS = collect_lemmas(globals())

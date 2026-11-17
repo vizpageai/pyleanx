@@ -165,3 +165,12 @@ def test_calderon_zygmund_written_proofs(lean_project):
     for t, r in zip(thms, results, strict=True):
         assert r.verified, (t.name, [d.message for d in r.diagnostics if d.severity == "error"])
         assert set(r.axioms) <= {"propext", "Classical.choice", "Quot.sound"}
+
+
+def test_hilbert_kernel_written_proofs(lean_project):
+    ns = runpy.run_path(str(EXAMPLES / "hilbert_kernel.py"))
+    thms = ns["THEOREMS"]
+    results = pl.verify_all(thms, project=lean_project, use_cache=False, timeout=3600)
+    for t, r in zip(thms, results, strict=True):
+        assert r.verified, (t.name, [d.message for d in r.diagnostics if d.severity == "error"])
+        assert set(r.axioms) <= {"propext", "Classical.choice", "Quot.sound"}
