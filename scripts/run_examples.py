@@ -56,6 +56,7 @@ CASES: dict[str, tuple[list[str], int]] = {
     "hilbert_kernel": (RUN, 0),  # the Hilbert kernel away from its singularity
     "cz_intervals": (RUN, 0),  # the intervals of {Mf > α}
     "pythagoras_similar": (RUN, 0),  # Pythagoras from similar triangles
+    "euclid_book1": (RUN, 0),  # Euclid I: angles, exterior angle, midsegment
 }
 
 # Examples deliberately not run here, with the reason (each must be run by hand).

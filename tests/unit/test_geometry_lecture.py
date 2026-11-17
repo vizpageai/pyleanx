@@ -107,6 +107,6 @@ def test_pythagoras_proof_is_short():
     finally:
         sys.path.remove(str(examples))
     prose = str(ps.pythagoras.prose())
-    assert "the leg rule at A" in prose and "the leg rule at B" in prose
+    assert "the leg rule at A" in prose and "similarly, with A and B exchanged" in prose
     assert "  6." not in prose  # five steps
     assert "  3." not in str(ps.leg_rule.prose())  # two steps

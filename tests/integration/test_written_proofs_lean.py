@@ -183,3 +183,29 @@ def test_cz_intervals_written_proofs(lean_project):
     for t, r in zip(thms, results, strict=True):
         assert r.verified, (t.name, [d.message for d in r.diagnostics if d.severity == "error"])
         assert set(r.axioms) <= {"propext", "Classical.choice", "Quot.sound"}
+
+
+def test_euclid_book1_written_proofs(lean_project):
+    ns = runpy.run_path(str(EXAMPLES / "euclid_book1.py"))
+    thms = ns["THEOREMS"]
+    results = pl.verify_all(thms, project=lean_project, use_cache=False, timeout=3600)
+    for t, r in zip(thms, results, strict=True):
+        assert r.verified, (t.name, [d.message for d in r.diagnostics if d.severity == "error"])
+        assert set(r.axioms) <= {"propext", "Classical.choice", "Quot.sound"}
+
+
+def test_repl_check_agrees_with_verify(lean_project):
+    x, y = pl.symbols("x y", pl.Real)
+    good = pl.Theorem("repl_check_good", [x, y], assumptions={"hx": x > 0, "hy": y > 0},
+                      conclusion=(x + y) ** 2 >= 4 * x * y,
+                      proof=pl.proof(pl.claim((x - y) ** 2 >= 0, name="h1"),
+                                     pl.conclude(because="h1")))
+    bad = pl.Theorem("repl_check_bad", [x, y], assumptions={"hx": x > 0},
+                     conclusion=x * y >= 0,
+                     proof=pl.proof(pl.claim(x * y >= 0, because="hx", name="h1"),
+                                    pl.conclude(because="h1")))
+    fast = pl.check_all([good, bad], project=lean_project, timeout=3600)
+    slow = pl.verify_all([good, bad], project=lean_project, use_cache=False, timeout=3600)
+    assert [r.status for r in fast] == [r.status for r in slow]
+    assert fast[0].verified and fast[0].backend == "repl" and fast[0].axioms == slow[0].axioms
+    assert not fast[1].verified and any(d.span_label.startswith("step 1") for d in fast[1].errors)
