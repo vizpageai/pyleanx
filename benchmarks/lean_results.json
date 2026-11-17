@@ -1,0 +1,87 @@
+{
+ "am_gm_two": {
+  "fingerprint": "27a8bfa6d799abd9",
+  "status": "pass",
+  "why": ""
+ },
+ "angle_bisector": {
+  "fingerprint": "ba719cce20b105fe",
+  "status": "pass",
+  "why": ""
+ },
+ "angle_in_semicircle": {
+  "fingerprint": "04234d07d6df81bb",
+  "status": "pass",
+  "why": ""
+ },
+ "euclid_equilateral_angles": {
+  "fingerprint": "3a8647249170e271",
+  "status": "pass",
+  "why": ""
+ },
+ "euclid_exterior_angle": {
+  "fingerprint": "4dcb8c0a3ee09708",
+  "status": "pass",
+  "why": ""
+ },
+ "euclid_isosceles_right_triangle": {
+  "fingerprint": "323c125cf7a61da3",
+  "status": "pass",
+  "why": ""
+ },
+ "euclid_midsegment": {
+  "fingerprint": "17eb73ebe71a3778",
+  "status": "pass",
+  "why": ""
+ },
+ "euclid_right_triangle_acute_angles": {
+  "fingerprint": "aaa7b6b4c06897f6",
+  "status": "pass",
+  "why": ""
+ },
+ "euclid_vertical_angles": {
+  "fingerprint": "590058d83ba94f29",
+  "status": "pass",
+  "why": ""
+ },
+ "isosceles_median_perpendicular": {
+  "fingerprint": "d105f57b1b5334c8",
+  "status": "pass",
+  "why": ""
+ },
+ "isosceles_right_triangle_base_angles": {
+  "fingerprint": "9dd2d8ee2aaa912d",
+  "status": "pass",
+  "why": ""
+ },
+ "leg_rule": {
+  "fingerprint": "76b8d8851c4231f9",
+  "status": "pass",
+  "why": ""
+ },
+ "medial_triangle_half_perimeter": {
+  "fingerprint": "2d978df1d7cad589",
+  "status": "pass",
+  "why": ""
+ },
+ "parallelogram_opposite_sides_equal": {
+  "fingerprint": "7d831dbbafdfe910",
+  "status": "pass",
+  "why": ""
+ },
+ "pythagoras_similar_triangles": {
+  "fingerprint": "5abfc878bb1fd28b",
+  "status": "pass",
+  "why": ""
+ },
+ "side_splitter_parts": {
+  "fingerprint": "a5ce317f2b765e6f",
+  "status": "pass",
+  "why": ""
+ },
+ "side_splitter_similar": {
+  "fingerprint": "1eff45cf7e8032a2",
+  "status": "pass",
+  "why": ""
+ }
+}

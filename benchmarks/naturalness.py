@@ -257,7 +257,12 @@ def report(rows: list[Row]) -> str:
              f"proofs with raw Lean: {sum(r.raw for r in rows)}"]
     if any(r.lean for r in rows):
         passed = sum(r.lean == "pass" for r in rows)
-        lines.append(f"- pass Lean as written: **{passed}/{n}**")
+        stale = sum(r.lean == "stale" for r in rows)
+        failed = sum(r.lean not in ("", "pass", "stale") for r in rows)
+        unchecked = sum(not r.lean for r in rows)
+        lines.append(f"- pass Lean as written: **{passed}/{n}**; failed: {failed}; checked only "
+                     f"with an earlier version of the generated Lean (stale): {stale}; not yet "
+                     f"checked: {unchecked}")
     lines += ["", "| area | example | theorem | steps | bookkeeping | facts cited | Lean |",
               "|---|---|---|---:|---:|---:|---|"]
     for r in rows:
