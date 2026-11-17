@@ -68,6 +68,14 @@ see [docs/stability.md](docs/stability.md)).
   |x − y₀| > 2t, and Hörmander's estimate ∫_{|x−y₀|>2t} |∫_I b(y)/(x−y) dy| dx ≤ 2∫_I|b|
   — written proofs verified by Lean. Shipped facts ∫_{|x−y₀|>s} dx/(x − y₀)² = 2/s.
 - The gap filler tries `field_simp` alone; prose brackets denominators like 2t.
+- Natural proofs (`docs/tutorials/natural-proofs.md`): `thm.check()` / `pl.check_all` check in
+  a persistent Lean REPL (seconds after the first run; same audit as `verify`, not archived);
+  `thm.sanity_check()` finds false steps on random numbers; `pl.explain_failure` and the prose
+  explain rejections step by step; reasons may be descriptions (`because="AA similarity"`,
+  `pl.search_facts`, `pl.fact`); `pl.similarly(step, exchange=(A, B))`; a sturdier gap filler
+  (cheap matching first, either orientation, two-fact applications, notation symmetry).
+- Euclid Book I propositions as written proofs (`examples/euclid_book1.py`) and a naturalness
+  benchmark over the examples (`benchmarks/naturalness.py`, `docs/benchmark.md`).
 - Pythagoras' theorem from similar triangles, as in a textbook (`examples/pythagoras_similar.py`):
   the leg rule AC² = AD·AB (△ABC ∼ △ACD by AA, 2 steps) and Pythagoras (drop the altitude,
   the leg rule at A and at B, add; 5 steps), both verified by Lean without Mathlib's

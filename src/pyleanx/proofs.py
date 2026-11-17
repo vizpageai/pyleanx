@@ -841,7 +841,17 @@ class Justify(Tactic):
         alts += [f"(with_reducible exact {f})" for f in fs]
         alts += [f"(with_reducible exact ({f}).symm)" for f in fs if " " not in f]
         lemmas0 = [f for f, t in zip(fs, self.facts, strict=True) if not isinstance(t, Expr)]
-        alts += [f"((with_reducible apply {f}); all_goals ({close}))" for f in lemmas0]
+        # side conditions after a cheap application are closed cheaply too (the full
+        # closing list, with simp_all and convert, comes with the unrestricted `apply` below)
+        cheap = ("first | assumption | exact Ne.symm ‹_› | "
+                 "(with_reducible exact ne₁₂_of_not_collinear ‹_›) | "
+                 "(with_reducible exact (ne₁₂_of_not_collinear ‹_›).symm) | "
+                 "(with_reducible exact ne₁₃_of_not_collinear ‹_›) | "
+                 "(with_reducible exact (ne₁₃_of_not_collinear ‹_›).symm) | "
+                 "(with_reducible exact ne₂₃_of_not_collinear ‹_›) | "
+                 "(with_reducible exact (ne₂₃_of_not_collinear ‹_›).symm) | "
+                 "exact Sbtw.wbtw ‹_› | rfl | linarith")
+        alts += [f"((with_reducible apply {f}); all_goals ({cheap}))" for f in lemmas0]
         alts += [f"linarith{h}", f"(simp only [EuclideanGeometry.angle_comm] at *; linarith{h})"]
         alts += [f"exact {f}" for f in fs]
         alts += [f"exact ({f}).symm" for f in fs if " " not in f]  # a cited equation, reversed

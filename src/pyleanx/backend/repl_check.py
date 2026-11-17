@@ -108,13 +108,32 @@ def _run_chunk(repl, code: str, env: int, first_line: int, n_opts: int,
     return resp.env, out, False
 
 
+_ATEXIT = False
+
+
+def _stop_repls_at_exit() -> None:
+    """A REPL holds Mathlib in memory (GBs); never leave one behind when Python exits."""
+    global _ATEXIT
+    if not _ATEXIT:
+        import atexit
+
+        from .leaninteract import shutdown_repls
+
+        atexit.register(shutdown_repls)
+        _ATEXIT = True
+
+
 def check_all(theorems: Sequence, project: LeanProject | str | None = None, *,
-              timeout: float | None = None, launch: str = "auto") -> list[VerificationResult]:
+              timeout: float | None = None, launch: str = "auto",
+              _retry: bool = True) -> list[VerificationResult]:
     """Check ``theorems`` in the shared REPL; same verdicts as :func:`verify_all`, faster.
 
-    Falls back to the batch backend if the REPL cannot be started.
+    If the REPL fails (it can be refused memory, or crash), it is restarted once; if that
+    fails too, the batch backend checks the theorems.
     """
-    from .leaninteract import ReplError, ReplTimeout, get_repl
+    from .leaninteract import ReplError, ReplTimeout, get_repl, shutdown_repls
+
+    _stop_repls_at_exit()
 
     proj = find_project(project)
     timeout = timeout if timeout is not None else proj.timeout
@@ -164,7 +183,12 @@ def check_all(theorems: Sequence, project: LeanProject | str | None = None, *,
         _PREAMBLES.clear()
         run = LeanRun(None, [], "", True, (time.monotonic() - t0) * 1000)
         return _results(theorems, module, proj, run)
-    except ReplError as exc:
+    except (ReplError, ValueError, OSError) as exc:  # incl. unparseable REPL output
+        shutdown_repls()
+        _PREAMBLES.clear()
+        if _retry:
+            return check_all(theorems, project=proj, timeout=timeout, launch=launch,
+                             _retry=False)
         res = verify_all(theorems, project=proj, use_cache=False, timeout=timeout)
         for r in res:
             r.diagnostics.append(_pyleanx_diag(
