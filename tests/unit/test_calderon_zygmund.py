@@ -78,3 +78,23 @@ def test_a_denominator_like_2t_is_bracketed():
     t = pl.symbol("t", pl.Real)
     prose = str(pl.Theorem("q", [t], conclusion=2 / (2 * t) == 1 / t).prose())
     assert "2/(2t)" in prose and "1/t" in prose
+
+
+def test_cz_intervals_proofs_render():
+    sys.path.insert(0, str(EXAMPLES))
+    try:
+        import cz_intervals as czi
+    finally:
+        sys.path.remove(str(EXAMPLES))
+    assert [t.name for t in czi.THEOREMS] == ["open_left_endpoint", "open_right_endpoint",
+                                              "open_intervals_meet",
+                                              "finite_measure_misses_both_sides",
+                                              "calderon_zygmund_intervals"]
+    for thm in czi.THEOREMS:
+        assert "sorry" not in thm.to_lean() and "not yet checked by Lean" in str(thm.prose())
+    src = czi.cz_intervals.to_lean()
+    for name in ("open_left_endpoint", "open_right_endpoint", "cz_interval_average",
+                 "finite_measure_misses_both_sides", "PyLeanX.Real.icc_as_interval"):
+        assert f"theorem {name}" in src
+    # sets given by a property print as {q : …}
+    assert "{q : q ≤ x ∧ ¬ q ∈ U}" in str(czi.left_endpoint.prose())

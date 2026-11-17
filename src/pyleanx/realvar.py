@@ -315,10 +315,14 @@ def measurable_fn(g: object) -> Expr:
 
 
 def pred_set(body: Any, sort: Any) -> Expr:
-    """{q : sort | body(q)} (a set given by a property)."""
+    """{q : sort | body(q)} (a set given by a property), printed {q : body(q)}."""
+    from .render.latex import latex_name
     from .terms import apply, fun
 
-    return apply(_c("setOf", r"\{{ {0} \}}"), fun(body, sort))
+    lam = fun(body, sort)
+    tex = (r"\{" + latex_name(lam.vars[0].name) + " : " + lam.body.to_latex() + r"\}")
+    tex = tex.replace("{", "{{").replace("}", "}}") + "{0:.0}"
+    return apply(_c("setOf", tex), lam)
 
 
 def volume_on_half_line_times_line() -> Expr:
@@ -784,7 +788,8 @@ mul_le_mul_right = lemma("mul_le_mul_of_nonneg_right", _SETINT,
 
 
 _IMPROPER = ("Mathlib.Analysis.SpecialFunctions.ImproperIntegrals",
-             "Mathlib.MeasureTheory.Measure.Lebesgue.Integral", "Mathlib.MeasureTheory.Group.Integral",
+             "Mathlib.MeasureTheory.Measure.Lebesgue.Integral",
+             "Mathlib.MeasureTheory.Group.Integral",
              _SETINT)
 
 #: ∫_{(s, ∞)} du/u² = 1/s.
@@ -844,5 +849,113 @@ of_real_le = lemma("ENNReal.ofReal_le_ofReal", _SETINT,
 set_integral_nonneg = lemma("MeasureTheory.setIntegral_nonneg", _SETINT,
                             label="the integral of a function ≥ 0 is ≥ 0")
 sq_abs = lemma("sq_abs", _SETINT, label="|a|² = a²")
+
+
+
+# =========================================================================================
+# The intervals of an open set (Calderón–Zygmund intervals)
+# =========================================================================================
+
+def infinity() -> Expr:
+    """∞ in [0, ∞] (``⊤``)."""
+    from .terms import const
+
+    return const("Top.top", latex=r"\infty")
+
+
+def Iic(b: object) -> Expr:  # noqa: N802
+    """(−∞, b]."""
+    return _app("Set.Iic", r"(-\infty, {0}]", b)
+
+
+def Ici(a: object) -> Expr:  # noqa: N802
+    """[a, ∞)."""
+    return _app("Set.Ici", r"[{0}, \infty)", a)
+
+
+def Icc(a: object, b: object) -> Expr:  # noqa: N802
+    """[a, b]."""
+    return _app("Set.Icc", "[{0}, {1}]", a, b)
+
+
+def sup_of(S: object) -> Expr:  # noqa: N803
+    """sup S (``sSup S``)."""
+    return _app("SupSet.sSup", r"\sup {0}", S)
+
+
+def inf_of(S: object) -> Expr:  # noqa: N803
+    """inf S (``sInf S``)."""
+    return _app("InfSet.sInf", r"\inf {0}", S)
+
+
+def bdd_above(S: object) -> Expr:  # noqa: N803
+    """S is bounded above."""
+    return _app("BddAbove", r"{0} \text{{ is bounded above}}", S)
+
+
+def bdd_below(S: object) -> Expr:  # noqa: N803
+    """S is bounded below."""
+    return _app("BddBelow", r"{0} \text{{ is bounded below}}", S)
+
+
+def nonempty(S: object) -> Expr:  # noqa: N803
+    """S is nonempty."""
+    return _app("Set.Nonempty", r"{0} \text{{ is nonempty}}", S)
+
+
+def is_closed(S: object) -> Expr:  # noqa: N803
+    """S is closed."""
+    return _app("IsClosed", r"{0} \text{{ is closed}}", S)
+
+
+left_part_closed = library_fact("PyLeanX.Real.left_part_closed", """
+theorem PyLeanX.Real.left_part_closed {U : Set ℝ} (hU : IsOpen U) (x : ℝ) :
+    IsClosed {y | y ≤ x ∧ ¬ y ∈ U} :=
+  (isClosed_le continuous_id continuous_const).inter hU.isClosed_compl
+""", _SETINT, label="the points ≤ x outside an open set form a closed set")
+
+right_part_closed = library_fact("PyLeanX.Real.right_part_closed", """
+theorem PyLeanX.Real.right_part_closed {U : Set ℝ} (hU : IsOpen U) (x : ℝ) :
+    IsClosed {y | x ≤ y ∧ ¬ y ∈ U} :=
+  (isClosed_le continuous_const continuous_id).inter hU.isClosed_compl
+""", _SETINT, label="the points ≥ x outside an open set form a closed set")
+
+left_part_bdd = library_fact("PyLeanX.Real.left_part_bdd", """
+theorem PyLeanX.Real.left_part_bdd (U : Set ℝ) (x : ℝ) : BddAbove {y | y ≤ x ∧ ¬ y ∈ U} :=
+  ⟨x, fun _ hy => hy.1⟩
+""", _SETINT, label="x bounds the points ≤ x")
+
+right_part_bdd = library_fact("PyLeanX.Real.right_part_bdd", """
+theorem PyLeanX.Real.right_part_bdd (U : Set ℝ) (x : ℝ) : BddBelow {y | x ≤ y ∧ ¬ y ∈ U} :=
+  ⟨x, fun _ hy => hy.1⟩
+""", _SETINT, label="x bounds the points ≥ x")
+
+icc_as_interval = library_fact("PyLeanX.Real.icc_as_interval", """
+theorem PyLeanX.Real.icc_as_interval (a b : ℝ) :
+    Metric.closedBall ((a + b) / 2) ((b - a) / 2) = Set.Icc a b := by
+  rw [Real.closedBall_eq_Icc]
+  congr 1 <;> ring
+""", _SETINT, label="[a, b] is the interval with centre (a + b)/2 and radius (b − a)/2")
+
+closed_sup_mem = lemma("IsClosed.csSup_mem", _SETINT,
+                       label="a closed nonempty set bounded above contains its supremum")
+closed_inf_mem = lemma("IsClosed.csInf_mem", _SETINT,
+                       label="a closed nonempty set bounded below contains its infimum")
+le_sup = lemma("le_csSup", _SETINT, label="every element is ≤ the supremum")
+inf_le = lemma("csInf_le", _SETINT, label="the infimum is ≤ every element")
+lt_of_le_of_ne = lemma("lt_of_le_of_ne", _SETINT, label="a ≤ b and a ≠ b give a < b")
+ne_of_mem_of_not_mem = lemma("ne_of_mem_of_not_mem", _SETINT,
+                             label="a point of a set differs from a point outside it")
+volume_Iic = lemma("Real.volume_Iic", _LEB, label="|(−∞, x]| = ∞")
+volume_Ici = lemma("Real.volume_Ici", _LEB, label="|[x, ∞)| = ∞")
+measure_mono_ennreal = lemma("MeasureTheory.measure_mono", _SETINT,
+                             label="a subset has smaller measure")
+not_le_of_gt = lemma("not_le_of_gt", _SETINT, label="a < b gives ¬(b ≤ a)")
+of_real_lt_top = lemma("ENNReal.ofReal_lt_top", _SETINT, label="a real number is < ∞")
+lt_of_le_of_lt = lemma("lt_of_le_of_lt", _SETINT, label="a ≤ b < c gives a < c")
+le_total = lemma("le_total", _SETINT, label="a ≤ b or b ≤ a")
+mem_Iic = lemma("Set.mem_Iic", _SETINT, label="y ∈ (−∞, x] iff y ≤ x")
+mem_Ici = lemma("Set.mem_Ici", _SETINT, label="y ∈ [x, ∞) iff x ≤ y")
+abs_of_pos = lemma("abs_of_pos", _SETINT, label="|a| = a for a > 0")
 
 LEMMAS = collect_lemmas(globals())

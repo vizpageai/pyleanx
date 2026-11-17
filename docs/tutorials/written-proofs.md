@@ -326,7 +326,10 @@ decomposition via the maximal function (ch. I §3): off Ω = {Mf > α}, |f| ≤ 
 (by Lebesgue's differentiation theorem), and every interval meeting ℝ ∖ Ω has average ≤ 2α. `examples/hilbert_kernel.py` proves the
 kernel estimates used on the bad part: if b has mean zero on I = [y₀ − t, y₀ + t], then
 |∫_I b(y)/(x − y) dy| ≤ (2t/|x − y₀|²)∫_I|b| for |x − y₀| > 2t, and integrates it (Hörmander):
-∫_{|x−y₀|>2t} |∫_I b(y)/(x − y) dy| dx ≤ 2∫_I|b|.
+∫_{|x−y₀|>2t} |∫_I b(y)/(x − y) dy| dx ≤ 2∫_I|b|. `examples/cz_intervals.py` finds the
+Calderón–Zygmund intervals: each point of Ω lies in an interval (a, b) ⊆ Ω whose endpoints
+a = sup{y ≤ x : y ∉ Ω}, b = inf{y ≥ x : y ∉ Ω} lie outside Ω, two such intervals that meet
+coincide, and the average of |f| over [a, b] is at most 2α.
 
 ## Abstract structures: "let G be a group"
 

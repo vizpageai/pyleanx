@@ -68,6 +68,10 @@ see [docs/stability.md](docs/stability.md)).
   |x − y₀| > 2t, and Hörmander's estimate ∫_{|x−y₀|>2t} |∫_I b(y)/(x−y) dy| dx ≤ 2∫_I|b|
   — written proofs verified by Lean. Shipped facts ∫_{|x−y₀|>s} dx/(x − y₀)² = 2/s.
 - The gap filler tries `field_simp` alone; prose brackets denominators like 2t.
+- The intervals of an open set and the Calderón–Zygmund intervals (`examples/cz_intervals.py`):
+  endpoints sup{y ≤ x : y ∉ U} and inf{y ≥ x : y ∉ U}, intervals that meet coincide, and every
+  x ∈ {Mf > α} lies in an interval (a, b) ⊆ {Mf > α} with a, b ∉ {Mf > α} and
+  ∫_[a,b]|f| ≤ 2α(b − a) — written proofs verified by Lean. The gap filler builds ⟨h₁, …, hₙ⟩.
 - The Calderón–Zygmund decomposition on ℝ (`examples/calderon_zygmund.py`): with
   Ω = {Mf > α}, Ω is open, |Ω| ≤ 8‖f·1{|f|>α/2}‖₁/α, |f| ≤ α a.e. off Ω, and every interval
   meeting ℝ ∖ Ω has average ≤ 2α — written proofs verified by Lean. Lebesgue's

@@ -820,6 +820,10 @@ class Justify(Tactic):
         alts = ["assumption", "contradiction"]
         alts += [f"exact {f}" for f in fs]
         alts += [f"exact ({f}).symm" for f in fs if " " not in f]  # a cited equation, reversed
+        # a conjunction A ∧ B ∧ … from its parts, cited in order
+        if len(fs) >= 2:
+            parts = ", ".join(f if " " not in f else f"({f})" for f in fs)
+            alts.append(f"exact ⟨{parts}⟩")
         # a part of a cited conjunction (e.g. one property of a parallelogram hypothesis)
         alts += [f"exact {f}{proj}" for f in fs if " " not in f
                  for proj in (".1", ".2", ".2.1", ".2.2", ".1.1", ".1.2")]
@@ -847,7 +851,8 @@ class Justify(Tactic):
         alts += ["rfl", "ring1", "omega", "positivity", "fun_prop", f"linarith{h}",
                  "(congr 1; ring1)", "(push_cast; ring1)",
                  f"(norm_num{hs}; done)", f"(simp{hs}; done)", f"(simp{hs}; ring1)",
-                 f"nlinarith{h}", "(field_simp; done)", "(field_simp; ring1)", f"(simp_all{hs}; done)",
+                 f"nlinarith{h}", "(field_simp; done)", "(field_simp; ring1)",
+                 f"(simp_all{hs}; done)",
                  f"(constructor; all_goals ({close}))"]
         if not self.avoid:  # aesop's simp set cannot be restricted here
             alts.append("(aesop; done)")
