@@ -84,7 +84,8 @@ jobs:
       - name: Release notes from CHANGELOG.md
         run: |
           v="${GITHUB_REF_NAME#v}"
-          awk -v v="$v" '$0 ~ "^## \[" v "\]" {f=1; next} f && /^## \[/ {exit} f' CHANGELOG.md > notes.md
+          # plain string matching: "[" and "]" must not become a regex character class
+          awk -v h="## [$v]" 'index($0, h) == 1 {f=1; next} f && index($0, "## [") == 1 {exit} f' CHANGELOG.md > notes.md
           test -s notes.md || echo "PyLeanX $v" > notes.md
       - run: gh release create "$GITHUB_REF_NAME" dist/* --title "PyLeanX ${GITHUB_REF_NAME#v}" --notes-file notes.md
         env:

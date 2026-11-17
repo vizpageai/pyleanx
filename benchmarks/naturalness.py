@@ -235,7 +235,7 @@ def _save_results(data: dict) -> None:
     import json
 
     text = json.dumps(data, indent=1, sort_keys=True, ensure_ascii=False)
-    RESULTS.write_text(text + "\n", encoding="utf-8")
+    RESULTS.write_text(text + "\n", encoding="utf-8", newline="\n")
 
 
 def report(rows: list[Row]) -> str:

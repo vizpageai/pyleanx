@@ -174,7 +174,7 @@ from .types import (  # noqa: E402
 )
 from .types import lean_type as Type  # noqa: E402, N812
 
-__version__ = "0.1.0.dev0"
+__version__ = "0.1.0"
 
 
 def latex(obj: Expr | Theorem) -> str:
