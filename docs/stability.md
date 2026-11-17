@@ -22,6 +22,23 @@ PyLeanX uses [semantic versioning](https://semver.org). During the `0.x` series:
 Modules and names starting with `_`, and `pyleanx.backend.*` internals not re-exported from
 `pyleanx`, may change in any release.
 
+## Maturity of features
+
+Public features carry one of two labels:
+
+- **stable** (the default): covered by the rules above.
+- **beta**: public and tested, but its behaviour may still be adjusted in a minor release
+  without a deprecation period, based on use. In 0.1 these are the natural-proof tools:
+  `Theorem.check` / `pl.check_all` (the REPL checker; its verdicts follow the same rules as
+  `verify`, but caching and process management may change), `Theorem.sanity_check`,
+  `pl.explain_failure` (the wording of explanations), `pl.fact` / `pl.search_facts` and
+  descriptions in `because=` (which description selects which fact may improve), and
+  `pl.similarly`. The heuristics of `benchmarks/naturalness.py` are not an API.
+
+Which alternatives the gap filler tries, and in which order, is not part of the API: a
+later release may close more steps (never fewer is the aim, and the benchmark measures it),
+and Lean checks whatever it produces.
+
 ## Deprecations
 
 A deprecated public name keeps working for at least one minor release and emits a
