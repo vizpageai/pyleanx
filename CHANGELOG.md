@@ -68,6 +68,11 @@ see [docs/stability.md](docs/stability.md)).
   |x − y₀| > 2t, and Hörmander's estimate ∫_{|x−y₀|>2t} |∫_I b(y)/(x−y) dy| dx ≤ 2∫_I|b|
   — written proofs verified by Lean. Shipped facts ∫_{|x−y₀|>s} dx/(x − y₀)² = 2/s.
 - The gap filler tries `field_simp` alone; prose brackets denominators like 2t.
+- Pythagoras' theorem from similar triangles (`examples/pythagoras_similar.py`): the altitude
+  to the hypotenuse gives △ACB ∼ △ADC and △BCA ∼ △BDC (AA), so AC² = AD·AB and BC² = DB·AB —
+  a written proof verified by Lean, without Mathlib's Pythagoras. Perpendicular lines are stated
+  as right angles (`geo.right_angle(A, D, C)`). New `geo.angle_along_ray`,
+  `geo.between_reverse`, `geo.between_ne_left`, `geo.between_ne_right`.
 - The intervals of an open set and the Calderón–Zygmund intervals (`examples/cz_intervals.py`):
   endpoints sup{y ≤ x : y ∉ U} and inf{y ≥ x : y ∉ U}, intervals that meet coincide, and every
   x ∈ {Mf > α} lies in an interval (a, b) ⊆ {Mf > α} with a, b ∉ {Mf > α} and

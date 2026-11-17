@@ -63,3 +63,21 @@ def test_products_of_lengths_print_with_a_dot():
     t = pl.Theorem("t", [A, B, C],
                    conclusion=geo.dist(A, B) * geo.dist(A, C) == geo.dist(A, C) * geo.dist(A, B))
     assert "|AB| · |AC|" in str(t.prose())
+
+
+def test_pythagoras_from_similar_triangles_renders():
+    import sys
+    from pathlib import Path
+
+    examples = Path(__file__).resolve().parents[2] / "examples"
+    sys.path.insert(0, str(examples))
+    try:
+        import pythagoras_similar as ps
+    finally:
+        sys.path.remove(str(examples))
+    src = ps.pythagoras.to_lean()
+    prose = str(ps.pythagoras.prose())
+    assert "sorry" not in src and "Sbtw.angle_eq_left" in src
+    # it must not cite Mathlib's Pythagoras (that would be circular)
+    assert "dist_sq_eq_dist_sq_add_dist_sq" not in src
+    assert "△ACB ∼ △ADC" in prose and "|AC|² + |BC|² = |AB|²" in prose

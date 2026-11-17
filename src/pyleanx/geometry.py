@@ -495,6 +495,16 @@ theorem PyLeanX.Algebra.split_fraction {a b : ℝ} (ha : 0 < a) : (a + b) / a = 
 cross_multiply = lemma("div_eq_div_iff", "Mathlib.Algebra.Order.Field.Basic",
                        label="cross-multiplication")
 
+#: D strictly between A and B  ⟹  ∠DAC = ∠BAC (Mathlib's ``Sbtw.angle_eq_left``; C explicit).
+angle_along_ray = lemma("Sbtw.angle_eq_left", _ANGLE,
+                        label="sliding a point along a ray does not change the angle")
+#: D strictly between A and B  ⟺  D strictly between B and A.
+between_reverse = lemma("sbtw_comm", _BETWEEN, label="betweenness does not depend on the order")
+#: D strictly between A and B  ⟹  D ≠ A, and D ≠ B.
+between_ne_left = lemma("Sbtw.ne_left", _BETWEEN, label="a point strictly between A and B is not A")
+between_ne_right = lemma("Sbtw.ne_right", _BETWEEN,
+                         label="a point strictly between A and B is not B")
+
 # The textbook catalogue (chapters: angles, triangles, congruence, similarity, parallels,
 # right triangles, midpoints, circles, quadrilaterals): ``geo.sss``, ``geo.thales``, …
 from ._geometry_textbook import *  # noqa: E402, F403
