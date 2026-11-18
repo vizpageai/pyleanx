@@ -27,6 +27,7 @@ pytest tests/unit -q                       # fast, no Lean
 pytest tests/integration -q                # real Lean; slow (minutes)
 python scripts/run_examples.py             # every example, expected outcomes
 mkdocs build --strict                      # documentation
+python benchmarks/naturalness.py --lean    # every written proof; slow, see below
 ```
 
 CI runs the same on Linux, Windows and macOS (unit tests) and Linux (Lean, examples, a
@@ -44,6 +45,16 @@ clean wheel install).
 - **Typed** public functions, docstrings for anything exported from `pyleanx`.
 - Domain catalog additions (`algebra.py` etc.) must be checked against the pinned Mathlib
   (`PYLEANX_SLOW_TESTS=1 pytest tests/integration/test_domains_lean.py`).
+- **Every catalogue fact has a textbook label** (`lemma(..., label="…")`): it is what the
+  proof prints and what `because="…"` descriptions match. Facts that form a family share one
+  label on purpose ("CPCTC"); otherwise a label should pick out one fact
+  (`test_every_label_selects_its_fact`).
+- **Gap filler changes** (`Justify` in `proofs.py`) can make existing proofs slower or fail
+  through Lean's per-declaration time budget. Put new alternatives after the cheap ones and
+  run the benchmark with Lean: `python benchmarks/naturalness.py --lean --only <module>` checks
+  one example module per process (each holds Mathlib in memory) and records verdicts with a
+  fingerprint of the generated Lean in `benchmarks/lean_results.json`; results for older
+  Lean are reported as stale.
 
 ## Design boundaries
 
