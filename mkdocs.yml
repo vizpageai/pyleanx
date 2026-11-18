@@ -43,6 +43,7 @@ nav:
   - Reference:
       - API guide: api.md
       - Python reference: reference.md
+      - Citable facts: facts.md
   - Background:
       - Trust model: security.md
       - Architecture: architecture.md

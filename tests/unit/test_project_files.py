@@ -1,4 +1,4 @@
-"""The example runner knows every example script (no Lean)."""
+"""Generated and enumerated project files are complete and current (no Lean)."""
 
 from __future__ import annotations
 
@@ -18,3 +18,12 @@ def test_every_example_has_an_expected_outcome_or_a_reason():
     listed = set(run_examples.CASES) | set(run_examples.SKIPPED) | run_examples.HELPERS
     on_disk = {p.stem for p in run_examples.EXAMPLES.glob("*.py")}
     assert listed <= on_disk, sorted(listed - on_disk)  # no stale entries either
+
+
+def test_the_facts_page_is_up_to_date():
+    sys.path.insert(0, str(ROOT / "scripts"))
+    try:
+        import gen_facts_doc
+    finally:
+        sys.path.remove(str(ROOT / "scripts"))
+    assert gen_facts_doc.main(["--check"]) == 0, "run python scripts/gen_facts_doc.py"

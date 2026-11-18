@@ -88,7 +88,8 @@ pl.claim(ang(A, B, C) + ang(B, C, A) + ang(C, A, B) == pi(),
 The description is matched against the printed labels and names of the facts every domain
 module provides. A description that is exactly a fact's label or name selects it. If two
 facts fit about equally well, the step is refused with the candidates listed, so a
-description never silently picks the wrong fact. `pl.search_facts("…")` lists the best
+description never silently picks the wrong fact. The [list of citable facts](../facts.md) shows every
+label. `pl.search_facts("…")` lists the best
 matches and `pl.fact("…")` returns one.
 
 Some facts come as a family under one name, as in a textbook: "by CPCTC" means whichever
