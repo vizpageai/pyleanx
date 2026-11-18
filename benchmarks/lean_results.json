@@ -24,6 +24,11 @@
   "status": "pass",
   "why": ""
  },
+ "bounded_sequence_has_cauchy_subsequence": {
+  "fingerprint": "34570b09c3558076",
+  "status": "pass",
+  "why": ""
+ },
  "cauchy_integral_formula": {
   "fingerprint": "003e8e38ae296515",
   "status": "pass",
@@ -31,6 +36,26 @@
  },
  "contour_integral_z_sq": {
   "fingerprint": "8227da5400c99acc",
+  "status": "pass",
+  "why": ""
+ },
+ "convergent_is_cauchy": {
+  "fingerprint": "71684c57daf11ed3",
+  "status": "pass",
+  "why": ""
+ },
+ "cubic_has_root": {
+  "fingerprint": "1fa469dbc5dca88f",
+  "status": "pass",
+  "why": ""
+ },
+ "decay_of_coefficients": {
+  "fingerprint": "fb4c090ac31478a5",
+  "status": "pass",
+  "why": ""
+ },
+ "decay_two_derivatives": {
+  "fingerprint": "5ee35279e03dc0d5",
   "status": "pass",
   "why": ""
  },
@@ -69,6 +94,16 @@
   "status": "pass",
   "why": ""
  },
+ "eventually_positive": {
+  "fingerprint": "cb3b389988eb5763",
+  "status": "pass",
+  "why": ""
+ },
+ "fourier_uniqueness": {
+  "fingerprint": "374d0fe0ff79891e",
+  "status": "pass",
+  "why": ""
+ },
  "infinitely_many_primes": {
   "fingerprint": "3dc200327bfb9e8e",
   "status": "pass",
@@ -94,8 +129,18 @@
   "status": "pass",
   "why": ""
  },
+ "limits_are_unique": {
+  "fingerprint": "343725b190f7623d",
+  "status": "pass",
+  "why": ""
+ },
  "medial_triangle_half_perimeter": {
   "fingerprint": "2d978df1d7cad589",
+  "status": "pass",
+  "why": ""
+ },
+ "one_over_n_tends_to_zero": {
+  "fingerprint": "20233dcc92ba0573",
   "status": "pass",
   "why": ""
  },
@@ -119,6 +164,16 @@
   "status": "pass",
   "why": ""
  },
+ "riemann_lebesgue_for_L2": {
+  "fingerprint": "f08375aa6ceeb318",
+  "status": "pass",
+  "why": ""
+ },
+ "shifted_sequence_limit": {
+  "fingerprint": "f9f46510eccf2e5f",
+  "status": "pass",
+  "why": ""
+ },
  "side_splitter_parts": {
   "fingerprint": "a5ce317f2b765e6f",
   "status": "pass",
@@ -126,6 +181,21 @@
  },
  "side_splitter_similar": {
   "fingerprint": "1eff45cf7e8032a2",
+  "status": "pass",
+  "why": ""
+ },
+ "three_x_plus_one_continuous": {
+  "fingerprint": "12754d265cef8d4b",
+  "status": "pass",
+  "why": ""
+ },
+ "value_at_zero": {
+  "fingerprint": "9cb9ed6497ae15e1",
+  "status": "pass",
+  "why": ""
+ },
+ "zero_coefficients_zero_energy": {
+  "fingerprint": "cc9f6280e26413a1",
   "status": "pass",
   "why": ""
  }
