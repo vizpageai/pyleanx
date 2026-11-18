@@ -115,3 +115,17 @@ def test_an_isosceles_triangle_is_drawn_and_a_wrong_base_angle_is_caught():
     wrong = pl.Theorem("iso_wrong", [A, B, C], assumptions=hyps,   # the apex angle is not a base angle
                        conclusion=ang(A, B, C) == ang(B, A, C), proof=pl.proof(pl.conclude()))
     assert "The statement looks false" in str(wrong.sanity_check())
+
+
+def test_a_right_angle_is_drawn_and_a_wrong_pythagoras_is_caught():
+    dist = geo.dist
+    hyps = {"hABC": geo.triangle(A, B, C), "hC": geo.right_angle(A, C, B)}
+    good = pl.Theorem("pyth", [A, B, C], assumptions=hyps,
+                      conclusion=dist(A, C) ** 2 + dist(B, C) ** 2 == dist(A, B) ** 2,
+                      proof=pl.proof(pl.conclude()))
+    rep = good.sanity_check()
+    assert rep.ok and rep.samples == 300
+    bad = pl.Theorem("pyth_wrong", [A, B, C], assumptions=hyps,   # the legs, not the hypotenuse
+                     conclusion=dist(A, B) ** 2 + dist(B, C) ** 2 == dist(A, C) ** 2,
+                     proof=pl.proof(pl.conclude()))
+    assert "The statement looks false" in str(bad.sanity_check())

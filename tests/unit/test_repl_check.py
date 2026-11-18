@@ -146,9 +146,11 @@ def test_numeric_check_says_when_nothing_was_checked():
     from pyleanx import geometry as geo
 
     A, B, C = geo.points("A B C")
-    right = pl.Theorem("r", [A, B, C], assumptions={"h": geo.right_angle(A, C, B)},
+    # an exact 60° angle: random points never satisfy it, and it is not constructed
+    sixty = pl.Theorem("r", [A, B, C],
+                       assumptions={"h": geo.angle(A, C, B) == pl.analysis.pi() / 3},
                        conclusion=geo.dist(A, B) > 0, proof=pl.proof(pl.conclude()))
-    assert "no random sample satisfies the hypotheses" in str(right.sanity_check())
+    assert "no random sample satisfies the hypotheses" in str(sixty.sanity_check())
     f = pl.symbol("f", pl.Fn(pl.Real, pl.Real))
     fun = pl.Theorem("fn", [f], conclusion=f(1) == f(1), proof=pl.proof(pl.conclude()))
     assert "cannot be sampled" in str(fun.sanity_check())

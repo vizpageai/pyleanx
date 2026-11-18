@@ -327,8 +327,37 @@ def _construct(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> Non
                     c, q = _point(evaluate(centre, env)), _point(evaluate(through, env))
                     r, phi = math.dist(c, q), rng.uniform(0, 2 * math.pi)
                     env[free.uid] = (c[0] + r * math.cos(phi), c[1] + r * math.sin(phi))
+                elif (right := _right_angle(h, env)) is not None:
+                    # ∠PVQ = 90°: Q goes on the perpendicular to VP at V
+                    p_, v_, free = right
+                    px, py = _point(evaluate(p_, env))
+                    vx, vy = _point(evaluate(v_, env))
+                    s = rng.choice((-1, 1)) * rng.uniform(0.3, 2.0)
+                    env[free.uid] = (vx - s * (py - vy), vy + s * (px - vx))
             except (Unsupported, ValueError, ZeroDivisionError, OverflowError):
                 continue
+
+
+def _right_angle(h: Any, env: dict[int, Any]) -> tuple[Any, Any, Var] | None:
+    """For ``∠PVQ = π/2`` (either side) with Q, or else P, a point variable: (P, V, free)."""
+    if not (isinstance(h, Compare) and h.op == "eq"):
+        return None
+    for ang, other in ((h.lhs, h.rhs), (h.rhs, h.lhs)):
+        if not (isinstance(ang, App) and ang.func.lean_name == "EuclideanGeometry.angle"
+                and len(ang.args) == 3):
+            continue
+        if _free_uids(other):
+            continue
+        try:
+            if not _close(float(evaluate(other, env)), math.pi / 2):
+                continue
+        except (Unsupported, TypeError, ValueError):
+            continue
+        p, v, q = ang.args
+        for a, b in ((p, q), (q, p)):
+            if isinstance(b, Var) and b.uid not in _free_uids(a) | _free_uids(v):
+                return a, v, b
+    return None
 
 
 def _equal_lengths(h: Any) -> tuple[Any, Any, Var] | None:

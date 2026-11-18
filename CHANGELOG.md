@@ -19,7 +19,8 @@ see [docs/stability.md](docs/stability.md)).
 - The first `check()` of a session says what it is doing while Lean loads its imports and
   checks the shipped facts (on stderr; `PYLEANX_QUIET=1` silences it).
 - `sanity_check` draws isosceles figures: for a hypothesis |AB| = |AC| it places C on the circle
-  about A through B, so isosceles-triangle proofs are tried on samples instead of skipped.
+  about A through B, so isosceles-triangle proofs are tried on samples instead of skipped;
+  likewise right angles (∠ACB = 90°: B on the perpendicular to CA at C), e.g. Pythagoras.
 
 ### Changed
 - The gap filler tries "lemma applied to a cited fact" only when a step cites at most about a
