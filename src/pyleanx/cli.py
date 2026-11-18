@@ -141,6 +141,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
                   "same mathlib rev" if same else f"lakefile {m and m.group(1)} != manifest {mrev}")
         if shutil.which("lake") and pin:
             # First use of a fresh workspace can take minutes (Lake configures packages).
+            if not args.json:
+                print("running the project's Lean via `lake env` (the first run after a fresh "
+                      "install or a reboot can take a few minutes)...", file=sys.stderr,
+                      flush=True)
             try:
                 env = proj.lake_env(refresh=True)
                 ver = _version_of([env["LEAN"], "--version"], cwd=proj.path)
