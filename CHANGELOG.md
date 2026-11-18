@@ -14,6 +14,9 @@ see [docs/stability.md](docs/stability.md)).
   exists) is refused when the theorem is built, with the closest names, instead of failing
   later in Lean as an unknown identifier.
 
+- `pyleanx check SCRIPT --watch`: re-checks on every save, with Lean kept loaded, after a
+  numeric sanity check; prints each proof with its verdict.
+
 ### Changed
 - The gap filler tries "lemma applied to a cited fact" only when a step cites at most about a
   dozen facts; a step citing dozens of facts hit Lean's per-declaration time limit.

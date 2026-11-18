@@ -221,11 +221,68 @@ def cmd_compile(args: argparse.Namespace) -> int:
 
 
 # ------------------------------------------------------------------------------ check
+def watch(script: str, project: LeanProject, *, poll: float = 0.5,
+          rounds: int | None = None, check: object = None) -> int:
+    """Re-check ``script`` every time it is saved, keeping Lean loaded between checks.
+
+    Each round reloads the script, tries every theorem on random numbers (instant, no Lean),
+    then checks them in the persistent Lean REPL and prints each proof with its verdict.
+    The first round loads Mathlib; later rounds re-check only what changed. Stops on Ctrl-C
+    (or after ``rounds`` checks, for tests).
+    """
+    import time
+
+    if check is None:
+        from .backend.repl_check import check_all as check
+    path = Path(script)
+    last: float | None = None
+    done = 0
+    try:
+        while rounds is None or done < rounds:
+            try:
+                mtime: float | None = path.stat().st_mtime
+            except OSError:
+                mtime = None
+            if mtime is None or mtime == last:
+                time.sleep(poll)
+                continue
+            last = mtime
+            done += 1
+            print(f"\n── {path.name} changed, checking ({time.strftime('%H:%M:%S')}) ──",
+                  flush=True)
+            try:
+                thms = load_theorems(script)
+            except Exception as exc:  # noqa: BLE001 - a broken edit must not stop the watch
+                print(f"{type(exc).__name__}: {exc}", flush=True)
+                continue
+            for t in thms:
+                try:
+                    report = t.sanity_check()
+                except Exception:  # noqa: BLE001 - the numeric check is best effort
+                    continue
+                if not report.ok:
+                    print(f"{t.name}: {report}", flush=True)
+            t0 = time.monotonic()
+            results = check(thms, project=project)  # type: ignore[operator]
+            for t, r in zip(thms, results, strict=True):
+                print(t.prose(r), flush=True)
+            n_ok = sum(r.verified for r in results)
+            print(f"{n_ok}/{len(results)} accepted by Lean in {time.monotonic() - t0:.0f}s; "
+                  "waiting for changes (Ctrl-C to stop)", flush=True)
+    except KeyboardInterrupt:
+        pass
+    return 0
+
+
 def cmd_check(args: argparse.Namespace) -> int:
-    thms = load_theorems(args.script)
     proj = _project_from(args)
     if args.allow_raw_tactics:
         proj = proj.with_(policy=dataclasses.replace(proj.policy, allow_raw_tactics=True))
+    if args.watch:
+        if args.json:
+            raise PyLeanXError("--watch prints proofs as text; it cannot be combined with --json")
+        return watch(args.script, proj)
+    thms = load_theorems(args.script)
     results = verify_all(thms, project=proj, use_cache=not args.no_cache)
     if args.json:
         payload = [r.to_dict() for r in results]
@@ -491,6 +548,9 @@ def build_parser() -> argparse.ArgumentParser:
             s.add_argument("--timeout", type=float)
             s.add_argument("--allow-raw-tactics", action="store_true",
                            help="permit UNTRUSTED pl.raw_tactic text (screened + audited)")
+            s.add_argument("--watch", action="store_true",
+                           help="re-check every time the script is saved, keeping Lean "
+                                "loaded (seconds per check after the first)")
         s.set_defaults(func=func)
 
     s = sub.add_parser("sanity", help="try a (trusted) script's theorems on random numbers "

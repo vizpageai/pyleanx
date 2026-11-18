@@ -25,6 +25,16 @@ steps, the same `#print axioms` audit and axiom policy. The difference is bookke
 `check` results say `backend="repl"` and are not archived. Run `verify()` once at the end
 to record the result with its fingerprint.
 
+Working in an editor rather than a notebook? Run
+
+```bash
+pyleanx check my_proof.py --watch
+```
+
+and save the file: each save re-runs the script, tries every step on random numbers
+(below), and checks the theorems with the Lean process kept from the previous save. The
+proofs are printed as numbered steps with Lean's verdict. Stop with Ctrl-C.
+
 ## Catch a wrong step before Lean: `thm.sanity_check()`
 
 ```python

@@ -149,6 +149,7 @@ pyleanx show-lean examples/square_identity.py
 pyleanx check examples/square_identity.py          # exit 0
 pyleanx check examples/bad_proof.py                # exit 1, with diagnostics
 pyleanx check examples/implication.py --json       # machine-readable
+pyleanx check my_proof.py --watch                  # re-check on every save, in seconds
 ```
 
 Scripts expose a module-level `THEOREMS` list or a `build()` function. **The CLI

@@ -461,6 +461,7 @@ pyleanx doctor [--project P] [--json]
 pyleanx show-lean SCRIPT [--project P] [--mathlib-imports] [--unicode-types]
 pyleanx compile SCRIPT [-o OUT.lean]
 pyleanx check SCRIPT [--json] [--include-source] [--no-cache] [--timeout S] [--allow-raw-tactics]
+pyleanx check SCRIPT --watch     # re-check on every save, Lean kept loaded
 pyleanx cache stats|clear
 pyleanx bank index|search|show|list [QUERY] [--bank FILE] [--json]
 pyleanx infoview NAME... [--import MODULE]... [--json]
