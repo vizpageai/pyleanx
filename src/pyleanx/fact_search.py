@@ -114,12 +114,37 @@ def _norm(text: str) -> str:
     return " ".join(re.findall(r"[a-z0-9°π]+", text.lower().replace("_", " ")))
 
 
+def facts_for(query: str) -> list[object]:
+    """The facts ``query`` describes, for ``because=``.
+
+    * exactly a fact's printed label (character for character, ignoring case) or its Python
+      name: that fact -- or, when several facts share the label (a family such as the six
+      parts of "CPCTC"), all of them, and Lean uses whichever justifies the step;
+    * otherwise the best match by words, if it is clearly the best;
+    * otherwise an error listing the candidates.
+    """
+    raw = query.strip().casefold()
+    by_name: dict[str, FactEntry] = {}
+    for e in _catalog():
+        if raw and (raw == e.label.strip().casefold()
+                    or raw == e.qualified.split(".", 1)[1].casefold()):
+            by_name.setdefault(str(getattr(e.obj, "name", e.qualified)), e)
+    if by_name:
+        return [e.obj for e in by_name.values()]
+    return [fact(query)]
+
+
 def fact(query: str) -> object:
     """The fact ``query`` describes; an error listing candidates if it is unclear.
 
     A query that is exactly a fact's printed label, or its Python name (``straight
     angle`` for ``geo.straight_angle``), selects that fact.
     """
+    raw = query.strip().casefold()
+    exact_raw = {str(getattr(e.obj, "name", e.qualified)): e for e in _catalog()
+                 if raw and raw == e.label.strip().casefold()}
+    if len(exact_raw) == 1:
+        return next(iter(exact_raw.values())).obj
     q = _norm(query)
     exact = {getattr(e.obj, "name", e.qualified): e for e in _catalog()
              if q and (q == _norm(e.label) or q == _norm(e.qualified.split(".", 1)[1]))}
@@ -147,4 +172,4 @@ def fact(query: str) -> object:
     return by_q[best[1]].obj
 
 
-__all__ = ["fact", "search_facts"]
+__all__ = ["fact", "facts_for", "search_facts"]

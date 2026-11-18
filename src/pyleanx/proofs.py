@@ -872,8 +872,9 @@ class Justify(Tactic):
         alts += [f"(with_reducible exact ({f} {g}).symm)" for f in lemmas for g in args
                  if g != f]
         # ... and to two cited facts, in either order ("by L, from h₁ and h₂")
-        alts += [f"exact {f} {g} {k}" for f in lemmas for g in args for k in args
-                 if len({f, g, k}) == 3]
+        if len(lemmas) * len(args) ** 2 <= 120:  # a cited family ("CPCTC") would explode
+            alts += [f"exact {f} {g} {k}" for f in lemmas for g in args for k in args
+                     if len({f, g, k}) == 3]
         alts += [f"exact {f} {g}" for f in lemmas for g in args if g != f]
         # rewriting with a cited equation, then tidying up
         alts += [f"(rw [{f}]; done)" for f in lemmas]
@@ -1131,9 +1132,9 @@ def _facts(because: object) -> tuple[Term, ...]:
             out.append(Name(f.eq_name))
         elif isinstance(f, str) and " " in f.strip():
             # a description ("AA similarity"): names never contain spaces
-            from .fact_search import fact
+            from .fact_search import facts_for
 
-            out.append(_term(fact(f)))
+            out.extend(_term(x) for x in facts_for(f))
         else:
             out.append(_term(f))
     return tuple(out)

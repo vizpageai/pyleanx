@@ -93,3 +93,19 @@ def test_benchmark_classifies_bookkeeping():
     assert nb.bookkeeping_kind(ang(A, B, C) == ang(C, B, A), hyps) == "notation"
     assert nb.bookkeeping_kind(ang(A, B, C) == ang(A, C, B), hyps) == ""  # a real fact
     assert nb.bookkeeping_kind(geo.triangle(B, A, C), hyps) == "notation"
+
+
+def test_every_label_selects_its_fact():
+    from pyleanx.fact_search import _catalog, facts_for
+
+    for e in _catalog():
+        names = [getattr(g, "name", None) for g in facts_for(e.label)]
+        assert getattr(e.obj, "name", None) in names, (e.qualified, e.label)
+
+
+def test_a_family_label_cites_every_member_and_prints_once():
+    c = pl.claim(A != B, because="corresponding parts of congruent triangles (CPCTC)")
+    assert len(c.facts) == 6
+    thm = pl.Theorem("fam", [A, B], conclusion=A != B, proof=pl.proof(c, pl.conclude()))
+    text = str(thm.prose())
+    assert text.count("corresponding parts of congruent triangles (CPCTC)") == 1

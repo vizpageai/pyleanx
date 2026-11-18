@@ -368,7 +368,8 @@ class _Reader:
         return _fact_text(f, self.hyps)
 
     def reason(self, facts: tuple[Any, ...], note: str) -> str:
-        return note or ", ".join(self.fact(f) for f in facts)
+        # a family cited by one description ("CPCTC") is named once
+        return note or ", ".join(dict.fromkeys(self.fact(f) for f in facts))
 
     def block(self, t: Tactic | None, target: Expr | None,
               prefix: str | None = None, start: int = 0) -> list[ProseStep]:
