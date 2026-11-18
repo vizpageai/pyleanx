@@ -159,7 +159,7 @@ AE = AC; this proof fixes AE = AC and deduces the parallel. Both use the same tr
 `pyleanx.geometry` (`geo`) has the vocabulary and the facts of a high-school course, so
 textbook proofs can be written step by step (`examples/textbook_geometry.py`):
 
-```python
+```py
 isosceles_median = pl.Theorem(
     "isosceles_median_perpendicular", [A, B, C, M],
     assumptions={"hABC": geo.triangle(A, B, C), "hiso": dist(A, B) == dist(A, C),
@@ -233,7 +233,7 @@ Lean rejects at the faulty step, and four exercises students solve in the notebo
 ε–δ unfoldings, and the big theorems under their textbook names, so a proof reads like the
 book (`examples/lecture_real_analysis.ipynb`, solutions in `examples/analysis_lecture.py`):
 
-```python
+```py
 pl.Theorem("three_x_plus_one_continuous", [f, x0],
     assumptions={"hf": pl.Forall(t, f(t) == 3 * t + 1)},
     conclusion=an.continuous_at(f, x0),
@@ -440,7 +440,7 @@ every run and its axioms are part of your theorem's audit. Nothing is taken on t
 Once a theorem is proved, cite the theorem **object** in later proofs, exactly like a library
 fact. From `examples/using_cauchy_integral.py`:
 
-```python
+```py
 from readable_cauchy_integral import cauchy_integral_formula   # the proved theorem
 
 zero, one, two = pl.ascribe(0, ca.C), pl.ascribe(1, ca.C), pl.real(2)

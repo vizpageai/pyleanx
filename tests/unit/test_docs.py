@@ -28,6 +28,37 @@ def test_tutorial_blocks_compile(page):
         compile(block, f"{page.name}[{i}]", "exec")
 
 
+def _undefined_names(blocks: list[str]) -> list[tuple[int, list[str]]]:
+    """Names each block reads that neither it nor an earlier block defines."""
+    import ast
+    import builtins
+
+    defined = set(dir(builtins))
+    out = []
+    for i, block in enumerate(blocks):
+        tree = ast.parse(block)
+        used = set()
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Name):
+                (defined.add if isinstance(n.ctx, ast.Store) else used.add)(n.id)
+            elif isinstance(n, (ast.Import, ast.ImportFrom)):
+                defined.update((a.asname or a.name).split(".")[0] for a in n.names)
+            elif isinstance(n, (ast.FunctionDef, ast.ClassDef)):
+                defined.add(n.name)
+            elif isinstance(n, ast.arg):
+                defined.add(n.arg)
+        if missing := sorted(used - defined):
+            out.append((i, missing))
+    return out
+
+
+@pytest.mark.parametrize("page", TUTORIALS, ids=lambda p: p.name)
+def test_tutorial_blocks_define_what_they_use(page):
+    # The runnable blocks are executed top to bottom by the Lean doc test; an excerpt that
+    # uses names from an example file must be a ```py block (compiled, not run).
+    assert _undefined_names(python_blocks(page)) == []
+
+
 def test_readme_blocks_compile():
     for i, block in enumerate(python_blocks(ROOT / "README.md")):
         compile(block, f"README[{i}]", "exec")
