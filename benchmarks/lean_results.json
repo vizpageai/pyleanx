@@ -1,4 +1,9 @@
 {
+ "abelian_of_sq_eq_one": {
+  "fingerprint": "944e6aad6c25459f",
+  "status": "pass",
+  "why": ""
+ },
  "am_gm_two": {
   "fingerprint": "27a8bfa6d799abd9",
   "status": "pass",
@@ -11,6 +16,21 @@
  },
  "angle_in_semicircle": {
   "fingerprint": "04234d07d6df81bb",
+  "status": "pass",
+  "why": ""
+ },
+ "bernoulli_inequality": {
+  "fingerprint": "6cceafea86c81fb5",
+  "status": "pass",
+  "why": ""
+ },
+ "cauchy_integral_formula": {
+  "fingerprint": "003e8e38ae296515",
+  "status": "pass",
+  "why": ""
+ },
+ "contour_integral_z_sq": {
+  "fingerprint": "8227da5400c99acc",
   "status": "pass",
   "why": ""
  },
@@ -49,6 +69,11 @@
   "status": "pass",
   "why": ""
  },
+ "infinitely_many_primes": {
+  "fingerprint": "3dc200327bfb9e8e",
+  "status": "pass",
+  "why": ""
+ },
  "isosceles_median_perpendicular": {
   "fingerprint": "d105f57b1b5334c8",
   "status": "pass",
@@ -64,6 +89,11 @@
   "status": "pass",
   "why": ""
  },
+ "limit_of_sum": {
+  "fingerprint": "4405f274ef05fb98",
+  "status": "pass",
+  "why": ""
+ },
  "medial_triangle_half_perimeter": {
   "fingerprint": "2d978df1d7cad589",
   "status": "pass",
@@ -74,8 +104,18 @@
   "status": "pass",
   "why": ""
  },
+ "product_of_consecutive_is_even": {
+  "fingerprint": "fd6dc0723b865fcd",
+  "status": "pass",
+  "why": ""
+ },
  "pythagoras_similar_triangles": {
   "fingerprint": "606eab1e2f3b97db",
+  "status": "pass",
+  "why": ""
+ },
+ "pythagorean_identity": {
+  "fingerprint": "82f18829da54b9d7",
   "status": "pass",
   "why": ""
  },
