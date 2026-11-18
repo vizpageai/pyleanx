@@ -27,6 +27,9 @@ see [docs/stability.md](docs/stability.md)).
   rejects now fails the benchmark job.
 
 ### Fixed
+- `TheoremBank.index_catalogs` asks Lean only for Mathlib declarations; it failed on the
+  facts PyLeanX proves itself (`geo.altitude`, …), which exist only in files that include
+  their proofs. Found by running `examples/theorem_bank.py`.
 - Tutorial excerpts of example files are shown as fragments, so the documentation test runs
   every page to the end.
 
