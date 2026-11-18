@@ -15,32 +15,37 @@
   "why": ""
  },
  "euclid_equilateral_angles": {
-  "fingerprint": "3a8647249170e271",
+  "fingerprint": "42f84d18c002e484",
   "status": "pass",
   "why": ""
  },
  "euclid_exterior_angle": {
-  "fingerprint": "4dcb8c0a3ee09708",
+  "fingerprint": "f933db4be0956d75",
   "status": "pass",
   "why": ""
  },
  "euclid_isosceles_right_triangle": {
-  "fingerprint": "323c125cf7a61da3",
+  "fingerprint": "85719437368ea445",
+  "status": "pass",
+  "why": ""
+ },
+ "euclid_median_bisects_apex": {
+  "fingerprint": "ad5287f70e8ad6d7",
   "status": "pass",
   "why": ""
  },
  "euclid_midsegment": {
-  "fingerprint": "17eb73ebe71a3778",
+  "fingerprint": "f4c1e911a850ee36",
   "status": "pass",
   "why": ""
  },
  "euclid_right_triangle_acute_angles": {
-  "fingerprint": "aaa7b6b4c06897f6",
+  "fingerprint": "322ec6c6a6983e5f",
   "status": "pass",
   "why": ""
  },
  "euclid_vertical_angles": {
-  "fingerprint": "590058d83ba94f29",
+  "fingerprint": "c7dc009a335be469",
   "status": "pass",
   "why": ""
  },
@@ -55,7 +60,7 @@
   "why": ""
  },
  "leg_rule": {
-  "fingerprint": "76b8d8851c4231f9",
+  "fingerprint": "bc90551747d7edb0",
   "status": "pass",
   "why": ""
  },
@@ -70,7 +75,7 @@
   "why": ""
  },
  "pythagoras_similar_triangles": {
-  "fingerprint": "5abfc878bb1fd28b",
+  "fingerprint": "606eab1e2f3b97db",
   "status": "pass",
   "why": ""
  },

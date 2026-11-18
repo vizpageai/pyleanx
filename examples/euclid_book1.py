@@ -11,6 +11,8 @@ vertices are listed) are supplied by PyLeanX and checked by Lean like everything
     E4  (I.32)       An exterior angle equals the sum of the two remote interior angles.
     E5  (I.15)       Vertical angles are equal.
     E6               The midsegment of a triangle is parallel to the third side and half as long.
+    E7  (I.8)        The median to the base of an isosceles triangle bisects the apex angle
+                     (SSS, then corresponding parts of congruent triangles).
 
 Run:  python examples/euclid_book1.py
 """
@@ -109,7 +111,23 @@ midsegment = pl.Theorem(
     ),
 )
 
-THEOREMS = [equilateral, right_triangle, isosceles_right, exterior, vertical, midsegment]
+median_bisects = pl.Theorem(
+    "euclid_median_bisects_apex", [A, B, C, M],
+    assumptions={"hABC": geo.triangle(A, B, C), "hiso": dist(A, B) == dist(A, C),
+                 "hM": geo.is_midpoint(M, B, C)},
+    conclusion=ang(M, A, B) == ang(M, A, C),
+    proof=pl.proof(
+        pl.claim(dist(B, M) == dist(C, M),
+                 because="the midpoint divides a segment into equal halves"),
+        pl.claim(geo.congruent((B, M, A), (C, M, A)), because="SSS",
+                 note="SSS: BM = CM, MA = MA, AB = AC", name="hcong"),
+        # "by CPCTC": the family of corresponding parts, cited by its label
+        pl.conclude(because=["corresponding parts of congruent triangles (CPCTC)", "hcong"]),
+    ),
+)
+
+THEOREMS = [equilateral, right_triangle, isosceles_right, exterior, vertical, midsegment,
+            median_bisects]
 
 if __name__ == "__main__":
     check = pl.check_all if "--fast" in sys.argv else pl.verify_all

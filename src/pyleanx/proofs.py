@@ -1122,6 +1122,17 @@ def proof(*steps_: Tactic) -> Tactic:
     return steps(*out) if len(out) != 1 else out[0]
 
 
+def _is_one_word_label(text: str) -> bool:
+    """Is ``text`` exactly (case-sensitively) the one-word label of a fact, like "SSS"?"""
+    from .fact_search import _catalog
+
+    t = text.strip()
+    # hypothesis names (hx, h1) and Lean names (mul_pos, Real.pi) never reach the catalog
+    if not t or _hyp_like(t) or "_" in t or "." in t:
+        return False
+    return any(e.label.strip() == t for e in _catalog())
+
+
 def _facts(because: object) -> tuple[Term, ...]:
     if because is None:
         return ()
@@ -1134,8 +1145,9 @@ def _facts(because: object) -> tuple[Term, ...]:
             out.append(Name(f.name))
         elif isinstance(f, Let):
             out.append(Name(f.eq_name))
-        elif isinstance(f, str) and " " in f.strip():
-            # a description ("AA similarity"): names never contain spaces
+        elif isinstance(f, str) and (" " in f.strip() or _is_one_word_label(f)):
+            # a description ("AA similarity"): names never contain spaces; a one-word label
+            # ("SSS", "SAS") selects its fact too
             from .fact_search import facts_for
 
             out.extend(_term(x) for x in facts_for(f))

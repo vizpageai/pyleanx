@@ -130,3 +130,12 @@ def test_hypothesis_like_names():
     assert all(_hyp_like(n) for n in ["h", "hx", "h1", "hABC", "hε", "hx'", "hD"])
     assert not any(_hyp_like(n) for n in ["mul_pos", "Real.pi", "hasSum", "abs_nonneg",
                                          "hypothesis_long_name"])
+
+
+def test_a_one_word_label_selects_its_fact():
+    # "by SSS" as a textbook writes it; not a Lean name called SSS
+    c = pl.claim(geo.congruent((A, B, C), (D, B, C)), because=["SSS", "h"])
+    assert [getattr(f, "name", None) for f in c.facts] == [geo.sss.name, "h"]
+    # other one-word reasons are still names
+    assert [f.name for f in pl.claim(A != B, because="hAB").facts] == ["hAB"]
+    assert [f.name for f in pl.claim(A != B, because="sss").facts] == ["sss"]
