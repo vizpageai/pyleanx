@@ -10,7 +10,7 @@ whether Lean accepts it. Everything below works with the written-proof style of
 Mathlib (minutes) and re-checking every shipped fact and cited theorem. While you are
 writing, use
 
-```python
+```py
 res = thm.check()            # or pl.check_all([thm1, thm2, ...])
 print(thm.prose(res))
 ```
@@ -28,9 +28,23 @@ to record the result with its fingerprint.
 ## Catch a wrong step before Lean: `thm.sanity_check()`
 
 ```python
-print(thm.sanity_check())
-# Step 1 looks false: with x = 0.8338, y = 0.04687 (all hypotheses hold),
-# “|x + y| ≤ |x|” fails: the left side is 0.8807, the right side 0.8338.
+import pyleanx as pl
+
+x, y = pl.symbols("x y", pl.Real)
+wrong = pl.Theorem(
+    "abs_sum", [x, y], assumptions={"hx": x > 0, "hy": y > 0},
+    conclusion=abs(x + y) <= abs(x) + abs(y),
+    proof=pl.proof(
+        pl.claim(abs(x + y) <= abs(x), because="hy"),   # a slip: should be |x| + |y|
+        pl.conclude()))
+report = wrong.sanity_check()
+print(report)
+assert not report.ok
+```
+
+```text
+Step 1 looks false: with x = 0.8338, y = 0.04687 (all hypotheses hold),
+“|x + y| ≤ |x|” fails: the left side is 0.8807, the right side 0.8338.
 ```
 
 The statement and each step are tried on random numbers (and random points of the plane)
@@ -64,7 +78,7 @@ gets suggestions: "Facts that might justify it: geo.similar_AA (AA similarity); 
 
 A reason that contains a space is a description of a fact, not a name:
 
-```python
+```py
 pl.claim(geo.similar((B, A, C), (C, A, D)), because=["AA similarity", "hABC", "hA"])
 pl.claim(AB == AD + DB, because=["segment addition", "hD"])
 pl.claim(ang(A, B, C) + ang(B, C, A) + ang(C, A, B) == pi(),
@@ -84,7 +98,7 @@ members, and Lean uses the one that fits; the proof names the family once.
 
 ## "Similarly"
 
-```python
+```py
 pl.claim(AC ** 2 == AD * AB, because=[leg_rule, "hABC", "hC", "hD", "hAD"], name="h1"),
 pl.similarly("h1", exchange=(A, B), name="h2"),          # 3. |BC|² = |BD|·|BA| (similarly)
 ```

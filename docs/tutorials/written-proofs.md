@@ -125,7 +125,7 @@ A construction is a `pl.let` that names a new point; later steps prove its prope
 use it. The angle bisector theorem (`readable_angle_bisector.py`) extends BA beyond A to E
 with AE = AC and applies the side-splitter theorem to triangle BEC:
 
-```python
+```py
 from readable_side_splitter import side_splitter      # proved earlier
 
 pl.let(E, geo.extend_beyond(B, A, dist(A, C)), note="extend BA beyond A to E with AE = AC"),
