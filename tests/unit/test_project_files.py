@@ -27,3 +27,16 @@ def test_the_facts_page_is_up_to_date():
     finally:
         sys.path.remove(str(ROOT / "scripts"))
     assert gen_facts_doc.main(["--check"]) == 0, "run python scripts/gen_facts_doc.py"
+
+
+def test_ci_failures_become_annotations(monkeypatch, capsys):
+    sys.path.insert(0, str(ROOT / "scripts"))
+    try:
+        import run_examples
+    finally:
+        sys.path.remove(str(ROOT / "scripts"))
+    run_examples.annotate("quiet", "outside CI nothing is printed")
+    assert capsys.readouterr().out == ""
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    run_examples.annotate("example a:b", "exit 1 (want 0)\n100% wrong")
+    assert capsys.readouterr().out == "::error title=example a%3Ab::exit 1 (want 0)%0A100%25 wrong\n"

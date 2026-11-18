@@ -6,6 +6,7 @@ in the pinned environment"). Usage:  python scripts/run_examples.py [name ...]
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import time
@@ -72,6 +73,18 @@ HELPERS = {
 }
 
 
+def annotate(title: str, message: str) -> None:
+    """On GitHub Actions, report a failure as an annotation (readable without the logs)."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+
+    def esc(s: str) -> str:
+        return s.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+    title = esc(title).replace(",", "%2C").replace(":", "%3A")
+    print(f"::error title={title}::{esc(message)}", flush=True)
+
+
 def unclassified() -> list[str]:
     """Example scripts with neither an expected outcome nor a reason to skip them."""
     return sorted(p.stem for p in EXAMPLES.glob("*.py")
@@ -84,6 +97,7 @@ def main(argv: list[str]) -> int:
     missing = unclassified()
     if missing:
         print(f"examples without an expected outcome: {missing}")
+        annotate("run_examples", f"examples without an expected outcome: {missing}")
         return 2
     names = argv or list(CASES)
     failures = []
@@ -98,6 +112,8 @@ def main(argv: list[str]) -> int:
         if not ok:
             failures.append(name)
             print(proc.stdout[-4000:], proc.stderr[-4000:], sep="\n")
+            annotate(f"example {name}", f"exit {proc.returncode} (want {want})\n"
+                     + (proc.stdout[-1500:] + "\n" + proc.stderr[-1500:]).strip())
     print(f"{len(names) - len(failures)}/{len(names)} examples behaved as expected")
     return 1 if failures else 0
 

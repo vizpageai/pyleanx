@@ -180,6 +180,24 @@ def collect() -> list[tuple[str, str, Theorem]]:
     return out
 
 
+#: proofs Lean did not accept in this run: (module, theorem, why)
+FAILED: list[tuple[str, str, str]] = []
+
+
+def _annotate(title: str, message: str) -> None:
+    """On GitHub Actions, report a failure as an annotation (readable without the logs)."""
+    import os
+
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+
+    def esc(s: str) -> str:
+        return s.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+    title = esc(title).replace(",", "%2C").replace(":", "%3A")
+    print(f"::error title={title}::{esc(message)}", flush=True)
+
+
 def measure(lean: bool = False, only: set[str] | None = None) -> list[Row]:
     rows = []
     items = collect()
@@ -203,6 +221,9 @@ def measure(lean: bool = False, only: set[str] | None = None) -> list[Row]:
                 why = "; ".join(d.message.splitlines()[0][:160] for d in r.errors[:2])
                 saved[items[i][2].name] = {"status": "pass" if r.verified else r.status.value,
                                            "fingerprint": _fp(items[i][2]), "why": why}
+                if not r.verified:
+                    FAILED.append((m, items[i][2].name, why))
+                    _annotate(f"{m}.{items[i][2].name}", f"{r.status.value}: {why}")
             _save_results(saved)  # after every module: a stopped run keeps what it checked
     for (_, _, t), row in zip(items, rows, strict=True):
         got = saved.get(t.name)
@@ -293,3 +314,8 @@ if __name__ == "__main__":
     out = ROOT / "docs" / "benchmark.md"
     out.write_text(text, encoding="utf-8", newline="\n")
     print(text)
+    if FAILED:  # with --lean: a proof Lean rejects fails the run (CI gate)
+        print(f"{len(FAILED)} proof(s) not accepted by Lean:", file=sys.stderr)
+        for m, name, why in FAILED:
+            print(f"  {m}.{name}: {why}", file=sys.stderr)
+        raise SystemExit(1)
