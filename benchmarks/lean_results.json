@@ -29,6 +29,16 @@
   "status": "pass",
   "why": ""
  },
+ "calderon_zygmund": {
+  "fingerprint": "d73e79fb27ca6507",
+  "status": "pass",
+  "why": ""
+ },
+ "calderon_zygmund_intervals": {
+  "fingerprint": "ba981b026055b498",
+  "status": "pass",
+  "why": ""
+ },
  "cauchy_integral_formula": {
   "fingerprint": "003e8e38ae296515",
   "status": "pass",
@@ -46,6 +56,16 @@
  },
  "cubic_has_root": {
   "fingerprint": "1fa469dbc5dca88f",
+  "status": "pass",
+  "why": ""
+ },
+ "cz_good_part": {
+  "fingerprint": "25d5b18a024cd1ec",
+  "status": "pass",
+  "why": ""
+ },
+ "cz_interval_average": {
+  "fingerprint": "da929dbd03d0b8b4",
   "status": "pass",
   "why": ""
  },
@@ -99,13 +119,93 @@
   "status": "pass",
   "why": ""
  },
+ "finite_measure_misses_both_sides": {
+  "fingerprint": "fa0de6277d5d7de6",
+  "status": "pass",
+  "why": ""
+ },
  "fourier_uniqueness": {
   "fingerprint": "374d0fe0ff79891e",
   "status": "pass",
   "why": ""
  },
+ "hardy_littlewood_Lp": {
+  "fingerprint": "4328baccf83e6c21",
+  "status": "pass",
+  "why": ""
+ },
+ "hardy_littlewood_maximal_compact": {
+  "fingerprint": "9d3e8ee88dfd93d4",
+  "status": "pass",
+  "why": ""
+ },
+ "hardy_littlewood_weak_type": {
+  "fingerprint": "16f31fc26fd3bdbb",
+  "status": "pass",
+  "why": ""
+ },
+ "hilbert_isometry": {
+  "fingerprint": "f48708c989265516",
+  "status": "pass",
+  "why": ""
+ },
+ "hilbert_kernel_cancellation": {
+  "fingerprint": "6c6759664f4cfe5d",
+  "status": "pass",
+  "why": ""
+ },
+ "hilbert_kernel_decay": {
+  "fingerprint": "798386330142a444",
+  "status": "pass",
+  "why": ""
+ },
+ "hilbert_kernel_hormander": {
+  "fingerprint": "c52eb5052da909d1",
+  "status": "pass",
+  "why": ""
+ },
+ "hilbert_kernel_smooth": {
+  "fingerprint": "ec53709a1c4f6064",
+  "status": "pass",
+  "why": ""
+ },
+ "hilbert_multiplier_isometry": {
+  "fingerprint": "a8143a7681d6a4b3",
+  "status": "pass",
+  "why": ""
+ },
+ "hilbert_multiplier_twice": {
+  "fingerprint": "959336a879744118",
+  "status": "pass",
+  "why": ""
+ },
+ "hilbert_square": {
+  "fingerprint": "71de6a4f673a6bc8",
+  "status": "pass",
+  "why": ""
+ },
+ "hilbert_symbol_norm": {
+  "fingerprint": "d46bffdb34b162e3",
+  "status": "pass",
+  "why": ""
+ },
+ "hilbert_symbol_sq": {
+  "fingerprint": "67a4797e89437c03",
+  "status": "pass",
+  "why": ""
+ },
  "infinitely_many_primes": {
   "fingerprint": "3dc200327bfb9e8e",
+  "status": "pass",
+  "why": ""
+ },
+ "inner_power_integral": {
+  "fingerprint": "15161a8635e33529",
+  "status": "pass",
+  "why": ""
+ },
+ "integrals_over_disjoint_intervals": {
+  "fingerprint": "d4b237e0499417e6",
   "status": "pass",
   "why": ""
  },
@@ -134,6 +234,46 @@
   "status": "pass",
   "why": ""
  },
+ "maximal_covering_bound": {
+  "fingerprint": "ae7e649eebed9ab2",
+  "status": "pass",
+  "why": ""
+ },
+ "maximal_inner_t_integral": {
+  "fingerprint": "854bdebc7e4f135a",
+  "status": "pass",
+  "why": ""
+ },
+ "maximal_level_integral": {
+  "fingerprint": "a5fb3ba178c9a66b",
+  "status": "pass",
+  "why": ""
+ },
+ "maximal_level_set_bound": {
+  "fingerprint": "c2e180b2eb055000",
+  "status": "pass",
+  "why": ""
+ },
+ "maximal_level_set_open": {
+  "fingerprint": "844569920cf83ba5",
+  "status": "pass",
+  "why": ""
+ },
+ "maximal_power_identity": {
+  "fingerprint": "8b0a2ec6c9c397d8",
+  "status": "pass",
+  "why": ""
+ },
+ "maximal_splitting_estimate": {
+  "fingerprint": "c76aa0a0b14cb23a",
+  "status": "pass",
+  "why": ""
+ },
+ "maximal_weight_algebra": {
+  "fingerprint": "a4a052cb28bd33f2",
+  "status": "pass",
+  "why": ""
+ },
  "medial_triangle_half_perimeter": {
   "fingerprint": "2d978df1d7cad589",
   "status": "pass",
@@ -141,6 +281,21 @@
  },
  "one_over_n_tends_to_zero": {
   "fingerprint": "20233dcc92ba0573",
+  "status": "pass",
+  "why": ""
+ },
+ "open_intervals_meet": {
+  "fingerprint": "36f03ead54d61006",
+  "status": "pass",
+  "why": ""
+ },
+ "open_left_endpoint": {
+  "fingerprint": "2c830a86df43c8f7",
+  "status": "pass",
+  "why": ""
+ },
+ "open_right_endpoint": {
+  "fingerprint": "81b1dae124fee673",
   "status": "pass",
   "why": ""
  },
@@ -191,6 +346,11 @@
  },
  "value_at_zero": {
   "fingerprint": "9cb9ed6497ae15e1",
+  "status": "pass",
+  "why": ""
+ },
+ "vitali_covering_finite": {
+  "fingerprint": "ee260b350b459e73",
   "status": "pass",
   "why": ""
  },
