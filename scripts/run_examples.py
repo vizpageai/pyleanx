@@ -65,12 +65,23 @@ SKIPPED: dict[str, str] = {
                           "~12 min) and ~20 min per Lean check; see docs/roadmap.md",
 }
 
+# Modules the lecture notebooks import; they state no theorems of their own.
+HELPERS = {
+    "lecture_tools",      # check(...) and failed-step reporting for the notebooks
+    "singular_lecture",   # figures for lecture_singular_integrals.ipynb (unit-tested)
+}
+
+
+def unclassified() -> list[str]:
+    """Example scripts with neither an expected outcome nor a reason to skip them."""
+    return sorted(p.stem for p in EXAMPLES.glob("*.py")
+                  if p.stem not in CASES and p.stem not in SKIPPED and p.stem not in HELPERS)
+
 
 def main(argv: list[str]) -> int:
     for name, why in SKIPPED.items():
         print(f"skip {name}: {why}")
-    missing = sorted(p.stem for p in EXAMPLES.glob("*.py")
-                     if p.stem not in CASES and p.stem not in SKIPPED)
+    missing = unclassified()
     if missing:
         print(f"examples without an expected outcome: {missing}")
         return 2
