@@ -114,3 +114,13 @@ def test_notebook_display_of_explanations_and_sanity_reports():
     md = thm.prose(res).to_markdown()
     assert "\n- Step 1" in md and "    •" not in md  # a list, not an indented code block
     assert thm.sanity_check()._repr_markdown_().startswith("❌ The statement looks false")
+
+
+def test_a_grind_failure_is_explained_without_its_search_dump():
+    from pyleanx.diagnose import _goal, _hint
+
+    msg = ("grind failed\n⊢ False\n[grind] Goal diagnostics\n  [facts] Asserted facts\n"
+           "    [prop] dist A B = dist A C\n    [prop] ¬Congruent ![B, M, A] ![C, M, A]")
+    assert _goal(msg) == ""
+    assert "no automatic justification closed the step" in _hint(msg)
+    assert _goal("unsolved goals\nx : ℝ\n⊢ x ≤ x + 1") == "x ≤ x + 1"

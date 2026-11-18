@@ -33,6 +33,8 @@ see [docs/stability.md](docs/stability.md)).
   rejects now fails the benchmark job.
 
 ### Fixed
+- A failed gap-filled step no longer shows `grind`'s search state as "Still to show: False
+  [grind] …"; it gets a hint about checking the cited facts instead.
 - A one-word label (`because="SSS"`, `"SAS"`) cites its fact; it was taken as a Lean name.
   Citing the CPCTC family by its label is now checked by Lean in `examples/euclid_book1.py`.
 - `TheoremBank.index_catalogs` asks Lean only for Mathlib declarations; it failed on the

@@ -31,6 +31,9 @@ _HINTS: list[tuple[str, str]] = [
     (r"failed to synthesize", "a statement mixes kinds of objects (e.g. a point and a "
      "number); check the expression"),
     (r"has already been declared", "the theorem's name is already taken; choose another name"),
+    (r"\[grind\]|grind failed", "no automatic justification closed the step from the cited "
+     "facts; check that each cited fact applies to these points in this order, cite the "
+     "fact that is missing, or split the step"),
 ]
 
 
@@ -38,8 +41,12 @@ def _goal(message: str) -> str:
     """The last goal Lean reports (``⊢ …``), as one line."""
     if "⊢" not in message:
         return ""
-    goal = message[message.rfind("⊢") + 1:].strip()
+    goal = message[message.rfind("⊢") + 1:]
+    # `grind` (the gap filler's last resort) appends its whole search state
+    goal = goal.split("[grind]", 1)[0].strip()
     goal = re.sub(r"\s+", " ", goal)
+    if goal == "False" and "[grind]" in message:
+        return ""  # grind negated the claim; "False" is all that was left, which says nothing
     return goal[:300]
 
 
