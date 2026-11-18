@@ -17,10 +17,11 @@ Start with `pyleanx doctor`. Each failing line includes a suggested fix.
 | `LiteralError` for `0.1` | Use `pl.real("0.1")` or `pl.rat(1, 10)`. |
 | `UnicodeEncodeError` on Windows | Set `PYTHONIOENCODING=utf-8` when printing Lean source from your own scripts; the CLI does this automatically. |
 | `` `foo` has already been declared `` | Your theorem name collides with a Mathlib/core declaration (e.g. `abs_nonneg`). Choose another name. |
-| the first `thm.check()` takes minutes | It loads Mathlib into a Lean process that is then kept; later checks of the same import set take seconds. |
+| the first `thm.check()` takes minutes | It loads Mathlib into a Lean process that is then kept (it prints `pyleanx: loading … Lean imports` meanwhile; `PYLEANX_QUIET=1` hides that); later checks of the same import set take seconds. For scripts, `pyleanx check script.py --watch` keeps the process between saves. |
 | `check` falls back to the batch backend ("fast REPL check was unavailable") | The REPL could not start or crashed, usually for lack of memory (each import set holds several GB). Close other programs, or lower `pyleanx.backend.repl_check.MAX_IMPORT_SETS` to 1; `pl.shutdown_sessions()` frees it. |
 | `failed to read file '….olean.private'` when the REPL starts | The machine was out of memory (the file exists). Free memory and retry. |
 | a step "ran out of time" (deterministic timeout) | State it in the same orientation as the cited fact (A ≠ C, not C ≠ A), cite fewer facts, or split it. `pl.explain_failure(thm, res)` names the step. |
+| `a step cites 'hz', but no hypothesis or step of the proof is called 'hz'` | A misspelt hypothesis name; the message lists the names that exist and the closest one. |
 | `“…” could mean several facts` | The description fits more than one fact equally well; use the fact's exact label or name (`pyleanx facts …` lists candidates). |
 | `sanity_check`: "nothing was checked" | The hypotheses could not be sampled (an exact right angle, a function, a set). It proves nothing either way; Lean decides. |
 | benchmark rows marked `stale` | The proof's generated Lean changed since it was checked; re-run `python benchmarks/naturalness.py --lean --only <module>`. |
