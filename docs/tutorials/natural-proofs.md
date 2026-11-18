@@ -77,6 +77,11 @@ facts fit about equally well, the step is refused with the candidates listed, so
 description never silently picks the wrong fact. `pl.search_facts("…")` lists the best
 matches and `pl.fact("…")` returns one.
 
+Some facts come as a family under one name, as in a textbook: "by CPCTC" means whichever
+corresponding part is needed. A description that is exactly such a family's label
+(`because="corresponding parts of congruent triangles (CPCTC)"`) cites all of its
+members, and Lean uses the one that fits; the proof names the family once.
+
 ## "Similarly"
 
 ```python
