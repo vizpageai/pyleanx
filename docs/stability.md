@@ -33,7 +33,10 @@ Public features carry one of two labels:
   `verify`, but caching and process management may change), `Theorem.sanity_check`,
   `pl.explain_failure` (the wording of explanations), `pl.fact` / `pl.search_facts` and
   descriptions in `because=` (which description selects which fact may improve), and
-  `pl.similarly`. The heuristics of `benchmarks/naturalness.py` are not an API.
+  `pl.similarly`, `pyleanx check --watch` (its output format), and the refusal of a cited
+  hypothesis name that the proof never defines (which names count as hypothesis-like may
+  change). The progress lines of the first `check` (stderr) are not an API. The heuristics of
+  `benchmarks/naturalness.py` are not an API.
 
 Which alternatives the gap filler tries, and in which order, is not part of the API: a
 later release may close more steps (never fewer is the aim, and the benchmark measures it),
