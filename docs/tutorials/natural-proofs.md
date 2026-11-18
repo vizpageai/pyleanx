@@ -64,8 +64,9 @@ says so, and when the hypotheses cannot be sampled (an exact right angle, a func
 set) it says that nothing was checked.
 
 Points the hypotheses determine are constructed the way one draws the figure: a point
-strictly between A and B is placed on the segment, and a hypothesis `M = midpoint(A, B)`
-(any `variable = expression`) is computed. From the command line,
+strictly between A and B is placed on the segment, a hypothesis `M = midpoint(A, B)`
+(any `variable = expression`) is computed, and for |AB| = |AC| the point C is placed on the
+circle about A through B (an isosceles triangle). From the command line,
 `pyleanx sanity script.py` checks every theorem of a script (exit status 1 if a step looks
 false), and `pyleanx facts AA similarity` searches the citable facts.
 

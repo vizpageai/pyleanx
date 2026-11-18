@@ -320,8 +320,35 @@ def _construct(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> Non
                 elif defines:
                     assert isinstance(h, Compare) and isinstance(h.lhs, Var)
                     env[h.lhs.uid] = evaluate(h.rhs, env)
+                elif (equal := _equal_lengths(h)) is not None:
+                    # |PQ| = |PR|: R goes on the circle about P through Q (an isosceles
+                    # triangle is drawn this way)
+                    centre, through, free = equal
+                    c, q = _point(evaluate(centre, env)), _point(evaluate(through, env))
+                    r, phi = math.dist(c, q), rng.uniform(0, 2 * math.pi)
+                    env[free.uid] = (c[0] + r * math.cos(phi), c[1] + r * math.sin(phi))
             except (Unsupported, ValueError, ZeroDivisionError, OverflowError):
                 continue
+
+
+def _equal_lengths(h: Any) -> tuple[Any, Any, Var] | None:
+    """For ``|PQ| = |PR|`` (in any order of endpoints) with R a point variable: (P, Q, R)."""
+    def ends(e: Any) -> tuple[Any, Any] | None:
+        if isinstance(e, App) and e.func.lean_name == "dist" and len(e.args) == 2:
+            return e.args[0], e.args[1]
+        return None
+
+    if not (isinstance(h, Compare) and h.op == "eq"):
+        return None
+    left, right = ends(h.lhs), ends(h.rhs)
+    if left is None or right is None:
+        return None
+    for p, q in (left, left[::-1]):
+        for p2, r in (right, right[::-1]):
+            if (p._key() == p2._key() and isinstance(r, Var) and r.uid not in _free_uids(p)
+                    and r.uid not in _free_uids(q)):
+                return p, q, r
+    return None
 
 
 def _free_uids(e: Any) -> set[int]:

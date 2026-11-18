@@ -103,3 +103,15 @@ def test_cli_sanity_and_facts(tmp_path, capsys):
     assert "geo.similar_AA" in capsys.readouterr().out
     assert main(["facts", "--json", "segment", "addition"]) == 0
     assert '"name": "geo.segment_addition"' in capsys.readouterr().out
+
+
+def test_an_isosceles_triangle_is_drawn_and_a_wrong_base_angle_is_caught():
+    ang, dist = geo.angle, geo.dist
+    hyps = {"hABC": geo.triangle(A, B, C), "hiso": dist(A, B) == dist(A, C)}
+    right = pl.Theorem("iso", [A, B, C], assumptions=hyps,
+                       conclusion=ang(A, B, C) == ang(A, C, B), proof=pl.proof(pl.conclude()))
+    rep = right.sanity_check()
+    assert rep.ok and rep.samples == 300
+    wrong = pl.Theorem("iso_wrong", [A, B, C], assumptions=hyps,   # the apex angle is not a base angle
+                       conclusion=ang(A, B, C) == ang(B, A, C), proof=pl.proof(pl.conclude()))
+    assert "The statement looks false" in str(wrong.sanity_check())
