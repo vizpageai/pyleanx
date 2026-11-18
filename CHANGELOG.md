@@ -21,8 +21,9 @@ see [docs/stability.md](docs/stability.md)).
 - `sanity_check` draws isosceles figures: for a hypothesis |AB| = |AC| it places C on the circle
   about A through B, so isosceles-triangle proofs are tried on samples instead of skipped;
   likewise right angles (∠ACB = 90°: B on the perpendicular to CA at C), e.g. Pythagoras, and
-  parallels (a parallelogram's fourth vertex); parallel/perpendicular lines and points on a
-  line are evaluated.
+  parallels (a parallelogram's fourth vertex), equilateral triangles (two circles) and vertical
+  angles; parallel/perpendicular lines and points on a line are evaluated. Of the 72
+  benchmark proofs, 28 are now tried on samples (18 before), with no finding on any of them.
 
 ### Changed
 - The gap filler tries "lemma applied to a cited fact" only when a step cites at most about a

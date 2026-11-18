@@ -68,7 +68,9 @@ strictly between A and B is placed on the segment, a hypothesis `M = midpoint(A,
 (any `variable = expression`) is computed, and for |AB| = |AC| the point C is placed on the
 circle about A through B (an isosceles triangle); for ∠ACB = 90° the point B is placed on
 the perpendicular to CA at C. A point on a line parallel to another goes on that parallel,
-and a parallelogram's fourth vertex where its two parallels meet. Parallel and perpendicular
+and a parallelogram's fourth vertex where its two parallels meet; an equilateral triangle's
+apex goes where two circles meet, and for vertical angles the second line is drawn through
+the common point. Parallel and perpendicular
 lines and "P lies on line AB" are evaluated too. From the command line,
 `pyleanx sanity script.py` checks every theorem of a script (exit status 1 if a step looks
 false), and `pyleanx facts AA similarity` searches the citable facts.

@@ -147,3 +147,24 @@ def test_parallelograms_are_drawn_and_parallel_and_perpendicular_lines_evaluated
     assert evaluate(geo.perpendicular(line(A, B), line(A, C)), env)
     assert not evaluate(geo.perpendicular(line(A, B), line(A, D)), env)
     assert evaluate(geo.on_line(D, line(C, D)), env) and not evaluate(geo.on_line(D, line(A, B)), env)
+
+
+def test_equilateral_and_vertical_angle_figures_are_drawn():
+    ang, dist = geo.angle, geo.dist
+    O = geo.point("O")  # noqa: E741, N806
+    equi = {"hABC": geo.triangle(A, B, C), "h1": dist(A, B) == dist(A, C),
+            "h2": dist(B, A) == dist(B, C)}
+    third = pl.analysis.pi() / 3
+    good = pl.Theorem("eq", [A, B, C], assumptions=equi, conclusion=ang(A, B, C) == third,
+                      proof=pl.proof(pl.conclude()))
+    assert good.sanity_check().ok and good.sanity_check().samples == 300
+    bad = pl.Theorem("eq_wrong", [A, B, C], assumptions=equi,
+                     conclusion=ang(A, B, C) == pl.analysis.pi() / 4, proof=pl.proof(pl.conclude()))
+    assert "The statement looks false" in str(bad.sanity_check())
+    vert = {"hAB": geo.strictly_between(O, A, B), "hCD": geo.strictly_between(O, C, D)}
+    good_v = pl.Theorem("vert", [A, B, C, D, O], assumptions=vert,
+                        conclusion=ang(A, O, C) == ang(B, O, D), proof=pl.proof(pl.conclude()))
+    assert good_v.sanity_check().samples == 300 and good_v.sanity_check().ok
+    bad_v = pl.Theorem("vert_wrong", [A, B, C, D, O], assumptions=vert,
+                       conclusion=ang(A, O, C) == ang(A, O, D), proof=pl.proof(pl.conclude()))
+    assert "The statement looks false" in str(bad_v.sanity_check())

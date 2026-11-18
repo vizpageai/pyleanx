@@ -343,9 +343,42 @@ def _construct(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> Non
     B goes on the segment; ``M = midpoint(A, B)`` and any ``x = expression`` are computed.
     (Every hypothesis is still evaluated afterwards; nothing is assumed.)"""
     hyps = list(_conjuncts(hyps))
+    uses = _uses(hyps)
+    owner: dict[int, int] = {}  # point -> the hypothesis that placed it (no other moves it)
+
+    def may_place(uid: int, i: int) -> bool:
+        if owner.setdefault(uid, i) != i:
+            return False
+        return True
+
+    # a point on two circles (|AB| = |AC| and |BA| = |BC|: an equilateral triangle's apex) is
+    # placed at one of their intersections; the hypotheses involved do not move it again
+    circles: dict[int, list[tuple[int, tuple[Any, Any, Var]]]] = {}
+    for i, h in enumerate(hyps):
+        for eq in _all_equal_lengths(h):
+            circles.setdefault(eq[2].uid, []).append((i, eq))
+    two_circles = {uid: cs for uid, cs in circles.items()
+                   if len({c[1][0]._key() for c in cs}) >= 2}
+    on_two_circles = {i for cs in two_circles.values() for i, _ in cs}
+
     for _ in range(2):  # a second pass resolves points defined from constructed points
         _place_on_parallels(hyps, env, rng)
-        for h in hyps:
+        for uid, cs in two_circles.items():
+            try:
+                (_, (c1_, q1_, _)), (_, (c2_, q2_, _)) = cs[0], next(
+                    c for c in cs[1:] if c[1][0]._key() != cs[0][1][0]._key())
+                c1, q1 = _point(evaluate(c1_, env)), _point(evaluate(q1_, env))
+                c2, q2 = _point(evaluate(c2_, env)), _point(evaluate(q2_, env))
+                hit = _circle_meet(c1, math.dist(c1, q1), c2, math.dist(c2, q2), rng)
+                if hit is not None:
+                    env[uid] = hit
+                    owner[uid] = -1
+            except (Unsupported, ValueError, ZeroDivisionError, OverflowError, StopIteration):
+                continue
+        # right angles first: a point that is also equidistant is then placed by both
+        order = sorted(range(len(hyps)), key=lambda j: not _right_angle_shape(hyps[j]))
+        for i in order:
+            h = hyps[i]
             try:
                 between = (isinstance(h, Apply) and isinstance(h.fn, Const)
                            and h.fn.name in ("Sbtw", "Wbtw") and len(h.args) == 4
@@ -354,27 +387,44 @@ def _construct(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> Non
                            and isinstance(h.lhs, Var) and h.lhs.uid not in _free_uids(h.rhs))
                 if between:
                     assert isinstance(h, Apply) and isinstance(h.fn, Const)
-                    a, b = _point(evaluate(h.args[1], env)), _point(evaluate(h.args[3], env))
-                    t = rng.uniform(0.05, 0.95) if h.fn.name == "Sbtw" else rng.random()
-                    p = h.args[2]
+                    a_, p, b_ = h.args[1], h.args[2], h.args[3]
                     assert isinstance(p, Var)
-                    env[p.uid] = (a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]))
+                    if may_place(p.uid, i):
+                        a, b = _point(evaluate(a_, env)), _point(evaluate(b_, env))
+                        t = rng.uniform(0.05, 0.95) if h.fn.name == "Sbtw" else rng.random()
+                        env[p.uid] = (a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]))
+                    else:
+                        # the middle point is already placed (vertical angles: O between A
+                        # and B, and between C and D): put an end beyond it instead
+                        for near, far in ((a_, b_), (b_, a_)):
+                            if isinstance(far, Var) and may_place(far.uid, i):
+                                n, m = _point(evaluate(near, env)), _point(env[p.uid])
+                                s = rng.uniform(0.3, 2.0)
+                                env[far.uid] = (m[0] + s * (m[0] - n[0]), m[1] + s * (m[1] - n[1]))
+                                break
                 elif defines:
                     assert isinstance(h, Compare) and isinstance(h.lhs, Var)
                     env[h.lhs.uid] = evaluate(h.rhs, env)
-                elif (equal := _equal_lengths(h)) is not None:
+                elif (equal := _equal_lengths(h, uses)) is not None:
                     # |PQ| = |PR|: R goes on the circle about P through Q (an isosceles
                     # triangle is drawn this way)
                     centre, through, free = equal
+                    if i in on_two_circles or not may_place(free.uid, i):
+                        continue
                     c, q = _point(evaluate(centre, env)), _point(evaluate(through, env))
                     r, phi = math.dist(c, q), rng.uniform(0, 2 * math.pi)
                     env[free.uid] = (c[0] + r * math.cos(phi), c[1] + r * math.sin(phi))
                 elif (right := _right_angle(h, env)) is not None:
-                    # ∠PVQ = 90°: Q goes on the perpendicular to VP at V
+                    # ∠PVQ = 90°: Q goes on the perpendicular to VP at V; at distance |VP|
+                    # if the legs are also equal (an isosceles right triangle)
                     p_, v_, free = right
+                    if not may_place(free.uid, i):
+                        continue
                     px, py = _point(evaluate(p_, env))
                     vx, vy = _point(evaluate(v_, env))
-                    s = rng.choice((-1, 1)) * rng.uniform(0.3, 2.0)
+                    equal_legs = any(_same_pair(_equal_lengths(g, uses, any_free=True),
+                                                v_, p_, free) for g in hyps)
+                    s = rng.choice((-1, 1)) * (1.0 if equal_legs else rng.uniform(0.3, 2.0))
                     env[free.uid] = (vx - s * (py - vy), vy + s * (px - vx))
             except (Unsupported, ValueError, ZeroDivisionError, OverflowError):
                 continue
@@ -466,8 +516,13 @@ def _right_angle(h: Any, env: dict[int, Any]) -> tuple[Any, Any, Var] | None:
     return None
 
 
-def _equal_lengths(h: Any) -> tuple[Any, Any, Var] | None:
-    """For ``|PQ| = |PR|`` (in any order of endpoints) with R a point variable: (P, Q, R)."""
+def _equal_lengths(h: Any, uses: dict[int, int] | None = None,
+                   any_free: bool = False) -> tuple[Any, Any, Var] | None:
+    """For ``|PQ| = |PR|`` (endpoints in any order, either side) with R a point variable:
+    (P, Q, R). Of two candidate R, the one fewer hypotheses mention is moved (so a point
+    that also defines others, like A in ``O = midpoint(A, B)``, stays where it is)."""
+    del any_free  # kept for call sites that only test the shape
+
     def ends(e: Any) -> tuple[Any, Any] | None:
         if isinstance(e, App) and e.func.lean_name == "dist" and len(e.args) == 2:
             return e.args[0], e.args[1]
@@ -478,12 +533,77 @@ def _equal_lengths(h: Any) -> tuple[Any, Any, Var] | None:
     left, right = ends(h.lhs), ends(h.rhs)
     if left is None or right is None:
         return None
-    for p, q in (left, left[::-1]):
-        for p2, r in (right, right[::-1]):
-            if (p._key() == p2._key() and isinstance(r, Var) and r.uid not in _free_uids(p)
-                    and r.uid not in _free_uids(q)):
-                return p, q, r
-    return None
+    found: list[tuple[Any, Any, Var]] = []
+    for a, b in ((left, right), (right, left)):
+        for p, q in (a, a[::-1]):
+            for p2, r in (b, b[::-1]):
+                if (p._key() == p2._key() and isinstance(r, Var)
+                        and r.uid not in _free_uids(p) and r.uid not in _free_uids(q)):
+                    found.append((p, q, r))
+    if not found:
+        return None
+    counts = uses or {}
+    return min(found, key=lambda f: counts.get(f[2].uid, 0))
+
+
+def _all_equal_lengths(h: Any) -> list[tuple[Any, Any, Var]]:
+    """Every reading of ``|PQ| = |PR|`` as "R on the circle about P through Q"."""
+    def ends(e: Any) -> tuple[Any, Any] | None:
+        if isinstance(e, App) and e.func.lean_name == "dist" and len(e.args) == 2:
+            return e.args[0], e.args[1]
+        return None
+
+    if not (isinstance(h, Compare) and h.op == "eq"):
+        return []
+    left, right = ends(h.lhs), ends(h.rhs)
+    if left is None or right is None:
+        return []
+    out = []
+    for a, b in ((left, right), (right, left)):
+        for p, q in (a, a[::-1]):
+            for p2, r in (b, b[::-1]):
+                if (p._key() == p2._key() and isinstance(r, Var)
+                        and r.uid not in _free_uids(p) and r.uid not in _free_uids(q)):
+                    out.append((p, q, r))
+    return out
+
+
+def _circle_meet(c1: tuple[float, float], r1: float, c2: tuple[float, float], r2: float,
+                 rng: random.Random) -> tuple[float, float] | None:
+    """One of the (at most two) intersections of two circles, chosen at random."""
+    d = math.dist(c1, c2)
+    if d <= _TOL or d > r1 + r2 or d < abs(r1 - r2):
+        return None
+    a = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
+    h = math.sqrt(max(r1 * r1 - a * a, 0.0))
+    ux, uy = (c2[0] - c1[0]) / d, (c2[1] - c1[1]) / d
+    mx, my = c1[0] + a * ux, c1[1] + a * uy
+    s = rng.choice((-1, 1))
+    return (mx - s * h * uy, my + s * h * ux)
+
+
+def _same_pair(eq: tuple[Any, Any, Var] | None, v: Any, p: Any, q: Var) -> bool:
+    """Does ``eq`` (from :func:`_equal_lengths`) say |VP| = |VQ|?"""
+    if eq is None:
+        return False
+    centre, a, b = eq
+    return (centre._key() == v._key()
+            and {a._key(), b._key()} == {p._key(), q._key()})
+
+
+def _uses(hyps: list[Expr]) -> dict[int, int]:
+    """How many hypotheses mention each variable."""
+    out: dict[int, int] = {}
+    for h in hyps:
+        for uid in _free_uids(h):
+            out[uid] = out.get(uid, 0) + 1
+    return out
+
+
+def _right_angle_shape(h: Any) -> bool:
+    return isinstance(h, Compare) and h.op == "eq" and any(
+        isinstance(s, App) and s.func.lean_name == "EuclideanGeometry.angle"
+        for s in (h.lhs, h.rhs))
 
 
 def _free_uids(e: Any) -> set[int]:
