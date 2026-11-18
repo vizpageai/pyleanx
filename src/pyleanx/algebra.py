@@ -36,28 +36,48 @@ _ABS = "Mathlib.Algebra.Order.Ring.Abs"
 _GROUP_ABS = "Mathlib.Algebra.Order.Group.Unbundled.Abs"
 _FIELD = "Mathlib.Algebra.Order.Field.Basic"
 
-sq_nonneg = lemma("sq_nonneg", _ORDER_RING)
-mul_self_nonneg = lemma("mul_self_nonneg", _ORDER_RING)
-two_mul_le_add_sq = lemma("two_mul_le_add_sq", _ORDER_RING)
-four_mul_le_sq_add = lemma("four_mul_le_sq_add", _ORDER_RING)
-add_sq = lemma("add_sq", _COMMUTE)
-sub_sq = lemma("sub_sq", _COMMUTE)
-add_pow_two = lemma("add_pow_two", _COMMUTE)
-mul_self_sub_mul_self = lemma("mul_self_sub_mul_self", _COMMUTE)
-sq_sub_sq = lemma("sq_sub_sq", _COMMUTE)
-mul_pow = lemma("mul_pow", "Mathlib.Algebra.Group.Basic")
-two_mul = lemma("two_mul", "Mathlib.Algebra.Ring.Defs")
-sq_abs = lemma("sq_abs", _ABS)
-abs_mul_abs_self = lemma("abs_mul_abs_self", _ABS)
-abs_mul = lemma("abs_mul", _ABS)
-abs_nonneg = lemma("abs_nonneg", _GROUP_ABS)
-abs_sub_comm = lemma("abs_sub_comm", _GROUP_ABS)
-abs_add_le = lemma("abs_add_le", _GROUP_ABS)
-sub_nonneg = lemma("sub_nonneg", _ABS)
+sq_nonneg = lemma("sq_nonneg", _ORDER_RING,
+                   label="squares are nonnegative")
+mul_self_nonneg = lemma("mul_self_nonneg", _ORDER_RING,
+                         label="a·a ≥ 0")
+two_mul_le_add_sq = lemma("two_mul_le_add_sq", _ORDER_RING,
+                           label="2ab ≤ a² + b²")
+four_mul_le_sq_add = lemma("four_mul_le_sq_add", _ORDER_RING,
+                            label="4ab ≤ (a + b)²")
+add_sq = lemma("add_sq", _COMMUTE,
+                label="(a + b)² = a² + 2ab + b²")
+sub_sq = lemma("sub_sq", _COMMUTE,
+                label="(a − b)² = a² − 2ab + b²")
+add_pow_two = lemma("add_pow_two", _COMMUTE,
+                     label="(a + b)² = a² + 2ab + b²")
+mul_self_sub_mul_self = lemma("mul_self_sub_mul_self", _COMMUTE,
+                               label="a·a − b·b = (a + b)(a − b)")
+sq_sub_sq = lemma("sq_sub_sq", _COMMUTE,
+                   label="a² − b² = (a + b)(a − b)")
+mul_pow = lemma("mul_pow", "Mathlib.Algebra.Group.Basic",
+                 label="(ab)ⁿ = aⁿbⁿ")
+two_mul = lemma("two_mul", "Mathlib.Algebra.Ring.Defs",
+                 label="2a = a + a")
+sq_abs = lemma("sq_abs", _ABS,
+                label="|a|² = a²")
+abs_mul_abs_self = lemma("abs_mul_abs_self", _ABS,
+                          label="|a|·|a| = a·a")
+abs_mul = lemma("abs_mul", _ABS,
+                 label="|ab| = |a||b|")
+abs_nonneg = lemma("abs_nonneg", _GROUP_ABS,
+                    label="|a| ≥ 0")
+abs_sub_comm = lemma("abs_sub_comm", _GROUP_ABS,
+                      label="|a − b| = |b − a|")
+abs_add_le = lemma("abs_add_le", _GROUP_ABS,
+                    label="the triangle inequality |a + b| ≤ |a| + |b|")
+sub_nonneg = lemma("sub_nonneg", _ABS,
+                    label="0 ≤ a − b iff b ≤ a")
 # Not `add_pos`: at the pinned Mathlib it means `b < c → 0 < a → b < c + a`; use
 # `positivity` or `linarith` for `0 < a + b`.
-mul_pos = lemma("mul_pos", _ORDER_RING)
-div_pos = lemma("div_pos", _FIELD)
+mul_pos = lemma("mul_pos", _ORDER_RING,
+                 label="a product of positive numbers is positive")
+div_pos = lemma("div_pos", _FIELD,
+                 label="a quotient of positive numbers is positive")
 
 #: The triangle inequality |a + b| ≤ |a| + |b|, cited by name.
 triangle_inequality = lemma("abs_add_le", _GROUP_ABS, label="triangle inequality")

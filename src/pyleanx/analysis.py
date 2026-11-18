@@ -74,23 +74,38 @@ def differentiable(f: object) -> Expr:
     return apply(c, Real, f)
 
 
-sqrt_nonneg = lemma("Real.sqrt_nonneg", _SQRT)
+sqrt_nonneg = lemma("Real.sqrt_nonneg", _SQRT,
+                     label="square roots are nonnegative")
 sq_sqrt = lemma("Real.sq_sqrt", _SQRT, label="(√a)² = a for a ≥ 0")  # 0 ≤ a → √a ^ 2 = a
 sqrt_mul = lemma("Real.sqrt_mul", _SQRT, label="√(ab) = √a·√b for a ≥ 0")
-sqrt_sq = lemma("Real.sqrt_sq", _SQRT)          # 0 ≤ a → √(a ^ 2) = a
-sqrt_mul_self = lemma("Real.sqrt_mul_self", _SQRT)
-exp_pos = lemma("Real.exp_pos", _EXP)
-exp_nonneg = lemma("Real.exp_nonneg", _EXP)
-add_one_le_exp = lemma("Real.add_one_le_exp", _EXP)
-exp_log = lemma("Real.exp_log", _LOG)           # 0 < x → exp (log x) = x
-log_exp = lemma("Real.log_exp", _LOG)
-log_le_sub_one_of_pos = lemma("Real.log_le_sub_one_of_pos", _LOG)
-sin_sq_add_cos_sq = lemma("Real.sin_sq_add_cos_sq", _TRIG)
-cos_sq_add_sin_sq = lemma("Real.cos_sq_add_sin_sq", _TRIG)
-sin_le_one = lemma("Real.sin_le_one", _TRIG)
-neg_one_le_sin = lemma("Real.neg_one_le_sin", _TRIG)
-cos_le_one = lemma("Real.cos_le_one", _TRIG)
-pi_pos = lemma("Real.pi_pos", _TRIG)
+sqrt_sq = lemma("Real.sqrt_sq", _SQRT,
+                 label="√(a²) = a for a ≥ 0")          # 0 ≤ a → √(a ^ 2) = a
+sqrt_mul_self = lemma("Real.sqrt_mul_self", _SQRT,
+                       label="√(a·a) = a for a ≥ 0")
+exp_pos = lemma("Real.exp_pos", _EXP,
+                 label="eˣ > 0")
+exp_nonneg = lemma("Real.exp_nonneg", _EXP,
+                    label="eˣ ≥ 0")
+add_one_le_exp = lemma("Real.add_one_le_exp", _EXP,
+                        label="1 + x ≤ eˣ")
+exp_log = lemma("Real.exp_log", _LOG,
+                 label="e^(log x) = x for x > 0")           # 0 < x → exp (log x) = x
+log_exp = lemma("Real.log_exp", _LOG,
+                 label="log(eˣ) = x")
+log_le_sub_one_of_pos = lemma("Real.log_le_sub_one_of_pos", _LOG,
+                               label="log x ≤ x − 1 for x > 0")
+sin_sq_add_cos_sq = lemma("Real.sin_sq_add_cos_sq", _TRIG,
+                           label="sin²x + cos²x = 1")
+cos_sq_add_sin_sq = lemma("Real.cos_sq_add_sin_sq", _TRIG,
+                           label="cos²x + sin²x = 1")
+sin_le_one = lemma("Real.sin_le_one", _TRIG,
+                    label="sin x ≤ 1")
+neg_one_le_sin = lemma("Real.neg_one_le_sin", _TRIG,
+                        label="−1 ≤ sin x")
+cos_le_one = lemma("Real.cos_le_one", _TRIG,
+                    label="cos x ≤ 1")
+pi_pos = lemma("Real.pi_pos", _TRIG,
+                label="π > 0")
 sin_zero = lemma("Real.sin_zero", _TRIG, label="sin 0 = 0")
 cos_zero = lemma("Real.cos_zero", _TRIG, label="cos 0 = 1")
 

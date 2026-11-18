@@ -74,15 +74,21 @@ def angle(a: object, b: object, c: object) -> App:
 
 
 dist_comm = lemma("dist_comm", _METRIC)
-dist_triangle = lemma("dist_triangle", _METRIC)
-dist_nonneg = lemma("dist_nonneg", _METRIC)
-dist_self = lemma("dist_self", _METRIC)
+dist_triangle = lemma("dist_triangle", _METRIC,
+                       label="the triangle inequality AC ≤ AB + BC")
+dist_nonneg = lemma("dist_nonneg", _METRIC,
+                     label="distances are nonnegative")
+dist_self = lemma("dist_self", _METRIC,
+                   label="the distance from a point to itself is 0")
 angle_comm = lemma("EuclideanGeometry.angle_comm", _ANGLE)
-angle_nonneg = lemma("EuclideanGeometry.angle_nonneg", _ANGLE)
-angle_le_pi = lemma("EuclideanGeometry.angle_le_pi", _ANGLE)
+angle_nonneg = lemma("EuclideanGeometry.angle_nonneg", _ANGLE,
+                      label="angles are nonnegative")
+angle_le_pi = lemma("EuclideanGeometry.angle_le_pi", _ANGLE,
+                     label="an angle is at most 180°")
 #: ∠ p₁ p₂ p₃ + ∠ p₂ p₃ p₁ + ∠ p₃ p₁ p₂ = π, given p₂ ≠ p₁ (explicit argument p₃).
 angle_add_angle_add_angle_eq_pi = lemma("EuclideanGeometry.angle_add_angle_add_angle_eq_pi",
-                                        _TRIANGLE)
+                                        _TRIANGLE,
+                                        label="the angles of a triangle add up to 180°")
 #: Pythagoras (both directions): |p₁p₃|² = |p₁p₂|² + |p₃p₂|²  ↔  ∠ p₁ p₂ p₃ = π / 2.
 pythagoras_iff = lemma(
     "EuclideanGeometry.dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two", _RIGHT,
