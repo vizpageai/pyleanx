@@ -148,10 +148,11 @@ class Theorem:
             raise TacticError(
                 f"prove() expects a tactic such as pl.ring() or pl.steps(...), got {tactic!r}"
             )
-        from .proofs import resolve_similarly, with_avoid
+        from .proofs import check_cited_names, resolve_similarly, with_avoid
 
         resolved = resolve_similarly(tactic, {h.name: h.prop for h in self.assumptions})
         assert resolved is not None
+        check_cited_names(resolved, (h.name for h in self.assumptions), self.name)
         self.proof = with_avoid(resolved, self.avoid)
         return self
 

@@ -47,6 +47,8 @@ def _undefined_names(blocks: list[str]) -> list[tuple[int, list[str]]]:
                 defined.add(n.name)
             elif isinstance(n, ast.arg):
                 defined.add(n.arg)
+            elif isinstance(n, ast.ExceptHandler) and n.name:
+                defined.add(n.name)
         if missing := sorted(used - defined):
             out.append((i, missing))
     return out

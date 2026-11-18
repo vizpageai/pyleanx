@@ -7,6 +7,24 @@ see [docs/stability.md](docs/stability.md)).
 
 ## [Unreleased]
 
+### Added
+- [Citable facts](docs/facts.md): a generated page listing all 390 facts of the domain
+  modules with the label that selects each one in `because=`.
+- A step that cites a hypothesis no part of the proof defines (`because="hz"` where only `hx`
+  exists) is refused when the theorem is built, with the closest names, instead of failing
+  later in Lean as an unknown identifier.
+
+### Changed
+- The gap filler tries "lemma applied to a cited fact" only when a step cites at most about a
+  dozen facts; a step citing dozens of facts hit Lean's per-declaration time limit.
+- CI runs the Lean integration tests, every example script and the naturalness benchmark as
+  three parallel jobs; failures are reported as annotations, and a written proof that Lean
+  rejects now fails the benchmark job.
+
+### Fixed
+- Tutorial excerpts of example files are shown as fragments, so the documentation test runs
+  every page to the end.
+
 ## [0.1.0] - 2026-11-17
 
 First public release. Pinned to Lean `v4.34.1` and Mathlib

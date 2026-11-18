@@ -109,3 +109,24 @@ def test_a_family_label_cites_every_member_and_prints_once():
     thm = pl.Theorem("fam", [A, B], conclusion=A != B, proof=pl.proof(c, pl.conclude()))
     text = str(thm.prose())
     assert text.count("corresponding parts of congruent triangles (CPCTC)") == 1
+
+
+def test_citing_a_hypothesis_that_does_not_exist_is_refused_with_a_suggestion():
+    x = pl.symbol("x", pl.Real)
+    with pytest.raises(pl.TacticError, match=r"cites 'hz'.*Did you mean hx\?"):
+        pl.Theorem("t", [x], assumptions={"hx": x > 0}, conclusion=x >= 0,
+                   proof=pl.proof(pl.claim(x >= 0, because="hz"), pl.conclude()))
+    # library names, and names introduced inside the proof, are accepted
+    pl.Theorem("u", [x], assumptions={"hx": x > 0}, conclusion=x >= 0,
+               proof=pl.proof(pl.claim(x >= 1 - 1, because=["hx", "le_of_lt"], name="h0"),
+                              pl.conclude(because="h0")))
+    thm = _pyth(pl.similarly("h1", exchange=(A, B), name="h2"))  # choose names hD hAD hBD
+    assert thm.proof is not None
+
+
+def test_hypothesis_like_names():
+    from pyleanx.proofs import _hyp_like
+
+    assert all(_hyp_like(n) for n in ["h", "hx", "h1", "hABC", "hε", "hx'", "hD"])
+    assert not any(_hyp_like(n) for n in ["mul_pos", "Real.pi", "hasSum", "abs_nonneg",
+                                         "hypothesis_long_name"])

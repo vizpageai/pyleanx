@@ -74,6 +74,22 @@ as `pl.explain_failure(thm, res)`):
 A numeric counterexample, when there is one, comes first. A step with no reason that fails
 gets suggestions: "Facts that might justify it: geo.similar_AA (AA similarity); …".
 
+Some slips are caught before Lean runs at all. Citing a hypothesis that does not exist is
+refused when the theorem is built:
+
+```python
+try:
+    pl.Theorem("typo", [x], assumptions={"hx": x > 0}, conclusion=x >= 0,
+               proof=pl.proof(pl.claim(x >= 0, because="hz"), pl.conclude()))
+except pl.TacticError as err:
+    print(err)
+```
+
+```text
+typo: a step cites 'hz', but no hypothesis or step of the proof is called 'hz'. Did you
+mean hx? (Names available: hx.)
+```
+
 ## Cite facts by what they say
 
 A reason that contains a space is a description of a fact, not a name:

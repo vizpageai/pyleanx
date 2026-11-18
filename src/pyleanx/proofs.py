@@ -1901,6 +1901,82 @@ def _contains_similarly(t: Any) -> bool:
     return False
 
 
+_HYP_LIKE = re.compile(r"^h[^\W_]*'*$")
+
+
+def _hyp_like(name: str) -> bool:
+    """Does a cited name look like a hypothesis (hx, h1, hABC, hε) rather than a lemma?
+
+    Library declarations have underscores or dots (``mul_pos``, ``Real.sqrt_nonneg``) or are
+    camelCase words (``hasSum``); those are left for Lean to resolve.
+    """
+    return (bool(_HYP_LIKE.match(name)) and len(name) <= 8
+            and not re.match(r"^h[a-z]{2,}[A-Z]", name))
+
+
+def _all_tactics(t: Tactic) -> Iterable[Tactic]:
+    yield t
+    for x in t.sub_tactics():
+        yield from _all_tactics(x)
+
+
+def _introduced_names(t: Tactic) -> set[str]:
+    """Every hypothesis name some step of the proof introduces (in any scope)."""
+    import dataclasses
+
+    out = {"this"}
+    for s in _all_tactics(t):
+        # dataclass fields only: some tactics have methods with these names
+        fields = ({f.name: getattr(s, f.name) for f in dataclasses.fields(s)}
+                  if dataclasses.is_dataclass(s) else {})
+        for attr in ("name", "ih", "ref"):
+            v = fields.get(attr)
+            if isinstance(v, str) and v:
+                out.add(v)
+        for attr in ("names", "succ_names"):
+            out.update(x for x in fields.get(attr) or () if isinstance(x, str))
+        out.update(h[0] for h in fields.get("hyps") or () if isinstance(h, tuple))
+        for alt in fields.get("alternatives") or ():
+            out.update(x for x in alt if isinstance(x, str))
+        for c in fields.get("cases") or ():
+            if isinstance(getattr(c, "name", None), str):
+                out.add(c.name)
+        if isinstance(s, Let):
+            out.add(s.eq_name)
+        if isinstance(s, Induction):
+            out.add(s.var)
+    return out
+
+
+def check_cited_names(t: Tactic | None, hyps: Iterable[str], theorem: str) -> None:
+    """Refuse a step that cites a hypothesis no part of the proof defines (a typo).
+
+    Only names shaped like hypotheses are checked (see :func:`_hyp_like`); everything else
+    may be a library declaration, which Lean resolves. Proofs with raw tactic text are not
+    checked, since the text may introduce names.
+    """
+    import difflib
+
+    if t is None or contains_raw(t):
+        return
+    known = _introduced_names(t) | set(hyps)
+    for s in _all_tactics(t):
+        facts = getattr(s, "facts", ())
+        cited: list[Term] = list(facts) if isinstance(facts, tuple) else []
+        if isinstance(s, Chain):
+            for link in s.links:
+                cited.extend(link[2])
+        for f in cited:
+            n = f.name if isinstance(f, Name) else None
+            if n and _hyp_like(n) and n not in known:
+                close = difflib.get_close_matches(n, sorted(known - {"this"}), n=3, cutoff=0.5)
+                hint = f" Did you mean {' or '.join(close)}?" if close else ""
+                names = ", ".join(sorted(known - {"this"})) or "none"
+                raise TacticError(f"{theorem}: a step cites {n!r}, but no hypothesis or step "
+                                  f"of the proof is called {n!r}.{hint} (Names available: "
+                                  f"{names}.)")
+
+
 def resolve_similarly(t: Tactic | None, hyps: dict[str, Expr]) -> Tactic | None:
     """Replace :func:`similarly` placeholders by the exchanged earlier steps."""
     from dataclasses import replace as dc_replace
