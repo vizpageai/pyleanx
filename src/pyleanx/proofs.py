@@ -868,14 +868,18 @@ class Justify(Tactic):
         # reducible unfolding only is tried first, in both orientations, so a fact stated the
         # other way round (A ≠ C for C ≠ A) fails at once instead of unfolding definitions.
         args = [g for g in fs if " " not in g]
-        alts += [f"(with_reducible exact {f} {g})" for f in lemmas for g in args if g != f]
+        # Lean's time budget is per declaration, so the pairs are capped: a step citing
+        # dozens of facts would otherwise try thousands of applications and time out.
+        pairs = len(lemmas) * len(args) <= 150
+        alts += [f"(with_reducible exact {f} {g})" for f in lemmas for g in args
+                 if pairs and g != f]
         alts += [f"(with_reducible exact ({f} {g}).symm)" for f in lemmas for g in args
-                 if g != f]
+                 if pairs and g != f]
         # ... and to two cited facts, in either order ("by L, from h₁ and h₂")
         if len(lemmas) * len(args) ** 2 <= 120:  # a cited family ("CPCTC") would explode
             alts += [f"exact {f} {g} {k}" for f in lemmas for g in args for k in args
                      if len({f, g, k}) == 3]
-        alts += [f"exact {f} {g}" for f in lemmas for g in args if g != f]
+        alts += [f"exact {f} {g}" for f in lemmas for g in args if pairs and g != f]
         # rewriting with a cited equation, then tidying up
         alts += [f"(rw [{f}]; done)" for f in lemmas]
         alts += [f"(rw [{f}]; simp{hs}; done)" for f in lemmas]
