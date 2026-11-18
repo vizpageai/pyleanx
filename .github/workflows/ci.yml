@@ -44,8 +44,14 @@ jobs:
       - run: pytest tests/unit -q --cov=pyleanx --cov-report=term-missing --cov-fail-under=80
 
   lean-integration:
-    # Full proof verification against the pinned Lean + Mathlib (release gate).
+    # Full proof verification against the pinned Lean + Mathlib (release gate). The three
+    # suites run side by side: none waits for, or is skipped by, another's failure.
+    name: lean (${{ matrix.suite }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [integration, examples, benchmark]
     env:
       PYLEANX_REQUIRE_LEAN: "1"
     steps:
@@ -70,13 +76,16 @@ jobs:
       - run: pip install -e ".[dev,interactive]" pytest-github-actions-annotate-failures
       - run: python -m pyleanx doctor
       - name: Integration tests (real Lean + axiom audit)
+        if: matrix.suite == 'integration'
         run: pytest tests -q -rfE --durations=15
       - name: Every example script
+        if: matrix.suite == 'examples'
         run: python scripts/run_examples.py
       - name: Naturalness benchmark (every written proof, with Lean)
+        if: matrix.suite == 'benchmark'
         run: python benchmarks/naturalness.py --lean
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && matrix.suite == 'benchmark'
         with:
           name: benchmark
           path: |
