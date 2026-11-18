@@ -5,7 +5,8 @@
     pl.search_facts("similar triangles proportional sides")   # ranked candidates
     pl.fact("the angles of a triangle add up to 180°")         # the Name, or an error
 
-A string in ``because=`` that contains a space is a *description* (hypothesis and step
+A string in ``because=`` that contains a space, or is exactly a one-word label such as
+``"SSS"``, is a *description* (hypothesis and step
 names never contain spaces). It is matched against the words of every fact the domain
 modules provide (geometry, real-variable methods, analysis, algebra, number theory,
 complex analysis, harmonic analysis, the Hilbert transform): their printed labels and

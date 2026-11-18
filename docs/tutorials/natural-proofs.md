@@ -102,7 +102,8 @@ mean hx? (Names available: hx.)
 
 ## Cite facts by what they say
 
-A reason that contains a space is a description of a fact, not a name:
+A reason that contains a space is a description of a fact, not a name (so is a fact's
+one-word label, such as `"SSS"` or `"SAS"`):
 
 ```py
 pl.claim(geo.similar((B, A, C), (C, A, D)), because=["AA similarity", "hABC", "hA"])
