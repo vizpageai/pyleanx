@@ -68,6 +68,30 @@ def _set_points(e: Expr, env: dict[int, Any]) -> list[Any]:
     raise Unsupported("set")
 
 
+@dataclass(frozen=True)
+class _Line:
+    """The line through two points (as a value of the evaluator)."""
+
+    points: tuple[tuple[float, float], ...]
+
+    @property
+    def direction(self) -> tuple[float, float]:
+        if len(self.points) < 2:
+            return (0.0, 0.0)
+        (x0, y0), (x1, y1) = self.points[0], self.points[1]
+        return (x1 - x0, y1 - y0)
+
+
+def _line(v: Any) -> _Line:
+    if isinstance(v, _Line):
+        return v
+    raise Unsupported("not a line")
+
+
+def _zero(u: tuple[float, float]) -> bool:
+    return math.hypot(*u) <= _TOL
+
+
 def _collinear(pts: list[Any]) -> bool:
     ps = [_point(p) for p in pts]
     if len(ps) < 3:
@@ -181,6 +205,22 @@ def evaluate(e: Expr, env: dict[int, Any]) -> Any:
             return _collinear(_set_points(args[1], env))
         if name == "dist" and len(args) == 2:
             return _dist(evaluate(args[0], env), evaluate(args[1], env))
+        if name == "affineSpan" and len(args) == 2:  # line[ℝ, a, b]
+            return _Line(tuple(_point(p) for p in _set_points(args[1], env)))
+        if name == "AffineSubspace.direction" and len(args) == 1:
+            return evaluate(args[0], env)  # a line stands for its direction here
+        if name == "AffineSubspace.Parallel" and len(args) == 2:
+            u, v = _line(evaluate(args[0], env)).direction, _line(evaluate(args[1], env)).direction
+            if _zero(u) or _zero(v):
+                return _zero(u) and _zero(v)   # two points are parallel; a point and a line not
+            return _close(u[0] * v[1] - u[1] * v[0], 0.0)
+        if name == "Submodule.IsOrtho" and len(args) == 2:
+            u, v = _line(evaluate(args[0], env)).direction, _line(evaluate(args[1], env)).direction
+            return _close(u[0] * v[0] + u[1] * v[1], 0.0)
+        if name == "Membership.mem" and len(args) == 2:
+            s = evaluate(args[0], env)
+            if isinstance(s, _Line):
+                return _collinear([*s.points, evaluate(args[1], env)])
         if name == "midpoint" and len(args) == 3 and isinstance(args[0], TypeTerm):
             (x1, y1), (x2, y2) = _point(evaluate(args[1], env)), _point(evaluate(args[2], env))
             return ((x1 + x2) / 2, (y1 + y2) / 2)
@@ -302,7 +342,9 @@ def _construct(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> Non
     """Place points the hypotheses determine, as one draws a figure: D strictly between A and
     B goes on the segment; ``M = midpoint(A, B)`` and any ``x = expression`` are computed.
     (Every hypothesis is still evaluated afterwards; nothing is assumed.)"""
+    hyps = list(_conjuncts(hyps))
     for _ in range(2):  # a second pass resolves points defined from constructed points
+        _place_on_parallels(hyps, env, rng)
         for h in hyps:
             try:
                 between = (isinstance(h, Apply) and isinstance(h.fn, Const)
@@ -336,6 +378,70 @@ def _construct(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> Non
                     env[free.uid] = (vx - s * (py - vy), vy + s * (px - vx))
             except (Unsupported, ValueError, ZeroDivisionError, OverflowError):
                 continue
+
+
+def _conjuncts(hyps: Iterable[Expr]) -> Iterable[Expr]:
+    for h in hyps:
+        if isinstance(h, Logic) and h.op == "and":
+            yield from _conjuncts([h.lhs, h.rhs])
+        else:
+            yield h
+
+
+def _line_ends(e: Any) -> tuple[Any, Any] | None:
+    """The two point expressions of ``line[ℝ, a, b]``."""
+    if (isinstance(e, Apply) and isinstance(e.fn, Const) and e.fn.name == "affineSpan"
+            and len(e.args) == 2):
+        s = e.args[1]
+        if (isinstance(s, Apply) and isinstance(s.fn, Const) and s.fn.name == "insert"
+                and isinstance(s.args[1], Apply) and isinstance(s.args[1].fn, Const)
+                and s.args[1].fn.name == "singleton"):
+            return s.args[0], s.args[1].args[0]
+    return None
+
+
+def _parallel_constraint(h: Any) -> tuple[Var, Any, Any, Any] | None:
+    """For ``line(P, Q) ∥ line(R, X)`` (any order) with X a point variable: (X, R, P, Q):
+    X lies on the line through R in the direction Q − P."""
+    if not (isinstance(h, Apply) and isinstance(h.fn, Const)
+            and h.fn.name == "AffineSubspace.Parallel" and len(h.args) == 2):
+        return None
+    l1, l2 = _line_ends(h.args[0]), _line_ends(h.args[1])
+    if l1 is None or l2 is None:
+        return None
+    for (p, q), (r, x) in ((l1, l2), (l1, l2[::-1]), (l2, l1), (l2, l1[::-1])):
+        if isinstance(x, Var) and all(x.uid not in _free_uids(e) for e in (p, q, r)):
+            return x, r, p, q
+    return None
+
+
+def _place_on_parallels(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> None:
+    """A point on a line parallel to another goes on that parallel through its partner; with
+    two such lines (a parallelogram's fourth vertex) it goes where they meet."""
+    by_point: dict[int, list[tuple[Var, Any, Any, Any]]] = {}
+    for h in hyps:
+        c = _parallel_constraint(h)
+        if c is not None:
+            by_point.setdefault(c[0].uid, []).append(c)
+    for uid, cons in by_point.items():
+        try:
+            lines = []
+            for _, r, p, q in cons[:2]:
+                (rx, ry), (px, py), (qx, qy) = (_point(evaluate(e, env)) for e in (r, p, q))
+                lines.append(((rx, ry), (qx - px, qy - py)))
+            if len(lines) == 1:
+                (rx, ry), (ux, uy) = lines[0]
+                t = rng.choice((-1, 1)) * rng.uniform(0.3, 2.0)
+                env[uid] = (rx + t * ux, ry + t * uy)
+                continue
+            ((ax, ay), (ux, uy)), ((bx, by), (vx, vy)) = lines
+            det = ux * vy - uy * vx
+            if abs(det) <= _TOL:
+                continue
+            t = ((bx - ax) * vy - (by - ay) * vx) / det
+            env[uid] = (ax + t * ux, ay + t * uy)
+        except (Unsupported, ValueError, ZeroDivisionError, OverflowError):
+            continue
 
 
 def _right_angle(h: Any, env: dict[int, Any]) -> tuple[Any, Any, Var] | None:

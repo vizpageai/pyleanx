@@ -129,3 +129,21 @@ def test_a_right_angle_is_drawn_and_a_wrong_pythagoras_is_caught():
                      conclusion=dist(A, B) ** 2 + dist(B, C) ** 2 == dist(A, C) ** 2,
                      proof=pl.proof(pl.conclude()))
     assert "The statement looks false" in str(bad.sanity_check())
+
+
+def test_parallelograms_are_drawn_and_parallel_and_perpendicular_lines_evaluated():
+    dist, line = geo.dist, geo.line
+    hyps = {"h": geo.parallelogram(A, B, C, D)}
+    good = pl.Theorem("pg", [A, B, C, D], assumptions=hyps,
+                      conclusion=dist(A, B) == dist(C, D), proof=pl.proof(pl.conclude()))
+    rep = good.sanity_check()
+    assert rep.ok and rep.samples == 300
+    bad = pl.Theorem("pg_wrong", [A, B, C, D], assumptions=hyps,   # diagonals need not be equal
+                     conclusion=dist(A, C) == dist(B, D), proof=pl.proof(pl.conclude()))
+    assert "The statement looks false" in str(bad.sanity_check())
+    env = {A.uid: (0.0, 0.0), B.uid: (1.0, 0.0), C.uid: (0.0, 2.0), D.uid: (1.0, 2.0)}
+    assert evaluate(geo.parallel(line(A, B), line(C, D)), env)
+    assert not evaluate(geo.parallel(line(A, B), line(A, C)), env)
+    assert evaluate(geo.perpendicular(line(A, B), line(A, C)), env)
+    assert not evaluate(geo.perpendicular(line(A, B), line(A, D)), env)
+    assert evaluate(geo.on_line(D, line(C, D)), env) and not evaluate(geo.on_line(D, line(A, B)), env)

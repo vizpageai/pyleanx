@@ -20,7 +20,9 @@ see [docs/stability.md](docs/stability.md)).
   checks the shipped facts (on stderr; `PYLEANX_QUIET=1` silences it).
 - `sanity_check` draws isosceles figures: for a hypothesis |AB| = |AC| it places C on the circle
   about A through B, so isosceles-triangle proofs are tried on samples instead of skipped;
-  likewise right angles (∠ACB = 90°: B on the perpendicular to CA at C), e.g. Pythagoras.
+  likewise right angles (∠ACB = 90°: B on the perpendicular to CA at C), e.g. Pythagoras, and
+  parallels (a parallelogram's fourth vertex); parallel/perpendicular lines and points on a
+  line are evaluated.
 
 ### Changed
 - The gap filler tries "lemma applied to a cited fact" only when a step cites at most about a
