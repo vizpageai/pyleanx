@@ -324,13 +324,20 @@ class TheoremBank:
 
     def index_catalogs(self, project: LeanProject | str | None = None, *,
                        timeout: float | None = None) -> list[BankEntry]:
-        """Index the curated domain catalogs (``pyleanx.algebra`` …) with Lean's types."""
+        """Index the curated domain catalogs (``pyleanx.algebra`` …) with Lean's types.
+
+        Only Mathlib declarations are indexed. Facts that PyLeanX states and proves itself
+        (:class:`~pyleanx.proofs.LibraryFact`, e.g. ``geo.altitude``) exist in Lean only in
+        files that include their proofs, so they are not entries of this catalog.
+        """
         from ._domain import CATALOG_VERSION, all_catalogs
+        from .proofs import LibraryFact
 
         items: dict[str, Name] = {}
         for module, cat in all_catalogs().items():
             for key, ref in cat.items():
-                items[f"{module}.{key}"] = ref
+                if not isinstance(ref, LibraryFact):
+                    items[f"{module}.{key}"] = ref
         prov = {"source": "pyleanx domain catalogs", "catalog_version": CATALOG_VERSION}
         return self.index_declarations(items, project, provenance=prov, meta=CATALOG_META,
                                        timeout=timeout)

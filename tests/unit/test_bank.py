@@ -189,3 +189,17 @@ def test_bank_persists_and_reloads(tmp_path, project):
         ["t_ring", "t_nat"]
     with pytest.raises(BankError, match="nope"):
         again.add_theorem(main, _fake_result(main, project), id="my.x", dependencies=["nope"])
+
+
+def test_catalog_index_asks_lean_only_for_mathlib_declarations(monkeypatch):
+    # facts PyLeanX proves itself exist in Lean only in files that include their proofs
+    seen = {}
+
+    def fake_index(self, items, project=None, **kw):
+        seen.update(items)
+        return []
+
+    monkeypatch.setattr(TheoremBank, "index_declarations", fake_index)
+    TheoremBank().index_catalogs()
+    assert seen and not any(r.name.startswith("PyLeanX.") for r in seen.values())
+    assert "geometry.dist_triangle" in seen and "geometry.altitude" not in seen
