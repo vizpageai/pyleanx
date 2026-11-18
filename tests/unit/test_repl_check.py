@@ -172,3 +172,14 @@ def test_explain_failure_handles_facts_cited_theorems_and_pyleanx_messages():
     assert any("expected exactly one axiom report" in w for w in why)
     assert any("a cited name is not known" in w for w in why)
     assert pl.explain_failure(thm, VerificationResult(theorem="t", status=Status.VERIFIED)) == []
+
+
+def test_progress_lines_go_to_stderr_and_can_be_silenced(monkeypatch, capsys):
+    from pyleanx.backend.repl_check import _progress
+
+    monkeypatch.delenv("PYLEANX_QUIET", raising=False)
+    _progress("loading 3 Lean imports")
+    assert capsys.readouterr().err == "pyleanx: loading 3 Lean imports\n"
+    monkeypatch.setenv("PYLEANX_QUIET", "1")
+    _progress("loading 3 Lean imports")
+    assert capsys.readouterr().err == ""

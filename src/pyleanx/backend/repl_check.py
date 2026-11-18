@@ -108,6 +108,16 @@ def _run_chunk(repl, code: str, env: int, first_line: int, n_opts: int,
     return resp.env, out, False
 
 
+def _progress(message: str) -> None:
+    """Say what a slow first check is doing (stderr; ``PYLEANX_QUIET=1`` silences it)."""
+    import os
+    import sys
+
+    if os.environ.get("PYLEANX_QUIET", "") not in ("", "0"):
+        return
+    print(f"pyleanx: {message}", file=sys.stderr, flush=True)
+
+
 _ATEXIT = False
 
 
@@ -157,7 +167,14 @@ def check_all(theorems: Sequence, project: LeanProject | str | None = None, *,
             shutdown_repls()
             _PREAMBLES.clear()
             repl = get_repl(proj, launch=launch)
+        cold = tuple(sorted(chunks.imports)) not in repl._envs
+        if cold:
+            _progress(f"loading {len(chunks.imports)} Lean imports (once per session; "
+                      "Mathlib can take a few minutes)...")
+        t_imp = time.monotonic()
         env = repl.import_env(chunks.imports, timeout)
+        if cold:
+            _progress(f"imports loaded in {time.monotonic() - t_imp:.0f}s")
         messages: list[LeanMessage] = []
         failed = False
         if chunks.preamble is not None:
@@ -167,6 +184,9 @@ def check_all(theorems: Sequence, project: LeanProject | str | None = None, *,
                 ("\n".join(sorted(chunks.imports)) + "\0" + text).encode()).hexdigest())
             hit = _PREAMBLES.get(key)
             if hit is None:
+                if e - s > 200:
+                    _progress("checking the shipped facts and cited theorems "
+                              f"({e - s + 1} lines; once, then remembered)...")
                 new_env, msgs, failed = _run_chunk(repl, text, env, s, len(chunks.options),
                                                    timeout)
                 if new_env is not None and not any(m.severity == "error" for m in msgs):

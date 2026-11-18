@@ -16,6 +16,8 @@ see [docs/stability.md](docs/stability.md)).
 
 - `pyleanx check SCRIPT --watch`: re-checks on every save, with Lean kept loaded, after a
   numeric sanity check; prints each proof with its verdict.
+- The first `check()` of a session says what it is doing while Lean loads its imports and
+  checks the shipped facts (on stderr; `PYLEANX_QUIET=1` silences it).
 
 ### Changed
 - The gap filler tries "lemma applied to a cited fact" only when a step cites at most about a
