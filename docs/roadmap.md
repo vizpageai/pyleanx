@@ -226,6 +226,32 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [ ] Benchmark re-run with the upgraded baseline proposer.
 - Unit tests: 248 passed; ruff and mypy clean.
 
+### Domain packages; pyleanx-analysis (2026-11-19, evening)
+- **Separate domain packages**: `domains/analysis` is its own distribution
+  (`pyleanx-analysis`, entry point `pyleanx.packs`), built only on PyLeanX and never
+  imported by it (test). Core support: plugin discovery (`pyleanx.packs.load_plugins`, used
+  by `pyleanx doctor` and `pyleanx facts`, never implicitly, so generated Lean depends only
+  on the proof and the packages imported); packs declare the Lean imports their rules need;
+  the numeric evaluator applies function-valued variables, λ terms and big operators through
+  handlers, compares functions pointwise, and skips hypotheses that hold by construction;
+  pack hints are consulted before the core's.
+- **pyleanx-analysis**: vocabulary (re-exporting `pyleanx.analysis` and `pyleanx.realvar`),
+  facts (Markov's inequality, …), rules for integrability, a.e. statements, nonnegativity
+  and finiteness of measures (each tactic checked against the pinned Mathlib first), a
+  calculus pack importing the derivative rules, numeric sampling of functions (properties
+  known; functions defined by hypotheses), derivatives and integrals, explanation hints.
+- **Lean evidence** (local batch checks, standard axioms): chapter *integration* 4/4
+  (Markov's inequality and an interval bound, each 1 step with the package, 3 without);
+  chapter *derivatives* 2/2. With the package imported, the Calderón–Zygmund module's 3
+  proofs verify unchanged (the same check for the other measure-theoretic modules was
+  stopped for low memory and not restarted). Bookkeeping ablation
+  (`benchmarks/pack_ablation.py`): removed all together from `cz_interval_average` (7),
+  `hilbert_kernel_smooth` (5), `maximal_level_set_open` (9); 18 steps across five
+  singular-integral proofs together; details in `domains/analysis/README.md`.
+- Also: `pyleanx new FILE` (a template written proof), a dot in products such as
+  cos x · x (was "cos xx"), docs pages *Domain packages*, the core modules in the reference,
+  written proofs on the docs home page, CONTRIBUTING for domain packages.
+
 ### The core (2026-11-19)
 Design and status: [core.md](core.md). Built on the existing code, without reimplementing it:
 guardrails (golden Lean of the 72 written proofs; a layering test: core modules import no
