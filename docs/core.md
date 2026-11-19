@@ -65,6 +65,14 @@ topo.hint(r"failed to synthesize TopologicalSpace", "say which topology the set 
 Its rules apply only to theorems that use its sorts or symbols. Nothing a pack registers
 is trusted: Lean checks every proof the rules help produce.
 
+A pack can live in its own distribution: [`pyleanx-analysis`](domains.md) (in
+`domains/analysis`) depends on `pyleanx`, announces itself through the `pyleanx.packs`
+entry point, and is never imported by the core (a test enforces it). A package takes part
+once it is imported, by the author or by `pyleanx.packs.load_plugins()` (used by
+`pyleanx doctor` and `pyleanx facts`), never implicitly: the Lean a proof generates
+depends only on the proof and the packages imported. For the same reason the core's
+golden-Lean test runs in a fresh process, and a package's tests run in their own.
+
 ## Constraints from Lean's mechanism
 
 * **Python never elaborates.** Implicit arguments, type-class instances, coercions and
