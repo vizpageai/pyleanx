@@ -163,6 +163,12 @@ def cmd_doctor(args: argparse.Namespace) -> int:
               else f"missing; run `lake exe cache get` in {proj.path}")
     stats = ResultCache().stats()
     check("result cache", True, f"{stats['path']} ({stats['entries']} entries)")
+    from .packs import load_plugins
+
+    plugins = load_plugins()
+    broken = {n: m for n, m in plugins.items() if m.startswith("failed")}
+    check("domain packages", not broken,
+          ", ".join(f"{n} ({m})" for n, m in plugins.items()) or "none installed")
 
     if args.json:
         print(json.dumps({"ok": ok, "checks": [
@@ -202,6 +208,9 @@ def cmd_sanity(args: argparse.Namespace) -> int:
 def cmd_facts(args: argparse.Namespace) -> int:
     """Search the facts of the domain modules by description."""
     from .fact_search import search_facts
+    from .packs import load_plugins
+
+    load_plugins()  # facts of installed domain packages are searchable too
 
     hits = search_facts(" ".join(args.query), k=args.limit)
     if args.json:

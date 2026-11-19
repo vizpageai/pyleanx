@@ -43,6 +43,7 @@ pack = pl.domain_pack(
              "AEMeasurable", "ENNReal.", "IsCompact"),
 )
 _rules.register(pack)
+pack.facts("pyleanx_analysis.facts", prefix="ana", title="Analysis (pyleanx-analysis)")
 
 from . import hints as _hints  # noqa: E402
 from . import numeric as _numeric  # noqa: E402

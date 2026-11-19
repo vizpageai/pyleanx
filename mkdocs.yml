@@ -48,6 +48,7 @@ nav:
       - Trust model: security.md
       - Architecture: architecture.md
       - The core: core.md
+      - Domain packages: domains.md
       - Mathematical foundations plan: foundations.md
       - Stability and versioning: stability.md
       - Troubleshooting: troubleshooting.md

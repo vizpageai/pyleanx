@@ -48,11 +48,16 @@ def render() -> str:
         parent, _, leaf = module.rpartition(".")
         return f"from {parent} import {leaf} as {prefix}" if parent else f"import {module}"
 
-    titles = {d.prefix: (d.title, how(d.module, d.prefix)) for d in domains()}
+    from pyleanx.packs import BUILTIN
+
+    builtin = {m for m, _, _ in BUILTIN}  # this page documents the pyleanx distribution
+    titles = {d.prefix: (d.title, how(d.module, d.prefix)) for d in domains()
+              if d.module in builtin}
 
     by_domain: dict[str, list] = {}
     for e in _catalog():
-        by_domain.setdefault(e.qualified.split(".", 1)[0], []).append(e)
+        if e.qualified.split(".", 1)[0] in titles:
+            by_domain.setdefault(e.qualified.split(".", 1)[0], []).append(e)
     total = sum(len(v) for v in by_domain.values())
     parts = [HEADER, f"{total} facts in {len(by_domain)} domains: "
              + ", ".join(f"[{titles[d][0]}](#{titles[d][0].lower().replace(' ', '-')})"
