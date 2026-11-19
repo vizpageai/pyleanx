@@ -462,6 +462,15 @@ def theorem_type_params(thm: Theorem) -> list:
     return type_params([s for s in sorts if s is not None])
 
 
+def theorem_packs(thm: Theorem) -> frozenset[str]:
+    """The domain packs whose vocabulary the theorem uses (their justification rules apply
+    to its steps; see :mod:`pyleanx.justify`)."""
+    from ..justify import packs_using
+    from ..ops import vocabulary
+
+    return packs_using(*vocabulary(thm))
+
+
 def type_param_binders(thm: Theorem) -> str:
     """``{G : Type*} [Group G]`` for each type parameter."""
     out = []
@@ -674,11 +683,14 @@ def render_module(
         else:
             s, e = b.add(f"    {concl} := by")
             b.spans.append(SourceSpan(s, e, "statement", thm.name, "conclusion", thm.origin))
-            for idx, step in enumerate(thm.proof.flat(), start=1):
-                lines = render_tactic_lines(step)
-                s, e = b.add(*("  " + ln for ln in lines))
-                label = f"step {idx}: {lines[0].strip()}"
-                b.spans.append(SourceSpan(s, e, "tactic", thm.name, label, step.origin))
+            from ..justify import active_packs
+
+            with active_packs(theorem_packs(thm)):
+                for idx, step in enumerate(thm.proof.flat(), start=1):
+                    lines = render_tactic_lines(step)
+                    s, e = b.add(*("  " + ln for ln in lines))
+                    label = f"step {idx}: {lines[0].strip()}"
+                    b.spans.append(SourceSpan(s, e, "tactic", thm.name, label, step.origin))
         thm_end = b.next_line - 1
         b.spans.append(SourceSpan(thm_start, thm_end, "theorem", thm.name, thm.name, thm.origin))
         if getattr(thm, "avoid", ()) and thm.proof is not None:

@@ -147,8 +147,9 @@ def contains_untyped_literal(e: Expr) -> bool:
 def substitute(e: Expr, mapping: dict[int, Expr]) -> Expr:
     """``e`` with free variables replaced (``mapping``: variable uid -> expression).
 
-    Display helper (used to print P(0), P(k + 1) in written proofs); binders that rebind a
-    mapped variable stop the replacement below them. Lean never sees the result.
+    Used to print P(0), P(k + 1) in written proofs and to build "similarly" steps (whose
+    result Lean checks in full); binders that rebind a mapped variable stop the replacement
+    below them. Public API: :func:`pyleanx.ops.substitute`.
     """
     import dataclasses
 

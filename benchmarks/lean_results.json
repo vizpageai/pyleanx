@@ -1,11 +1,11 @@
 {
  "abelian_of_sq_eq_one": {
-  "fingerprint": "944e6aad6c25459f",
+  "fingerprint": "e0a971fd48533cdc",
   "status": "pass",
   "why": ""
  },
  "am_gm_two": {
-  "fingerprint": "27a8bfa6d799abd9",
+  "fingerprint": "aa635c21966aadfa",
   "status": "pass",
   "why": ""
  },
@@ -20,62 +20,62 @@
   "why": ""
  },
  "bernoulli_inequality": {
-  "fingerprint": "6cceafea86c81fb5",
+  "fingerprint": "ea53721139ce23d8",
   "status": "pass",
   "why": ""
  },
  "bounded_sequence_has_cauchy_subsequence": {
-  "fingerprint": "34570b09c3558076",
+  "fingerprint": "c892d360d8d799f6",
   "status": "pass",
   "why": ""
  },
  "calderon_zygmund": {
-  "fingerprint": "d73e79fb27ca6507",
+  "fingerprint": "771c92c38e65c040",
   "status": "pass",
   "why": ""
  },
  "calderon_zygmund_intervals": {
-  "fingerprint": "ba981b026055b498",
+  "fingerprint": "6207fd16f20a7c4f",
   "status": "pass",
   "why": ""
  },
  "cauchy_integral_formula": {
-  "fingerprint": "003e8e38ae296515",
+  "fingerprint": "e2f29d84358cd6ad",
   "status": "pass",
   "why": ""
  },
  "contour_integral_z_sq": {
-  "fingerprint": "8227da5400c99acc",
+  "fingerprint": "963b5a618d575764",
   "status": "pass",
   "why": ""
  },
  "convergent_is_cauchy": {
-  "fingerprint": "71684c57daf11ed3",
+  "fingerprint": "a711d1882e0d211e",
   "status": "pass",
   "why": ""
  },
  "cubic_has_root": {
-  "fingerprint": "1fa469dbc5dca88f",
+  "fingerprint": "588eae86e556d89e",
   "status": "pass",
   "why": ""
  },
  "cz_good_part": {
-  "fingerprint": "25d5b18a024cd1ec",
+  "fingerprint": "c361276269a41305",
   "status": "pass",
   "why": ""
  },
  "cz_interval_average": {
-  "fingerprint": "da929dbd03d0b8b4",
+  "fingerprint": "3e7b0b752068bb06",
   "status": "pass",
   "why": ""
  },
  "decay_of_coefficients": {
-  "fingerprint": "fb4c090ac31478a5",
+  "fingerprint": "b2b33b1c9ca4cb0b",
   "status": "pass",
   "why": ""
  },
  "decay_two_derivatives": {
-  "fingerprint": "5ee35279e03dc0d5",
+  "fingerprint": "e6099c42bd71c84f",
   "status": "pass",
   "why": ""
  },
@@ -115,97 +115,97 @@
   "why": ""
  },
  "eventually_positive": {
-  "fingerprint": "cb3b389988eb5763",
+  "fingerprint": "fa0ef541fbc3dfab",
   "status": "pass",
   "why": ""
  },
  "finite_measure_misses_both_sides": {
-  "fingerprint": "fa0de6277d5d7de6",
+  "fingerprint": "a169be957e392e82",
   "status": "pass",
   "why": ""
  },
  "fourier_uniqueness": {
-  "fingerprint": "374d0fe0ff79891e",
+  "fingerprint": "e07c414dab506c4c",
   "status": "pass",
   "why": ""
  },
  "hardy_littlewood_Lp": {
-  "fingerprint": "4328baccf83e6c21",
+  "fingerprint": "8268edc4a9886202",
   "status": "pass",
   "why": ""
  },
  "hardy_littlewood_maximal_compact": {
-  "fingerprint": "9d3e8ee88dfd93d4",
+  "fingerprint": "c28b5a7cfa572ef7",
   "status": "pass",
   "why": ""
  },
  "hardy_littlewood_weak_type": {
-  "fingerprint": "16f31fc26fd3bdbb",
+  "fingerprint": "36566a7c70c30d2c",
   "status": "pass",
   "why": ""
  },
  "hilbert_isometry": {
-  "fingerprint": "f48708c989265516",
+  "fingerprint": "87451921f98cc40a",
   "status": "pass",
   "why": ""
  },
  "hilbert_kernel_cancellation": {
-  "fingerprint": "6c6759664f4cfe5d",
+  "fingerprint": "4b0a875ddc9cfd09",
   "status": "pass",
   "why": ""
  },
  "hilbert_kernel_decay": {
-  "fingerprint": "798386330142a444",
+  "fingerprint": "00056f3fea5fe6bb",
   "status": "pass",
   "why": ""
  },
  "hilbert_kernel_hormander": {
-  "fingerprint": "c52eb5052da909d1",
+  "fingerprint": "67f39b83586fb711",
   "status": "pass",
   "why": ""
  },
  "hilbert_kernel_smooth": {
-  "fingerprint": "ec53709a1c4f6064",
+  "fingerprint": "64cebcf85417a44a",
   "status": "pass",
   "why": ""
  },
  "hilbert_multiplier_isometry": {
-  "fingerprint": "a8143a7681d6a4b3",
+  "fingerprint": "f4221f31cf99d3fb",
   "status": "pass",
   "why": ""
  },
  "hilbert_multiplier_twice": {
-  "fingerprint": "959336a879744118",
+  "fingerprint": "1b9519180492099f",
   "status": "pass",
   "why": ""
  },
  "hilbert_square": {
-  "fingerprint": "71de6a4f673a6bc8",
+  "fingerprint": "9b867960132f6e31",
   "status": "pass",
   "why": ""
  },
  "hilbert_symbol_norm": {
-  "fingerprint": "d46bffdb34b162e3",
+  "fingerprint": "ba3764470e807194",
   "status": "pass",
   "why": ""
  },
  "hilbert_symbol_sq": {
-  "fingerprint": "67a4797e89437c03",
+  "fingerprint": "c42e8a8d47fed01a",
   "status": "pass",
   "why": ""
  },
  "infinitely_many_primes": {
-  "fingerprint": "3dc200327bfb9e8e",
+  "fingerprint": "8debc94a5e6ecac4",
   "status": "pass",
   "why": ""
  },
  "inner_power_integral": {
-  "fingerprint": "15161a8635e33529",
+  "fingerprint": "12abfde1fda2216c",
   "status": "pass",
   "why": ""
  },
  "integrals_over_disjoint_intervals": {
-  "fingerprint": "d4b237e0499417e6",
+  "fingerprint": "0091f052d8182264",
   "status": "pass",
   "why": ""
  },
@@ -225,52 +225,52 @@
   "why": ""
  },
  "limit_of_sum": {
-  "fingerprint": "4405f274ef05fb98",
+  "fingerprint": "4e197b2fe90ea227",
   "status": "pass",
   "why": ""
  },
  "limits_are_unique": {
-  "fingerprint": "343725b190f7623d",
+  "fingerprint": "ba1a4610b5991d29",
   "status": "pass",
   "why": ""
  },
  "maximal_covering_bound": {
-  "fingerprint": "ae7e649eebed9ab2",
+  "fingerprint": "c3ddfa3baa8d6067",
   "status": "pass",
   "why": ""
  },
  "maximal_inner_t_integral": {
-  "fingerprint": "854bdebc7e4f135a",
+  "fingerprint": "caafcae862fa2431",
   "status": "pass",
   "why": ""
  },
  "maximal_level_integral": {
-  "fingerprint": "a5fb3ba178c9a66b",
+  "fingerprint": "b059fa6224e2a03b",
   "status": "pass",
   "why": ""
  },
  "maximal_level_set_bound": {
-  "fingerprint": "c2e180b2eb055000",
+  "fingerprint": "710193f13b8a0b4a",
   "status": "pass",
   "why": ""
  },
  "maximal_level_set_open": {
-  "fingerprint": "844569920cf83ba5",
+  "fingerprint": "3eb964f87921d51c",
   "status": "pass",
   "why": ""
  },
  "maximal_power_identity": {
-  "fingerprint": "8b0a2ec6c9c397d8",
+  "fingerprint": "0599f321f7f6918d",
   "status": "pass",
   "why": ""
  },
  "maximal_splitting_estimate": {
-  "fingerprint": "c76aa0a0b14cb23a",
+  "fingerprint": "03c48fbab53d006f",
   "status": "pass",
   "why": ""
  },
  "maximal_weight_algebra": {
-  "fingerprint": "a4a052cb28bd33f2",
+  "fingerprint": "4c594160bc6be1fb",
   "status": "pass",
   "why": ""
  },
@@ -280,22 +280,22 @@
   "why": ""
  },
  "one_over_n_tends_to_zero": {
-  "fingerprint": "20233dcc92ba0573",
+  "fingerprint": "21bbce113e07c065",
   "status": "pass",
   "why": ""
  },
  "open_intervals_meet": {
-  "fingerprint": "36f03ead54d61006",
+  "fingerprint": "da6510599685d34c",
   "status": "pass",
   "why": ""
  },
  "open_left_endpoint": {
-  "fingerprint": "2c830a86df43c8f7",
+  "fingerprint": "e542e71103ba886b",
   "status": "pass",
   "why": ""
  },
  "open_right_endpoint": {
-  "fingerprint": "81b1dae124fee673",
+  "fingerprint": "b54c9641c0143306",
   "status": "pass",
   "why": ""
  },
@@ -305,7 +305,7 @@
   "why": ""
  },
  "product_of_consecutive_is_even": {
-  "fingerprint": "fd6dc0723b865fcd",
+  "fingerprint": "83a01656db5033b3",
   "status": "pass",
   "why": ""
  },
@@ -315,17 +315,17 @@
   "why": ""
  },
  "pythagorean_identity": {
-  "fingerprint": "82f18829da54b9d7",
+  "fingerprint": "3bf8eb2506e2900a",
   "status": "pass",
   "why": ""
  },
  "riemann_lebesgue_for_L2": {
-  "fingerprint": "f08375aa6ceeb318",
+  "fingerprint": "1643bb984db5bb13",
   "status": "pass",
   "why": ""
  },
  "shifted_sequence_limit": {
-  "fingerprint": "f9f46510eccf2e5f",
+  "fingerprint": "83aea4d9de378b6e",
   "status": "pass",
   "why": ""
  },
@@ -340,22 +340,22 @@
   "why": ""
  },
  "three_x_plus_one_continuous": {
-  "fingerprint": "12754d265cef8d4b",
+  "fingerprint": "50ca7f88ca9b6bab",
   "status": "pass",
   "why": ""
  },
  "value_at_zero": {
-  "fingerprint": "9cb9ed6497ae15e1",
+  "fingerprint": "d5635c1a39c95386",
   "status": "pass",
   "why": ""
  },
  "vitali_covering_finite": {
-  "fingerprint": "ee260b350b459e73",
+  "fingerprint": "a2f4fc2f0b7178f3",
   "status": "pass",
   "why": ""
  },
  "zero_coefficients_zero_energy": {
-  "fingerprint": "cc9f6280e26413a1",
+  "fingerprint": "c2daf1d2b5c52b0b",
   "status": "pass",
   "why": ""
  }
