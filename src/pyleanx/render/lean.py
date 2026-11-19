@@ -662,11 +662,26 @@ def render_module(
         b.spans.append(SourceSpan(s, e, "library_fact", None, f"library fact {fact.name}"))
     r = _ExprRenderer(unicode_types)
     dep_lines: dict[str, tuple[int, int]] = {}
+    from ..justify import active_packs, collecting_macros
+
+    defined: set[str] = set()  # justification macros already in the file
     for thm in emitted:
         b.add("")
         if thm in deps:
             b.add(f"-- PyLeanX: theorem {thm.name}, cited by a proof below (re-checked here)")
         thm_start = b.next_line
+        # The steps are rendered first: they name the closer macros they call, which are
+        # written before the theorem (inside its span, so that the fast checker's cached
+        # preamble does not change when a proof does).
+        rendered: list[tuple[Tactic, list[str]]] = []
+        if thm.proof is not None:
+            with active_packs(theorem_packs(thm)), collecting_macros() as macros:
+                rendered = [(step, render_tactic_lines(step)) for step in thm.proof.flat()]
+            for name, definition in macros.items():
+                if name not in defined:
+                    defined.add(name)
+                    b.add(*definition)
+                    b.add("")
         head, concl = _statement_parts(thm, r)
         s, e = b.add(head)
         b.spans.append(SourceSpan(s, e, "binders", thm.name, "variables and hypotheses",
@@ -683,14 +698,10 @@ def render_module(
         else:
             s, e = b.add(f"    {concl} := by")
             b.spans.append(SourceSpan(s, e, "statement", thm.name, "conclusion", thm.origin))
-            from ..justify import active_packs
-
-            with active_packs(theorem_packs(thm)):
-                for idx, step in enumerate(thm.proof.flat(), start=1):
-                    lines = render_tactic_lines(step)
-                    s, e = b.add(*("  " + ln for ln in lines))
-                    label = f"step {idx}: {lines[0].strip()}"
-                    b.spans.append(SourceSpan(s, e, "tactic", thm.name, label, step.origin))
+            for idx, (step, lines) in enumerate(rendered, start=1):
+                s, e = b.add(*("  " + ln for ln in lines))
+                label = f"step {idx}: {lines[0].strip()}"
+                b.spans.append(SourceSpan(s, e, "tactic", thm.name, label, step.origin))
         thm_end = b.next_line - 1
         b.spans.append(SourceSpan(thm_start, thm_end, "theorem", thm.name, thm.name, thm.origin))
         if getattr(thm, "avoid", ()) and thm.proof is not None:

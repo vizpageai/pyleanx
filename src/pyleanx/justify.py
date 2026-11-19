@@ -160,15 +160,67 @@ def _texts(slot: str, step: Step, active: frozenset[str] | None) -> list[str]:
     return [t for r in rules(slot, active) for t in r.make(step)]
 
 
+# --- compact Lean: the side-goal closers written once per file, as a macro ------------
+# Spelled out, the closers of side goals are repeated inside every "apply a cited lemma"
+# alternative of every step, and Lean spends most of a check parsing them (the 7 Euclid
+# proofs: 888 KB of Lean, parsing 19 s of 38 s). While a module is rendered, the
+# step-independent closers become one macro per file (`pyleanx_close_…`) that the steps
+# call; Lean's work for those proofs halves (19 s). Writing every step's search as a macro
+# too was measured and is worse: each macro is compiled like a program. Hygiene is off in
+# the macros, so the hypotheses they use are the ones in scope where they are called.
+
+#: macro name -> its Lean definition, while a module is rendered (None: write in full)
+_MACROS: contextvars.ContextVar[dict[str, list[str]] | None] = contextvars.ContextVar(
+    "pyleanx_macros", default=None)
+
+
+@contextmanager
+def collecting_macros() -> Iterator[dict[str, list[str]]]:
+    """Within the block, steps call macros; the definitions are collected in the dict."""
+    found: dict[str, list[str]] = {}
+    token = _MACROS.set(found)
+    try:
+        yield found
+    finally:
+        _MACROS.reset(token)
+
+
+def _macro(kind: str, alts: list[str]) -> str:
+    """The name of a macro running ``first | alts…`` (registered for the module)."""
+    import hashlib
+
+    found = _MACROS.get()
+    assert found is not None
+    name = f"pyleanx_{kind}_" + hashlib.sha256("\n".join(alts).encode()).hexdigest()[:12]
+    if name not in found:
+        found[name] = ["set_option hygiene false in",
+                       f'macro "{name}" : tactic => `(tactic|',
+                       "  first",
+                       *(f"    | {a}" for a in alts[:-1]),
+                       f"    | {alts[-1]})"]
+    return name
+
+
+def _first(slot: str, step: Step, active: frozenset[str] | None) -> str:
+    """``first | …`` of a closer slot; its step-independent prefix as a macro if compact."""
+    items = _texts(slot, step, active)
+    if _MACROS.get() is not None:
+        common = _texts(slot, Step((), (), step.avoid), active)
+        if common and items[:len(common)] == common:
+            items = [_macro("close", common), *items[len(common):]]
+    return "first | " + " | ".join(items)
+
+
 def alternatives(facts: Iterable[str], lemmas: Iterable[str],
                  avoid: Iterable[str] = ()) -> list[str]:
     """The tactic alternatives for one step, in order, without repetitions."""
     active = current_packs()
     step = Step(tuple(facts), tuple(lemmas), tuple(avoid))
-    step = replace(step, cheap="first | " + " | ".join(_texts("cheap_close", step, active)))
-    step = replace(step, close="first | " + " | ".join(_texts("close", step, active)))
+    step = replace(step, cheap=_first("cheap_close", step, active))
+    step = replace(step, close=_first("close", step, active))
     # an alternative tried twice cannot succeed the second time
-    return list(dict.fromkeys(_texts("step", step, active)))
+    alts = list(dict.fromkeys(_texts("step", step, active)))
+    return alts
 
 
 # =====================================================================================

@@ -72,7 +72,10 @@ def test_repl_check_splits_imports_preamble_and_theorems():
     pre = "\n".join(lines[c.preamble[0] - 1:c.preamble[1]])
     main = "\n".join(lines[c.main[0] - 1:c.main[1]])
     assert "theorem PyLeanX.Geometry.altitude_to_hypotenuse" in pre and "leg_rule" not in pre
-    assert main.lstrip().startswith("theorem leg_rule") and "#print axioms pythagoras" in main
+    # the theorems' justification macros belong to them, not to the cached preamble
+    assert main.lstrip().startswith("set_option hygiene false in\nmacro \"pyleanx_")
+    assert "theorem leg_rule" in main and "#print axioms pythagoras" in main
+    assert "pyleanx_s_" not in pre
     assert all(o.startswith("set_option") for o in c.options) and "import" not in pre
 
 

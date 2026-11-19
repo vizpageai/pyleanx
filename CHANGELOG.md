@@ -22,6 +22,9 @@ see [docs/stability.md](docs/stability.md)).
   - The numeric sanity check is a framework (`register_function`, `register_apply`,
     `register_sampler`, `register_construction`); points and figures are the geometry
     pack's.
+  - Compact Lean: the side-goal closers of the justification search are one Lean macro per
+    file instead of being repeated in every alternative; Lean's work for the Euclid proofs
+    halves (parsing 19 s → 5 s).
   - Fact search keeps a registry of domains (`register_domain`); the built-in packs are
     listed in `pyleanx.packs`, and third-party packs register the same way.
 - [Citable facts](docs/facts.md): a generated page listing all 390 facts of the domain
