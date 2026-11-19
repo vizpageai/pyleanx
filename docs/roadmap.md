@@ -251,6 +251,18 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - Also: `pyleanx new FILE` (a template written proof), a dot in products such as
   cos x · x (was "cos xx"), docs pages *Domain packages*, the core modules in the reference,
   written proofs on the docs home page, CONTRIBUTING for domain packages.
+- Later the same night: package chapter *Calderón–Zygmund* (Stein's interval estimate in
+  9 steps against 16 in the core example; Lean-verified); the bookkeeping ablation extended
+  (see the package README; the Marcinkiewicz module's run was stopped for low memory and
+  not restarted); random sequences in the sanity check; finite sums over
+  `pl.finset_range(n)` (written ∑_{i<n}, evaluated numerically) with the example
+  `readable_odd_sum.py` (1 + 3 + … + (2n − 1) = n², Lean-verified, benchmark 73/73);
+  natural-number subtraction/division/remainder evaluated as in Lean (a false alarm and a
+  missed counterexample fixed); kernels as named checkers (`get_checker`,
+  `register_checker`); no module-level import cycle (now a test); the derivation graph
+  prints as a table; the first tutorial has a written proof; the `pyleanx new` template
+  verified with Lean. The REPL checker verifies the compact Lean (closer macros) on the
+  algebra examples.
 
 ### The core (2026-11-19)
 Design and status: [core.md](core.md). Built on the existing code, without reimplementing it:
