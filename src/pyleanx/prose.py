@@ -62,7 +62,7 @@ _SYMBOLS = {
     "theta": "θ", "varepsilon": "ε", "mid": "∣", "varphi": "φ", "lambda": "λ", "mu": "μ",
     "sigma": "σ", "phi": "φ", "omega": "ω", "xi": "ξ", "eta": "η", "zeta": "ζ", "psi": "ψ",
     "chi": "χ", "nu": "ν", "tau": "τ", "rho": "ρ", "kappa": "κ", "bigcup": "⋃", "subseteq": "⊆",
-    "cup": "∪", "cap": "∩",
+    "cup": "∪", "cap": "∩", "dots": "…", "ldots": "…", "cdots": "⋯",
 }
 _BB = {"R": "ℝ", "N": "ℕ", "Z": "ℤ", "Q": "ℚ", "C": "ℂ"}
 

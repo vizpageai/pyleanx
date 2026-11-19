@@ -43,6 +43,7 @@ CASES: dict[str, tuple[list[str], int]] = {
     "readable_limit_sum": (RUN, 0),
     "readable_group_abelian": (RUN, 0),
     "readable_bernoulli": (RUN, 0),
+    "readable_odd_sum": (RUN, 0),  # sum of the first n odd numbers, by induction
     "readable_cauchy_integral": (RUN, 0),
     "using_cauchy_integral": (RUN, 0),
     "readable_angle_bisector": (RUN, 0),

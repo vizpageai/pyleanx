@@ -45,6 +45,7 @@ SOURCES = [
     ("geometry", "textbook_geometry"),
     ("algebra & number theory", "readable_am_gm"),
     ("algebra & number theory", "readable_bernoulli"),
+    ("algebra & number theory", "readable_odd_sum"),
     ("algebra & number theory", "readable_consecutive_even"),
     ("algebra & number theory", "readable_group_abelian"),
     ("algebra & number theory", "readable_infinite_primes"),

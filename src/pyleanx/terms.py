@@ -351,6 +351,20 @@ def _bigop(kind: str, over: object, body: Callable[..., object], sort: Sort | No
     return BigOp(kind, v, out, out.sort or UNKNOWN, set_expr, bnds)  # type: ignore[arg-type]
 
 
+_FINSET_BASIC = "Mathlib.Algebra.BigOperators.Group.Finset.Basic"
+
+
+def finset_range(n: object) -> Expr:
+    """{0, 1, …, n − 1} as a finite set of natural numbers (Mathlib's ``Finset.range n``):
+    ``pl.sum(pl.finset_range(n), lambda k: k ** 2, sort=pl.Nat)`` is ∑_{k < n} k²."""
+    from .types import Fn, Nat, lean_type
+
+    fin = lean_type("Finset ℕ", (_FINSET_BASIC,), latex=r"\text{Finset}(\mathbb{N})")
+    rng = const("Finset.range", Fn(Nat, fin), (_FINSET_BASIC,),
+                latex=r"\{{0, \dots, {0} - 1\}}")
+    return apply(rng, n)
+
+
 def sum(over: object, body: Callable[..., object], *, sort: Sort | None = None) -> BigOp:  # noqa: A001
     """``∑ i : T, body i`` (``over`` a finite type such as ``pl.Fin(3)``) or ``∑ i ∈ s, …``."""
     return _bigop("sum", over, body, sort)

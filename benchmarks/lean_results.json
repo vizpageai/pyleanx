@@ -339,6 +339,11 @@
   "status": "pass",
   "why": ""
  },
+ "sum_of_odd_numbers": {
+  "fingerprint": "fae2b03de86a40a0",
+  "status": "pass",
+  "why": ""
+ },
  "three_x_plus_one_continuous": {
   "fingerprint": "dc54c3dd4fe6716a",
   "status": "pass",

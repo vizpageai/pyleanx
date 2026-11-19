@@ -342,6 +342,41 @@ def _detail(prop: Expr, env: dict[int, Any]) -> str:
     return f": the left side is {_fmt(a)}, the right side {_fmt(b)}"
 
 
+# --- finite sums and products (core arithmetic) --------------------------------------
+_MAX_TERMS = 10_000
+
+
+def _finset_range(args: tuple, env: dict[int, Any]) -> Any:
+    """``Finset.range n`` = {0, …, n − 1}."""
+    if len(args) != 1:
+        return NotImplemented
+    n = evaluate(args[0], env)
+    if not (isinstance(n, float) and n.is_integer() and 0 <= n <= _MAX_TERMS):
+        raise Unsupported("Finset.range of a large or non-natural number")
+    return range(int(n))
+
+
+def _finite_bigop(e: Any, env: dict[int, Any]) -> Any:
+    """∑ / ∏ over a finite set whose elements can be listed (e.g. ``Finset.range n``)."""
+    if e.over is None:
+        return NotImplemented
+    dom = evaluate(e.over, env)
+    if not isinstance(dom, (range, tuple, frozenset)) or len(dom) > _MAX_TERMS:
+        raise Unsupported("a sum over a set that cannot be listed")
+    terms = [evaluate(e.body, {**env, e.var.uid: float(i)}) for i in dom]
+    if e.kind == "sum":
+        return float(math.fsum(terms))
+    out = 1.0
+    for x in terms:
+        out *= x
+    return out
+
+
+_APPLY["Finset.range"] = _finset_range
+_BIGOPS["sum"] = _finite_bigop
+_BIGOPS["prod"] = _finite_bigop
+
+
 def _construct(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> list[Expr]:
     """Place the values the hypotheses determine, as one draws a figure: any
     ``x = expression`` is computed, and registered construction hooks place the rest (the

@@ -213,7 +213,12 @@ class _Latex:
                     return rf"\int_{{{self.render(e.over)[0]}}} {body}\, d{v}", 66
                 return rf"\int_{{{latex_sort(e.var.sort)}}} {body}\, d{v}", 66
             sym = {"sum": r"\sum", "prod": r"\prod", "union": r"\bigcup"}[e.kind]
-            dom = (rf"{v} \in {self.render(e.over)[0]}" if e.over is not None
+            over = e.over
+            if (isinstance(over, Apply) and isinstance(over.fn, Const)
+                    and over.fn.name == "Finset.range" and len(over.args) == 1):
+                # ∑_{i < n}, as mathematicians write a sum over {0, …, n − 1}
+                return rf"{sym}_{{{v} < {self.render(over.args[0])[0]}}} {body}", 66
+            dom = (rf"{v} \in {self.render(over)[0]}" if over is not None
                    else rf"{v} \in {latex_sort(e.var.sort)}")
             return rf"{sym}_{{{dom}}} {body}", 66
         if isinstance(e, Pair):

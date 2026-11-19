@@ -194,3 +194,28 @@ def test_a_pack_can_declare_the_lean_modules_its_rules_need():
         justify._RULES[:] = saved[0]
         justify._PACKS.clear()
         justify._PACKS.update(saved[1])
+
+
+def test_finite_sums_over_a_range_are_evaluated():
+    n = pl.symbol("n", pl.Nat)
+
+    def squares(m: object) -> pl.Expr:
+        return pl.sum(pl.finset_range(m), lambda k: k ** 2, sort=pl.Nat)
+
+    assert evaluate(squares(n), {n.uid: 4.0}) == 14.0          # 0 + 1 + 4 + 9
+    good = pl.Theorem("sq", [n], conclusion=6 * squares(n) == (n - 1) * n * (2 * n - 1),
+                      proof=pl.proof(pl.conclude()))
+    assert good.sanity_check().ok
+    bad = pl.Theorem("sq_bad", [n], conclusion=6 * squares(n) == n * (n + 1) * (2 * n + 1),
+                     proof=pl.proof(pl.conclude()))
+    assert "looks false" in str(bad.sanity_check())
+    prod = pl.prod(pl.finset_range(n), lambda k: k + 1, sort=pl.Nat)   # n!
+    assert evaluate(prod, {n.uid: 5.0}) == 120.0
+
+
+def test_a_sum_over_a_range_is_written_with_i_less_than_n():
+    from pyleanx.prose import plain
+
+    n = pl.symbol("n", pl.Nat)
+    assert plain(pl.sum(pl.finset_range(n), lambda i: 2 * i + 1, sort=pl.Nat)) == \
+        "∑_(i < n)(2i + 1)"

@@ -20,6 +20,9 @@ see [docs/stability.md](docs/stability.md)).
   which Markov's inequality and an interval bound are one-step proofs (three steps
   without the package).
 - `pyleanx new FILE`: a template written proof to start from.
+- Finite sums and products over `pl.finset_range(n)` ({0, …, n − 1}, written ∑_{i<n}):
+  evaluated by the sanity check, so a wrong closed form is reported with a value of n;
+  example `examples/readable_odd_sum.py` (1 + 3 + … + (2n − 1) = n² by induction).
 - Numeric evaluator: function-valued variables, λ terms, big operators through handlers
   (`register_bigop`), hypotheses that hold by construction (`Construction.defined`).
 - **The core** ([docs/core.md](docs/core.md)): the domain-free engine PyLeanX is built on,
