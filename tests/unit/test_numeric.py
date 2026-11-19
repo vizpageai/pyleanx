@@ -219,3 +219,16 @@ def test_a_sum_over_a_range_is_written_with_i_less_than_n():
     n = pl.symbol("n", pl.Nat)
     assert plain(pl.sum(pl.finset_range(n), lambda i: 2 * i + 1, sort=pl.Nat)) == \
         "∑_(i < n)(2i + 1)"
+
+
+def test_natural_numbers_subtract_and_divide_as_in_lean():
+    n = pl.symbol("n", pl.Nat)
+
+    def check(name: str, concl: object) -> str:
+        return str(pl.Theorem(name, [n], conclusion=concl,
+                              proof=pl.proof(pl.conclude())).sanity_check())
+
+    assert "looks false" not in check("sub_ok", n - 5 >= 0)          # truncated: no alarm
+    assert "looks false" not in check("div_ok", (n / 2) * 2 <= n)     # rounds down
+    assert "looks false" in check("sub_bad", n - 1 + 1 == n)          # false at n = 0 in Lean
+    assert "looks false" in check("div_bad", (n / 2) * 2 == n)        # false for odd n

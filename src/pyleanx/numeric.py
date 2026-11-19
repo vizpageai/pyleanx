@@ -142,14 +142,26 @@ def evaluate(e: Expr, env: dict[int, Any]) -> Any:
         a, b = evaluate(e.lhs, env), evaluate(e.rhs, env)
         if isinstance(a, tuple) or isinstance(b, tuple):
             raise Unsupported("vector arithmetic")
+        kind = getattr(e.sort, "name", "")
         if e.op == "add":
             return a + b
         if e.op == "sub":
-            return a - b
+            # ℕ: truncated subtraction, as in Lean (3 − 5 = 0)
+            return max(0.0, a - b) if kind == "Nat" else a - b
         if e.op == "mul":
             return a * b
         if e.op == "div":
-            return 0.0 if b == 0 else a / b  # Lean: x / 0 = 0
+            if b == 0:
+                return 0.0  # Lean: x / 0 = 0
+            if kind == "Nat":
+                return float(math.floor(a / b))  # ℕ: rounds down
+            if kind == "Int":
+                raise Unsupported("integer division")
+            return a / b
+        if e.op == "mod":
+            if kind == "Nat":
+                return a if b == 0 else float(math.fmod(a, b))  # Lean: n % 0 = n
+            raise Unsupported("remainder outside ℕ")
         if e.op == "pow":
             try:
                 return a ** b if float(b).is_integer() or a >= 0 else math.nan
