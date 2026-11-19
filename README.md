@@ -64,19 +64,20 @@ pythagoras = pl.Theorem(
     proof=pl.proof(
         pl.choose(D, such_that=pl.And(geo.strictly_between(D, A, B),
                                       geo.right_angle(A, D, C), geo.right_angle(B, D, C)),
-                  because=["drop the altitude to the hypotenuse", "hABC", "hC"],
+                  because=[geo.altitude_to_hypotenuse, "hABC", "hC"],
                   names="hD hAD hBD"),
         pl.claim(AC**2 == AD * AB, because=[leg_rule, "hABC", "hC", "hD", "hAD"], name="h1"),
         pl.similarly("h1", exchange=(A, B), name="h2"),          # BC² = BD·BA
-        pl.claim(AB == AD + DB, because=["segment addition", "hD"], name="hseg"),
+        pl.claim(AB == AD + DB, because=[geo.segment_addition, "hD"], name="hseg"),
         pl.chain(AC**2 + BC**2, ("=", AD * AB + BD * BA, ["h1", "h2"]),
                  ("=", (AD + DB) * AB, geo.dist_comm), ("=", AB**2, "hseg"))))
 
 print(pythagoras.prose(pythagoras.check()))   # numbered steps, ✔ Checked by Lean
 ```
 
-* **Reasons in words**: `because="AA similarity"` finds the fact; unclear wording is refused
-  with the candidates, never guessed.
+* **Precise reasons, read in words**: each step cites facts by name (`geo.similar_AA`); the
+  printed proof shows them as the textbook says them ("AA similarity").
+  `pl.search_facts("…")` finds a fact by what it says.
 * **Fast feedback**: `thm.check()` keeps Lean running and re-checks in seconds;
   `thm.sanity_check()` finds a false step on random numbers before Lean runs.
 * **Failures in the proof's words**: "Step 3, “…”: Lean could not justify it. Still to

@@ -1,6 +1,7 @@
 """Propositions from Euclid, Book I, as textbook written proofs checked by Lean.
 
-Each proof states its steps and cites the textbook fact behind each one, in words
+Each proof states its steps and cites the textbook fact behind each one by name
+(``geo.angle_add_angle_add_angle_eq_pi``); the printed proof shows the fact in words
 ("the angles of a triangle add up to 180°"). Side conditions a textbook leaves implicit
 (the vertices of a triangle are distinct, ∠ABC = ∠CBA, the order in which a triangle's
 vertices are listed) are supplied by PyLeanX and checked by Lean like everything else.
@@ -27,7 +28,6 @@ from pyleanx.analysis import pi
 
 A, B, C, D, M, N, O = geo.points("A B C D M N O")  # noqa: E741
 ang, dist = geo.angle, geo.dist
-ISOSCELES = "the base angles of an isosceles triangle are equal"
 
 equilateral = pl.Theorem(
     "euclid_equilateral_angles", [A, B, C],
@@ -35,12 +35,12 @@ equilateral = pl.Theorem(
                  "h1": dist(A, B) == dist(A, C), "h2": dist(B, A) == dist(B, C)},
     conclusion=ang(A, B, C) == pi() / 3,
     proof=pl.proof(
-        pl.claim(ang(A, B, C) == ang(A, C, B), because=[ISOSCELES, "h1"],
+        pl.claim(ang(A, B, C) == ang(A, C, B), because=[geo.isosceles_base_angles, "h1"],
                  name="e1"),
-        pl.claim(ang(B, A, C) == ang(B, C, A), because=[ISOSCELES, "h2"],
+        pl.claim(ang(B, A, C) == ang(B, C, A), because=[geo.isosceles_base_angles, "h2"],
                  name="e2"),
         pl.claim(ang(A, B, C) + ang(B, C, A) + ang(C, A, B) == pi(),
-                 because="the angles of a triangle add up to 180°", name="sum"),
+                 because=geo.angle_add_angle_add_angle_eq_pi, name="sum"),
         pl.conclude(because=["e1", "e2", "sum"]),
     ),
 )
@@ -51,7 +51,7 @@ right_triangle = pl.Theorem(
     conclusion=ang(C, A, B) + ang(A, B, C) == pi() / 2,
     proof=pl.proof(
         pl.claim(ang(A, B, C) + ang(B, C, A) + ang(C, A, B) == pi(),
-                 because="the angles of a triangle add up to 180°", name="sum"),
+                 because=geo.angle_add_angle_add_angle_eq_pi, name="sum"),
         pl.conclude(because=["sum", "hC"]),
     ),
 )
@@ -62,10 +62,10 @@ isosceles_right = pl.Theorem(
                  "hiso": dist(C, A) == dist(C, B)},
     conclusion=ang(C, A, B) == pi() / 4,
     proof=pl.proof(
-        pl.claim(ang(C, A, B) == ang(C, B, A), because=[ISOSCELES, "hiso"],
+        pl.claim(ang(C, A, B) == ang(C, B, A), because=[geo.isosceles_base_angles, "hiso"],
                  name="e"),
         pl.claim(ang(A, B, C) + ang(B, C, A) + ang(C, A, B) == pi(),
-                 because="the angles of a triangle add up to 180°", name="sum"),
+                 because=geo.angle_add_angle_add_angle_eq_pi, name="sum"),
         pl.conclude(because=["e", "sum", "hC"]),
     ),
 )
@@ -75,13 +75,13 @@ exterior = pl.Theorem(
     assumptions={"hABC": geo.triangle(A, B, C), "hD": geo.strictly_between(C, B, D)},
     conclusion=ang(A, C, D) == ang(C, A, B) + ang(A, B, C),
     proof=pl.proof(
-        pl.claim(ang(B, C, D) == pi(), because=["straight angle", "hD"], name="hstraight",
+        pl.claim(ang(B, C, D) == pi(), because=[geo.straight_angle, "hD"], name="hstraight",
                  note="C lies between B and D"),
         pl.claim(ang(A, C, B) + ang(A, C, D) == pi(),
-                 because=["angles on a straight line add up to 180°", "hstraight"],
+                 because=[geo.linear_pair, "hstraight"],
                  name="pair"),
         pl.claim(ang(A, B, C) + ang(B, C, A) + ang(C, A, B) == pi(),
-                 because="the angles of a triangle add up to 180°", name="sum"),
+                 because=geo.angle_add_angle_add_angle_eq_pi, name="sum"),
         pl.conclude(because=["pair", "sum"]),
     ),
 )
@@ -91,9 +91,9 @@ vertical = pl.Theorem(
     assumptions={"hAB": geo.strictly_between(O, A, B), "hCD": geo.strictly_between(O, C, D)},
     conclusion=ang(A, O, C) == ang(B, O, D),
     proof=pl.proof(
-        pl.claim(ang(A, O, B) == pi(), because=["straight angle", "hAB"], name="h1"),
-        pl.claim(ang(C, O, D) == pi(), because=["straight angle", "hCD"], name="h2"),
-        pl.conclude(because=["vertical angles are equal", "h1", "h2"]),
+        pl.claim(ang(A, O, B) == pi(), because=[geo.straight_angle, "hAB"], name="h1"),
+        pl.claim(ang(C, O, D) == pi(), because=[geo.straight_angle, "hCD"], name="h2"),
+        pl.conclude(because=[geo.vertical_angles, "h1", "h2"]),
     ),
 )
 
@@ -104,9 +104,9 @@ midsegment = pl.Theorem(
                       dist(M, N) == dist(B, C) / 2),
     proof=pl.proof(
         pl.claim(geo.parallel(geo.line(M, N), geo.line(B, C)),
-                 because=["midsegment parallel to the third side", "hM", "hN"], name="hpar"),
+                 because=[geo.midsegment_parallel, "hM", "hN"], name="hpar"),
         pl.claim(dist(M, N) == dist(B, C) / 2,
-                 because=["midsegment half the third side", "hM", "hN"], name="hlen"),
+                 because=[geo.midsegment_length, "hM", "hN"], name="hlen"),
         pl.conclude(because=["hpar", "hlen"]),
     ),
 )
@@ -118,11 +118,11 @@ median_bisects = pl.Theorem(
     conclusion=ang(M, A, B) == ang(M, A, C),
     proof=pl.proof(
         pl.claim(dist(B, M) == dist(C, M),
-                 because="the midpoint divides a segment into equal halves"),
-        pl.claim(geo.congruent((B, M, A), (C, M, A)), because="SSS",
+                 because=geo.midpoint_equal_halves),
+        pl.claim(geo.congruent((B, M, A), (C, M, A)), because=geo.sss,
                  note="SSS: BM = CM, MA = MA, AB = AC", name="hcong"),
-        # "by CPCTC": the family of corresponding parts, cited by its label
-        pl.conclude(because=["corresponding parts of congruent triangles (CPCTC)", "hcong"]),
+        # "by CPCTC": the family of corresponding parts; Lean uses the part it needs
+        pl.conclude(because=[geo.cpctc, "hcong"]),
     ),
 )
 

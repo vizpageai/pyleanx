@@ -42,6 +42,11 @@ see [docs/stability.md](docs/stability.md)).
   benchmark proofs, 28 are now tried on samples (18 before), with no finding on any of them.
 
 ### Changed
+- Proofs cite facts by name (`because=[geo.sss, "h"]`); the examples, tutorials and README
+  no longer cite by description. `geo.cpctc` is the CPCTC family as one name, and `because=`
+  accepts such a group. Descriptions remain a way to *find* facts (`pl.search_facts`,
+  `pyleanx facts`) and are still accepted in `because=` for exploring. Generated Lean is
+  unchanged (each description named exactly the fact now cited).
 - The gap filler tries "lemma applied to a cited fact" only when a step cites at most about a
   dozen facts; a step citing dozens of facts hit Lean's per-declaration time limit.
 - CI runs the Lean integration tests, every example script and the naturalness benchmark as

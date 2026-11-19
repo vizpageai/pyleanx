@@ -357,7 +357,8 @@ See the tutorial [Writing proofs like a mathematician](tutorials/written-proofs.
 | `pl.Theorem(…, avoid=[lemmas])` | `simp [-lemma]` in gap fillers, plus a Lean check that fails if the proof term refers to them |
 | `thm.prose(result=None)`, `pl.prose(thm, result)` | the proof as numbered, nested steps (text / Jupyter) |
 | `pl.similarly("h1", exchange=(A, B), name="h2")`, `replace=(x, e)` or a list of pairs | the step `h1` again with the substitution (statement, reasons, sub-proof); hypotheses renamed to the exchanged ones |
-| `because="AA similarity"` (any reason containing a space, or a one-word label such as `"SSS"`) | the fact with that description (`pl.fact`, `pl.search_facts`); unclear descriptions are refused with candidates; every label is in [Citable facts](facts.md) |
+| `because=[geo.similar_AA, "hABC"]`; a family: `because=[geo.cpctc, "h"]` | facts by name (the form to use in kept proofs), hypotheses and steps by their names; every fact's name and label is in [Citable facts](facts.md) |
+| `pl.search_facts("similar triangles")`, `pl.fact("…")` | find a fact by what it says (also accepted in `because=` for exploring: a description, or a one-word label such as `"SSS"`; unclear ones are refused with candidates) |
 
 The gap filler uses cited facts directly, applies them (discharging side conditions from the
 context), uses one half of a cited `∧`/`↔`, and tries `simp`/`norm_num`/`linarith`/

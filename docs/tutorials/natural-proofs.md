@@ -106,29 +106,31 @@ typo: a step cites 'hz', but no hypothesis or step of the proof is called 'hz'. 
 mean hx? (Names available: hx.)
 ```
 
-## Cite facts by what they say
+## Cite facts by name; find them by what they say
 
-A reason that contains a space is a description of a fact, not a name (so is a fact's
-one-word label, such as `"SSS"` or `"SAS"`):
+A proof cites each fact by its precise name, the way code names a function:
 
 ```py
-pl.claim(geo.similar((B, A, C), (C, A, D)), because=["AA similarity", "hABC", "hA"])
-pl.claim(AB == AD + DB, because=["segment addition", "hD"])
+pl.claim(geo.similar((B, A, C), (C, A, D)), because=[geo.similar_AA, "hABC", "hA"])
+pl.claim(AB == AD + DB, because=[geo.segment_addition, "hD"])
 pl.claim(ang(A, B, C) + ang(B, C, A) + ang(C, A, B) == pi(),
-         because="the angles of a triangle add up to 180°")
+         because=geo.angle_add_angle_add_angle_eq_pi)
 ```
 
-The description is matched against the printed labels and names of the facts every domain
-module provides. A description that is exactly a fact's label or name selects it. If two
-facts fit about equally well, the step is refused with the candidates listed, so a
-description never silently picks the wrong fact. The [list of citable facts](../facts.md) shows every
-label. `pl.search_facts("…")` lists the best
-matches and `pl.fact("…")` returns one.
+The printed proof shows each fact in words ("AA similarity", "the angles of a triangle add
+up to 180°"), so the reader sees the textbook reason and the code stays unambiguous.
 
 Some facts come as a family under one name, as in a textbook: "by CPCTC" means whichever
-corresponding part is needed. A description that is exactly such a family's label
-(`because="corresponding parts of congruent triangles (CPCTC)"`) cites all of its
-members, and Lean uses the one that fits; the proof names the family once.
+corresponding part is needed. `geo.cpctc` is that family (its six parts);
+`because=[geo.cpctc, "hcong"]` cites all of them, Lean uses the one that fits, and the
+printed proof names the family once.
+
+To *find* a fact, search by what it says: `pl.search_facts("similar triangles proportional
+sides")` lists the best matches with their names, `pyleanx facts AA similarity` does the
+same from the shell, and the [list of citable facts](../facts.md) shows every name with its
+label. (`because=` also accepts a fact's description or exact label, for exploring in a
+notebook; an unclear description is refused with the candidates. Proofs that are kept
+should cite names.)
 
 ## "Similarly"
 

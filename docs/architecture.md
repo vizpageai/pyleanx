@@ -96,7 +96,7 @@ theorem/project imports. `import_mode="mathlib"` emits `import Mathlib` instead.
 ## Natural proofs (0.1)
 
 ```
- written proof (pl.claim / pl.similarly / because="AA similarity")
+ written proof (pl.claim / pl.similarly / because=geo.similar_AA)
         │ fact_search.py: description → library Name (exact label/name, else ranked,
         │                 refused when unclear)
         │ proofs.resolve_similarly: earlier step + substitution, hypotheses renamed

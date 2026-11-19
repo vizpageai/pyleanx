@@ -20,7 +20,7 @@ def _pyth() -> pl.Theorem:
         proof=pl.proof(
             pl.choose(D, such_that=pl.And(geo.strictly_between(D, A, B),
                                           geo.right_angle(A, D, C), geo.right_angle(B, D, C)),
-                      because=["drop the altitude to the hypotenuse", "hABC", "hC"],
+                      because=[geo.altitude_to_hypotenuse, "hABC", "hC"],
                       names="hD hAD hBD"),
             pl.claim(AC ** 2 == AD * AB, because=["hABC", "hC", "hD", "hAD"], name="h1"),
             pl.similarly("h1", exchange=(A, B), name="h2"),

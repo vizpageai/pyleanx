@@ -5,7 +5,7 @@ with |aₙ − A| < ε/2 for n ≥ N₁ … Hence |aₙ + bₙ − (A + B)| < ε
 exactly that, in any area of mathematics, and Lean checks every step.
 
 While writing, check with `thm.check()` (seconds after the first run), catch false steps
-with `thm.sanity_check()`, cite facts by description (`because="AA similarity"`) and
+with `thm.sanity_check()`, find facts by what they say (`pl.search_facts`) and
 repeat a step by symmetry with `pl.similarly`: see
 [Fast feedback and natural steps](natural-proofs.md).
 

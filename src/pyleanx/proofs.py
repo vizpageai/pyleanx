@@ -1032,6 +1032,8 @@ def _facts(because: object) -> tuple[Term, ...]:
     if because is None:
         return ()
     items = list(because) if isinstance(because, (list, tuple)) else [because]
+    while any(isinstance(f, (list, tuple)) for f in items):  # a family (geo.cpctc) inside
+        items = [g for f in items for g in (f if isinstance(f, (list, tuple)) else [f])]
     out: list[Term] = []
     for f in items:
         if isinstance(f, Claim):

@@ -740,11 +740,16 @@ from ._geometry_textbook import *  # noqa: E402, F403
 
 LEMMAS = collect_lemmas(globals())
 
+#: corresponding parts of congruent triangles (CPCTC): the six parts as one family. Cite
+#: ``because=[geo.cpctc, "hcong"]``; Lean uses whichever part the step needs.
+cpctc = (cpctc_ab, cpctc_bc, cpctc_ca, cpctc_angle_a, cpctc_angle_b,  # noqa: F405
+         cpctc_angle_c)  # noqa: F405
+
 __all__ = ["Point", "point", "points", "dist", "angle", "line", "parallel", "on_segment",
            "collinear", "triangle", "similar", "strictly_between", "extend_beyond",
            "perpendicular", "on_line",
            "segment_addition", "cross_multiply", "flip_ratio", "split_fraction",
            "congruent", "midpoint", "right_angle", "on_circle", "parallelogram",
            "is_midpoint", "opposite_sides", "same_side", "concyclic",
-           "LEMMAS", "VERIFIED_MATHLIB",
+           "LEMMAS", "VERIFIED_MATHLIB", "cpctc",
            "CATALOG_VERSION", *LEMMAS]
