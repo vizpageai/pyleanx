@@ -5,7 +5,9 @@ Before Lean spends minutes on a proof, try the statement and each step on random
     report = thm.sanity_check()
     print(report)      # "Step 3 looks false: with x = 1.5, y = -2 ... |x + y| ≤ |x| is 0.5 ≤ ..."
 
-Variables of sort ℝ, ℕ, ℤ and points of the plane are sampled at random; samples that
+Variables of sort ℝ, ℕ and ℤ are sampled at random, and so are the sorts a domain pack
+registers (the geometry pack: points of the plane, with its constructions of figures; see
+``register_sampler``, ``register_apply``, ``register_construction``); samples that
 violate a hypothesis are discarded. A step that evaluates to false on a sample satisfying
 all hypotheses (and every earlier step) is reported with that sample: it cannot be proved
 as stated. When nothing can be evaluated (functions, sets, integrals, quantifiers, or
@@ -22,7 +24,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .expr import App, BinOp, Cast, Compare, Expr, Lit, Logic, Neg, NotP, PropConst, Quant, Var
-from .terms import Apply, Const, TypeTerm
+from .terms import Apply, Const
 
 _TOL = 1e-7
 
@@ -35,89 +37,15 @@ def _close(a: float, b: float) -> bool:
     return abs(a - b) <= _TOL * max(1.0, abs(a), abs(b))
 
 
-def _point(v: Any) -> tuple[float, float]:
-    if isinstance(v, tuple) and len(v) == 2:
-        return v
-    raise Unsupported("not a point")
+def _vector_distance(a: Any, b: Any) -> float:
+    """Distance of two vector values (points), for comparing them."""
+    if not (isinstance(a, tuple) and isinstance(b, tuple) and len(a) == len(b)):
+        raise Unsupported("not a point")
+    return math.dist(a, b)
 
 
-def _dist(a: Any, b: Any) -> float:
-    if isinstance(a, tuple):
-        (x1, y1), (x2, y2) = _point(a), _point(b)
-        return math.hypot(x1 - x2, y1 - y2)
-    return abs(float(a) - float(b))
-
-
-def _angle(a: Any, b: Any, c: Any) -> float:
-    (ax, ay), (bx, by), (cx, cy) = _point(a), _point(b), _point(c)
-    u, v = (ax - bx, ay - by), (cx - bx, cy - by)
-    nu, nv = math.hypot(*u), math.hypot(*v)
-    if nu == 0 or nv == 0:
-        return math.pi / 2  # Mathlib's convention for a zero vector
-    cos = max(-1.0, min(1.0, (u[0] * v[0] + u[1] * v[1]) / (nu * nv)))
-    return math.acos(cos)
-
-
-def _set_points(e: Expr, env: dict[int, Any]) -> list[Any]:
-    """The elements of ``insert a (insert b (singleton c))``."""
-    if isinstance(e, Apply) and isinstance(e.fn, Const):
-        if e.fn.name == "singleton" and len(e.args) == 1:
-            return [evaluate(e.args[0], env)]
-        if e.fn.name == "insert" and len(e.args) == 2:
-            return [evaluate(e.args[0], env), *_set_points(e.args[1], env)]
-    raise Unsupported("set")
-
-
-@dataclass(frozen=True)
-class _Line:
-    """The line through two points (as a value of the evaluator)."""
-
-    points: tuple[tuple[float, float], ...]
-
-    @property
-    def direction(self) -> tuple[float, float]:
-        if len(self.points) < 2:
-            return (0.0, 0.0)
-        (x0, y0), (x1, y1) = self.points[0], self.points[1]
-        return (x1 - x0, y1 - y0)
-
-
-def _line(v: Any) -> _Line:
-    if isinstance(v, _Line):
-        return v
-    raise Unsupported("not a line")
-
-
-def _zero(u: tuple[float, float]) -> bool:
-    return math.hypot(*u) <= _TOL
-
-
-def _collinear(pts: list[Any]) -> bool:
-    ps = [_point(p) for p in pts]
-    if len(ps) < 3:
-        return True
-    (x0, y0) = ps[0]
-    for (x1, y1) in ps[1:]:
-        for (x2, y2) in ps[1:]:
-            if abs((x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0)) > 1e-9:
-                return False
-    return True
-
-
-def _between(a: Any, p: Any, b: Any, strict: bool) -> bool:
-    (ax, ay), (px, py), (bx, by) = _point(a), _point(p), _point(b)
-    if not _collinear([a, p, b]):
-        return False
-    dx, dy = bx - ax, by - ay
-    n = dx * dx + dy * dy
-    if n == 0:
-        return (px, py) == (ax, ay) and not strict
-    t = ((px - ax) * dx + (py - ay) * dy) / n
-    if strict:
-        return 1e-12 < t < 1 - 1e-12
-    return -1e-12 <= t <= 1 + 1e-12
-
-
+# --- what packs register --------------------------------------------------------------
+#: functions by Lean name (an ``App``): the numeric prelude here; packs add theirs
 _FUNCS: dict[str, Any] = {
     "abs": lambda x: abs(x),
     "min": lambda a, b: min(a, b),
@@ -128,9 +56,56 @@ _FUNCS: dict[str, Any] = {
     "Real.sin": math.sin,
     "Real.cos": math.cos,
     "Real.pi": lambda: math.pi,
-    "dist": _dist,
-    "EuclideanGeometry.angle": _angle,
 }
+#: constant-headed applications (``Apply``) by head name: handler(args, env) -> value, or
+#: ``NotImplemented`` when the handler does not apply to these arguments
+_APPLY: dict[str, Any] = {}
+#: samplers of values by sort name: sampler(rng) -> value
+_SAMPLERS: dict[str, Any] = {}
+#: construction hooks, in registration order (see :class:`Construction`)
+_CONSTRUCTIONS: dict[str, Any] = {}
+
+
+def register_function(lean_name: str, fn: Any) -> None:
+    """Evaluate applications of the function ``lean_name`` with ``fn`` (on values)."""
+    _FUNCS[lean_name] = fn
+
+
+def register_apply(head: str, handler: Any) -> None:
+    """Evaluate ``head args…`` (a constant applied to terms) with ``handler(args, env)``;
+    the handler returns ``NotImplemented`` for arguments it does not handle."""
+    _APPLY[head] = handler
+
+
+def register_sampler(sort_name: str, sampler: Any) -> None:
+    """Draw random values of a sort with ``sampler(rng)``."""
+    _SAMPLERS[sort_name] = sampler
+
+
+def register_construction(hook: Any, *, name: str) -> None:
+    """Add a construction hook (registering ``name`` again replaces it).
+
+    A hook has ``setup(c) -> state``, ``before_pass(c, state)``, ``first(h) -> bool``
+    (hypotheses to handle before the others) and ``place(c, state, i, h) -> bool``
+    (handle hypothesis ``i``; True when it applied). See :class:`Construction`.
+    """
+    _CONSTRUCTIONS[name] = hook
+
+
+@dataclass
+class Construction:
+    """What a construction hook sees while a sample is drawn."""
+
+    hyps: list[Expr]                # the hypotheses, split at ∧
+    env: dict[int, Any]             # variable uid -> value (filled in place)
+    rng: random.Random
+    uses: dict[int, int]            # how many hypotheses mention each variable
+    owner: dict[int, int] = field(default_factory=dict)  # uid -> hypothesis that placed it
+
+    def may_place(self, uid: int, i: int) -> bool:
+        """May hypothesis ``i`` place variable ``uid``? (One placed by another hypothesis
+        is not moved again.)"""
+        return self.owner.setdefault(uid, i) == i
 
 
 def evaluate(e: Expr, env: dict[int, Any]) -> Any:
@@ -174,7 +149,7 @@ def evaluate(e: Expr, env: dict[int, Any]) -> Any:
         a, b = evaluate(e.lhs, env), evaluate(e.rhs, env)
         if isinstance(a, tuple) or isinstance(b, tuple):
             if e.op in ("eq", "ne"):
-                same = _dist(a, b) <= 1e-9
+                same = _vector_distance(a, b) <= 1e-9
                 return same if e.op == "eq" else not same
             raise Unsupported("point comparison")
         if any(isinstance(x, float) and math.isnan(x) for x in (a, b)):
@@ -197,33 +172,11 @@ def evaluate(e: Expr, env: dict[int, Any]) -> Any:
         if e.op == "iff":
             return a == evaluate(e.rhs, env)
     if isinstance(e, Apply) and isinstance(e.fn, Const):
-        name, args = e.fn.name, e.args
-        if name in ("Sbtw", "Wbtw") and len(args) == 4 and isinstance(args[0], TypeTerm):
-            a, p, b = (evaluate(x, env) for x in args[1:])
-            return _between(a, p, b, strict=name == "Sbtw")
-        if name == "Collinear" and len(args) == 2:
-            return _collinear(_set_points(args[1], env))
-        if name == "dist" and len(args) == 2:
-            return _dist(evaluate(args[0], env), evaluate(args[1], env))
-        if name == "affineSpan" and len(args) == 2:  # line[ℝ, a, b]
-            return _Line(tuple(_point(p) for p in _set_points(args[1], env)))
-        if name == "AffineSubspace.direction" and len(args) == 1:
-            return evaluate(args[0], env)  # a line stands for its direction here
-        if name == "AffineSubspace.Parallel" and len(args) == 2:
-            u, v = _line(evaluate(args[0], env)).direction, _line(evaluate(args[1], env)).direction
-            if _zero(u) or _zero(v):
-                return _zero(u) and _zero(v)   # two points are parallel; a point and a line not
-            return _close(u[0] * v[1] - u[1] * v[0], 0.0)
-        if name == "Submodule.IsOrtho" and len(args) == 2:
-            u, v = _line(evaluate(args[0], env)).direction, _line(evaluate(args[1], env)).direction
-            return _close(u[0] * v[0] + u[1] * v[1], 0.0)
-        if name == "Membership.mem" and len(args) == 2:
-            s = evaluate(args[0], env)
-            if isinstance(s, _Line):
-                return _collinear([*s.points, evaluate(args[1], env)])
-        if name == "midpoint" and len(args) == 3 and isinstance(args[0], TypeTerm):
-            (x1, y1), (x2, y2) = _point(evaluate(args[1], env)), _point(evaluate(args[2], env))
-            return ((x1 + x2) / 2, (y1 + y2) / 2)
+        handler = _APPLY.get(e.fn.name)
+        if handler is not None:
+            value = handler(e.args, env)
+            if value is not NotImplemented:
+                return value
     if isinstance(e, Quant):
         raise Unsupported("quantifier")
     raise Unsupported(type(e).__name__)
@@ -247,8 +200,9 @@ def _sample(sort_name: str, rng: random.Random) -> Any:
         return float(rng.randint(0, 12))
     if sort_name == "Int":
         return float(rng.randint(-10, 10))
-    if sort_name == "Point":
-        return (rng.uniform(-5, 5), rng.uniform(-5, 5))
+    sampler = _SAMPLERS.get(sort_name)
+    if sampler is not None:
+        return sampler(rng)
     raise Unsupported(sort_name)
 
 
@@ -339,93 +293,28 @@ def _detail(prop: Expr, env: dict[int, Any]) -> str:
 
 
 def _construct(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> None:
-    """Place points the hypotheses determine, as one draws a figure: D strictly between A and
-    B goes on the segment; ``M = midpoint(A, B)`` and any ``x = expression`` are computed.
-    (Every hypothesis is still evaluated afterwards; nothing is assumed.)"""
+    """Place the values the hypotheses determine, as one draws a figure: any
+    ``x = expression`` is computed, and registered construction hooks place the rest (the
+    geometry pack: a point strictly between A and B goes on the segment, …). Every
+    hypothesis is still evaluated afterwards; nothing is assumed."""
     hyps = list(_conjuncts(hyps))
-    uses = _uses(hyps)
-    owner: dict[int, int] = {}  # point -> the hypothesis that placed it (no other moves it)
-
-    def may_place(uid: int, i: int) -> bool:
-        if owner.setdefault(uid, i) != i:
-            return False
-        return True
-
-    # a point on two circles (|AB| = |AC| and |BA| = |BC|: an equilateral triangle's apex) is
-    # placed at one of their intersections; the hypotheses involved do not move it again
-    circles: dict[int, list[tuple[int, tuple[Any, Any, Var]]]] = {}
-    for i, h in enumerate(hyps):
-        for eq in _all_equal_lengths(h):
-            circles.setdefault(eq[2].uid, []).append((i, eq))
-    two_circles = {uid: cs for uid, cs in circles.items()
-                   if len({c[1][0]._key() for c in cs}) >= 2}
-    on_two_circles = {i for cs in two_circles.values() for i, _ in cs}
-
-    for _ in range(2):  # a second pass resolves points defined from constructed points
-        _place_on_parallels(hyps, env, rng)
-        for uid, cs in two_circles.items():
-            try:
-                (_, (c1_, q1_, _)), (_, (c2_, q2_, _)) = cs[0], next(
-                    c for c in cs[1:] if c[1][0]._key() != cs[0][1][0]._key())
-                c1, q1 = _point(evaluate(c1_, env)), _point(evaluate(q1_, env))
-                c2, q2 = _point(evaluate(c2_, env)), _point(evaluate(q2_, env))
-                hit = _circle_meet(c1, math.dist(c1, q1), c2, math.dist(c2, q2), rng)
-                if hit is not None:
-                    env[uid] = hit
-                    owner[uid] = -1
-            except (Unsupported, ValueError, ZeroDivisionError, OverflowError, StopIteration):
-                continue
-        # right angles first: a point that is also equidistant is then placed by both
-        order = sorted(range(len(hyps)), key=lambda j: not _right_angle_shape(hyps[j]))
+    c = Construction(hyps, env, rng, _uses(hyps))
+    hooks = [(hook, hook.setup(c)) for hook in _CONSTRUCTIONS.values()]
+    for _ in range(2):  # a second pass resolves values defined from constructed ones
+        for hook, state in hooks:
+            hook.before_pass(c, state)
+        order = sorted(range(len(hyps)),
+                       key=lambda j: not any(hook.first(hyps[j]) for hook, _ in hooks))
         for i in order:
             h = hyps[i]
             try:
-                between = (isinstance(h, Apply) and isinstance(h.fn, Const)
-                           and h.fn.name in ("Sbtw", "Wbtw") and len(h.args) == 4
-                           and isinstance(h.args[2], Var))
-                defines = (isinstance(h, Compare) and h.op == "eq"
-                           and isinstance(h.lhs, Var) and h.lhs.uid not in _free_uids(h.rhs))
-                if between:
-                    assert isinstance(h, Apply) and isinstance(h.fn, Const)
-                    a_, p, b_ = h.args[1], h.args[2], h.args[3]
-                    assert isinstance(p, Var)
-                    if may_place(p.uid, i):
-                        a, b = _point(evaluate(a_, env)), _point(evaluate(b_, env))
-                        t = rng.uniform(0.05, 0.95) if h.fn.name == "Sbtw" else rng.random()
-                        env[p.uid] = (a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]))
-                    else:
-                        # the middle point is already placed (vertical angles: O between A
-                        # and B, and between C and D): put an end beyond it instead
-                        for near, far in ((a_, b_), (b_, a_)):
-                            if isinstance(far, Var) and may_place(far.uid, i):
-                                n, m = _point(evaluate(near, env)), _point(env[p.uid])
-                                s = rng.uniform(0.3, 2.0)
-                                env[far.uid] = (m[0] + s * (m[0] - n[0]), m[1] + s * (m[1] - n[1]))
-                                break
-                elif defines:
-                    assert isinstance(h, Compare) and isinstance(h.lhs, Var)
+                if (isinstance(h, Compare) and h.op == "eq" and isinstance(h.lhs, Var)
+                        and h.lhs.uid not in _free_uids(h.rhs)):
                     env[h.lhs.uid] = evaluate(h.rhs, env)
-                elif (equal := _equal_lengths(h, uses)) is not None:
-                    # |PQ| = |PR|: R goes on the circle about P through Q (an isosceles
-                    # triangle is drawn this way)
-                    centre, through, free = equal
-                    if i in on_two_circles or not may_place(free.uid, i):
-                        continue
-                    c, q = _point(evaluate(centre, env)), _point(evaluate(through, env))
-                    r, phi = math.dist(c, q), rng.uniform(0, 2 * math.pi)
-                    env[free.uid] = (c[0] + r * math.cos(phi), c[1] + r * math.sin(phi))
-                elif (right := _right_angle(h, env)) is not None:
-                    # ∠PVQ = 90°: Q goes on the perpendicular to VP at V; at distance |VP|
-                    # if the legs are also equal (an isosceles right triangle)
-                    p_, v_, free = right
-                    if not may_place(free.uid, i):
-                        continue
-                    px, py = _point(evaluate(p_, env))
-                    vx, vy = _point(evaluate(v_, env))
-                    equal_legs = any(_same_pair(_equal_lengths(g, uses, any_free=True),
-                                                v_, p_, free) for g in hyps)
-                    s = rng.choice((-1, 1)) * (1.0 if equal_legs else rng.uniform(0.3, 2.0))
-                    env[free.uid] = (vx - s * (py - vy), vy + s * (px - vx))
+                    continue
+                for hook, state in hooks:
+                    if hook.place(c, state, i, h):
+                        break
             except (Unsupported, ValueError, ZeroDivisionError, OverflowError):
                 continue
 
@@ -438,159 +327,6 @@ def _conjuncts(hyps: Iterable[Expr]) -> Iterable[Expr]:
             yield h
 
 
-def _line_ends(e: Any) -> tuple[Any, Any] | None:
-    """The two point expressions of ``line[ℝ, a, b]``."""
-    if (isinstance(e, Apply) and isinstance(e.fn, Const) and e.fn.name == "affineSpan"
-            and len(e.args) == 2):
-        s = e.args[1]
-        if (isinstance(s, Apply) and isinstance(s.fn, Const) and s.fn.name == "insert"
-                and isinstance(s.args[1], Apply) and isinstance(s.args[1].fn, Const)
-                and s.args[1].fn.name == "singleton"):
-            return s.args[0], s.args[1].args[0]
-    return None
-
-
-def _parallel_constraint(h: Any) -> tuple[Var, Any, Any, Any] | None:
-    """For ``line(P, Q) ∥ line(R, X)`` (any order) with X a point variable: (X, R, P, Q):
-    X lies on the line through R in the direction Q − P."""
-    if not (isinstance(h, Apply) and isinstance(h.fn, Const)
-            and h.fn.name == "AffineSubspace.Parallel" and len(h.args) == 2):
-        return None
-    l1, l2 = _line_ends(h.args[0]), _line_ends(h.args[1])
-    if l1 is None or l2 is None:
-        return None
-    for (p, q), (r, x) in ((l1, l2), (l1, l2[::-1]), (l2, l1), (l2, l1[::-1])):
-        if isinstance(x, Var) and all(x.uid not in _free_uids(e) for e in (p, q, r)):
-            return x, r, p, q
-    return None
-
-
-def _place_on_parallels(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> None:
-    """A point on a line parallel to another goes on that parallel through its partner; with
-    two such lines (a parallelogram's fourth vertex) it goes where they meet."""
-    by_point: dict[int, list[tuple[Var, Any, Any, Any]]] = {}
-    for h in hyps:
-        c = _parallel_constraint(h)
-        if c is not None:
-            by_point.setdefault(c[0].uid, []).append(c)
-    for uid, cons in by_point.items():
-        try:
-            lines = []
-            for _, r, p, q in cons[:2]:
-                (rx, ry), (px, py), (qx, qy) = (_point(evaluate(e, env)) for e in (r, p, q))
-                lines.append(((rx, ry), (qx - px, qy - py)))
-            if len(lines) == 1:
-                (rx, ry), (ux, uy) = lines[0]
-                t = rng.choice((-1, 1)) * rng.uniform(0.3, 2.0)
-                env[uid] = (rx + t * ux, ry + t * uy)
-                continue
-            ((ax, ay), (ux, uy)), ((bx, by), (vx, vy)) = lines
-            det = ux * vy - uy * vx
-            if abs(det) <= _TOL:
-                continue
-            t = ((bx - ax) * vy - (by - ay) * vx) / det
-            env[uid] = (ax + t * ux, ay + t * uy)
-        except (Unsupported, ValueError, ZeroDivisionError, OverflowError):
-            continue
-
-
-def _right_angle(h: Any, env: dict[int, Any]) -> tuple[Any, Any, Var] | None:
-    """For ``∠PVQ = π/2`` (either side) with Q, or else P, a point variable: (P, V, free)."""
-    if not (isinstance(h, Compare) and h.op == "eq"):
-        return None
-    for ang, other in ((h.lhs, h.rhs), (h.rhs, h.lhs)):
-        if not (isinstance(ang, App) and ang.func.lean_name == "EuclideanGeometry.angle"
-                and len(ang.args) == 3):
-            continue
-        if _free_uids(other):
-            continue
-        try:
-            if not _close(float(evaluate(other, env)), math.pi / 2):
-                continue
-        except (Unsupported, TypeError, ValueError):
-            continue
-        p, v, q = ang.args
-        for a, b in ((p, q), (q, p)):
-            if isinstance(b, Var) and b.uid not in _free_uids(a) | _free_uids(v):
-                return a, v, b
-    return None
-
-
-def _equal_lengths(h: Any, uses: dict[int, int] | None = None,
-                   any_free: bool = False) -> tuple[Any, Any, Var] | None:
-    """For ``|PQ| = |PR|`` (endpoints in any order, either side) with R a point variable:
-    (P, Q, R). Of two candidate R, the one fewer hypotheses mention is moved (so a point
-    that also defines others, like A in ``O = midpoint(A, B)``, stays where it is)."""
-    del any_free  # kept for call sites that only test the shape
-
-    def ends(e: Any) -> tuple[Any, Any] | None:
-        if isinstance(e, App) and e.func.lean_name == "dist" and len(e.args) == 2:
-            return e.args[0], e.args[1]
-        return None
-
-    if not (isinstance(h, Compare) and h.op == "eq"):
-        return None
-    left, right = ends(h.lhs), ends(h.rhs)
-    if left is None or right is None:
-        return None
-    found: list[tuple[Any, Any, Var]] = []
-    for a, b in ((left, right), (right, left)):
-        for p, q in (a, a[::-1]):
-            for p2, r in (b, b[::-1]):
-                if (p._key() == p2._key() and isinstance(r, Var)
-                        and r.uid not in _free_uids(p) and r.uid not in _free_uids(q)):
-                    found.append((p, q, r))
-    if not found:
-        return None
-    counts = uses or {}
-    return min(found, key=lambda f: counts.get(f[2].uid, 0))
-
-
-def _all_equal_lengths(h: Any) -> list[tuple[Any, Any, Var]]:
-    """Every reading of ``|PQ| = |PR|`` as "R on the circle about P through Q"."""
-    def ends(e: Any) -> tuple[Any, Any] | None:
-        if isinstance(e, App) and e.func.lean_name == "dist" and len(e.args) == 2:
-            return e.args[0], e.args[1]
-        return None
-
-    if not (isinstance(h, Compare) and h.op == "eq"):
-        return []
-    left, right = ends(h.lhs), ends(h.rhs)
-    if left is None or right is None:
-        return []
-    out = []
-    for a, b in ((left, right), (right, left)):
-        for p, q in (a, a[::-1]):
-            for p2, r in (b, b[::-1]):
-                if (p._key() == p2._key() and isinstance(r, Var)
-                        and r.uid not in _free_uids(p) and r.uid not in _free_uids(q)):
-                    out.append((p, q, r))
-    return out
-
-
-def _circle_meet(c1: tuple[float, float], r1: float, c2: tuple[float, float], r2: float,
-                 rng: random.Random) -> tuple[float, float] | None:
-    """One of the (at most two) intersections of two circles, chosen at random."""
-    d = math.dist(c1, c2)
-    if d <= _TOL or d > r1 + r2 or d < abs(r1 - r2):
-        return None
-    a = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
-    h = math.sqrt(max(r1 * r1 - a * a, 0.0))
-    ux, uy = (c2[0] - c1[0]) / d, (c2[1] - c1[1]) / d
-    mx, my = c1[0] + a * ux, c1[1] + a * uy
-    s = rng.choice((-1, 1))
-    return (mx - s * h * uy, my + s * h * ux)
-
-
-def _same_pair(eq: tuple[Any, Any, Var] | None, v: Any, p: Any, q: Var) -> bool:
-    """Does ``eq`` (from :func:`_equal_lengths`) say |VP| = |VQ|?"""
-    if eq is None:
-        return False
-    centre, a, b = eq
-    return (centre._key() == v._key()
-            and {a._key(), b._key()} == {p._key(), q._key()})
-
-
 def _uses(hyps: list[Expr]) -> dict[int, int]:
     """How many hypotheses mention each variable."""
     out: dict[int, int] = {}
@@ -598,12 +334,6 @@ def _uses(hyps: list[Expr]) -> dict[int, int]:
         for uid in _free_uids(h):
             out[uid] = out.get(uid, 0) + 1
     return out
-
-
-def _right_angle_shape(h: Any) -> bool:
-    return isinstance(h, Compare) and h.op == "eq" and any(
-        isinstance(s, App) and s.func.lean_name == "EuclideanGeometry.angle"
-        for s in (h.lhs, h.rhs))
 
 
 def _free_uids(e: Any) -> set[int]:

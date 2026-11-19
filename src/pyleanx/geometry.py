@@ -58,6 +58,7 @@ def point(name: str) -> Var:
 # Justification rules of plane geometry (see pyleanx.justify): what a textbook leaves
 # implicit. They apply only to theorems about points.
 # -------------------------------------------------------------------------------------
+from . import _geometry_numeric  # noqa: E402, F401 - points in the numeric sanity check
 from . import justify as _j  # noqa: E402
 
 _j.register_pack("geometry", sorts={"Point"})

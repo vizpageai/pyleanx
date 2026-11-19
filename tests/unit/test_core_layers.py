@@ -14,7 +14,7 @@ SRC = ROOT / "src" / "pyleanx"
 CORE = ["types", "expr", "terms", "binders", "defs", "names", "errors", "_origin", "proofs",
         "theorem", "imports", "render/lean", "render/sourcemap", "backend/interface",
         "backend/audit", "backend/cache", "backend/subprocess_backend",
-        "backend/repl_check", "project", "justify", "derivation", "ops"]
+        "backend/repl_check", "project", "justify", "derivation", "ops", "numeric"]
 #: domain packs (vocabulary, facts, rules); built on the core, never imported by it
 DOMAINS = {"geometry", "analysis", "algebra", "numbers", "complex_analysis", "harmonic",
            "hilbert", "realvar", "_geometry_textbook", "_analysis_textbook"}
