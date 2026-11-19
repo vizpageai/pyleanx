@@ -26,10 +26,36 @@ from functools import lru_cache
 
 from .errors import TacticError
 
-#: (module, prefix used when printing a candidate)
-_DOMAINS = (("geometry", "geo"), ("realvar", "rv"), ("analysis", "an"), ("algebra", "alg"),
-            ("numbers", "nt"), ("complex_analysis", "ca"), ("harmonic", "ha"),
-            ("hilbert", "hil"))
+
+@dataclass(frozen=True)
+class Domain:
+    """A module whose ``LEMMAS`` are citable by description."""
+
+    module: str   # importable module name
+    prefix: str   # printed before a fact's Python name ("geo.similar_AA")
+    title: str    # heading in the list of citable facts
+
+
+#: registered domains, in the order their facts are listed (see pyleanx.packs)
+_REGISTRY: dict[str, Domain] = {}
+
+
+def register_domain(module: str, *, prefix: str, title: str = "") -> Domain:
+    """Make the ``LEMMAS`` of ``module`` citable by description (registering a module again
+    replaces it). The built-in domain packs are registered in :mod:`pyleanx.packs`."""
+    d = Domain(module, prefix, title or prefix)
+    _REGISTRY[module] = d
+    _catalog.cache_clear()
+    _idf.cache_clear()
+    return d
+
+
+def domains() -> tuple[Domain, ...]:
+    """The registered domains (the built-in packs first)."""
+    import importlib
+
+    importlib.import_module("pyleanx.packs")  # registers the built-in packs
+    return tuple(_REGISTRY.values())
 
 _STOP = {"a", "an", "the", "of", "is", "are", "and", "or", "to", "in", "on", "for", "by",
          "with", "its", "it", "be", "as", "at", "that", "this", "when", "if", "then", "from",
@@ -68,9 +94,10 @@ class FactEntry:
 def _catalog() -> tuple[FactEntry, ...]:
     out: list[FactEntry] = []
     seen: set[str] = set()
-    for mod_name, prefix in _DOMAINS:
+    for d in domains():
+        mod_name, prefix = d.module, d.prefix
         try:
-            mod = importlib.import_module(f"pyleanx.{mod_name}")
+            mod = importlib.import_module(mod_name)
         except Exception:  # noqa: BLE001 - an optional domain must not break search
             continue
         for py_name, obj in getattr(mod, "LEMMAS", {}).items():

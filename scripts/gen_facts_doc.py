@@ -12,17 +12,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "facts.md"
 
-TITLES = {
-    "geo": ("Plane geometry", "from pyleanx import geometry as geo"),
-    "rv": ("Real-variable methods", "from pyleanx import realvar as rv"),
-    "an": ("Real analysis", "from pyleanx import analysis as an"),
-    "alg": ("Algebra", "from pyleanx import algebra as alg"),
-    "nt": ("Number theory", "from pyleanx import numbers as nt"),
-    "ca": ("Complex analysis", "from pyleanx import complex_analysis as ca"),
-    "ha": ("Harmonic analysis", "from pyleanx import harmonic as ha"),
-    "hil": ("The Hilbert transform", "from pyleanx import hilbert as hil"),
-}
-
 HEADER = """\
 # Citable facts
 
@@ -54,18 +43,24 @@ def _cell(text: str) -> str:
 
 
 def render() -> str:
-    from pyleanx.fact_search import _catalog
+    from pyleanx.fact_search import _catalog, domains
     from pyleanx.proofs import LibraryFact
+
+    def how(module: str, prefix: str) -> str:
+        parent, _, leaf = module.rpartition(".")
+        return f"from {parent} import {leaf} as {prefix}" if parent else f"import {module}"
+
+    titles = {d.prefix: (d.title, how(d.module, d.prefix)) for d in domains()}
 
     by_domain: dict[str, list] = {}
     for e in _catalog():
         by_domain.setdefault(e.qualified.split(".", 1)[0], []).append(e)
     total = sum(len(v) for v in by_domain.values())
     parts = [HEADER, f"{total} facts in {len(by_domain)} domains: "
-             + ", ".join(f"[{TITLES[d][0]}](#{TITLES[d][0].lower().replace(' ', '-')})"
-                         f" ({len(by_domain[d])})" for d in TITLES if d in by_domain)
+             + ", ".join(f"[{titles[d][0]}](#{titles[d][0].lower().replace(' ', '-')})"
+                         f" ({len(by_domain[d])})" for d in titles if d in by_domain)
              + ".\n"]
-    for d, (title, imp) in TITLES.items():
+    for d, (title, imp) in titles.items():
         entries = by_domain.get(d)
         if not entries:
             continue

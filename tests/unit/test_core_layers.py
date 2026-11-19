@@ -14,7 +14,8 @@ SRC = ROOT / "src" / "pyleanx"
 CORE = ["types", "expr", "terms", "binders", "defs", "names", "errors", "_origin", "proofs",
         "theorem", "imports", "render/lean", "render/sourcemap", "backend/interface",
         "backend/audit", "backend/cache", "backend/subprocess_backend",
-        "backend/repl_check", "project", "justify", "derivation", "ops", "numeric"]
+        "backend/repl_check", "project", "justify", "derivation", "ops", "numeric",
+        "fact_search"]
 #: domain packs (vocabulary, facts, rules); built on the core, never imported by it
 DOMAINS = {"geometry", "analysis", "algebra", "numbers", "complex_analysis", "harmonic",
            "hilbert", "realvar", "_geometry_textbook", "_analysis_textbook"}
@@ -65,3 +66,24 @@ def test_generated_lean_of_every_written_proof_is_unchanged():
     finally:
         sys.path.remove(str(ROOT / "scripts"))
     assert golden_lean.changed() == []
+
+
+def test_a_third_party_domain_registers_its_facts(tmp_path, monkeypatch):
+    import pyleanx as pl
+    from pyleanx import fact_search
+
+    (tmp_path / "toy_pack.py").write_text(
+        "from pyleanx.proofs import Name\n"
+        "LEMMAS = {'frob_comm': Name('Toy.frob_comm', label='the frobnicator commutes')}\n",
+        encoding="utf-8")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    saved = dict(fact_search._REGISTRY)
+    try:
+        fact_search.register_domain("toy_pack", prefix="toy", title="Toy")
+        assert pl.fact("the frobnicator commutes").name == "Toy.frob_comm"
+        assert any(d.module == "toy_pack" for d in fact_search.domains())
+    finally:
+        fact_search._REGISTRY.clear()
+        fact_search._REGISTRY.update(saved)
+        fact_search._catalog.cache_clear()
+        fact_search._idf.cache_clear()
