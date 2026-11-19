@@ -83,3 +83,25 @@ def test_hints_explain_analysis_failures():
 
     assert "integrability" in _hint("failed to synthesize MeasureTheory.Integrable")
     assert "finite" in _hint("unsolved goals ⊢ volume K ≠ ⊤")
+
+
+def test_the_calculus_pack_imports_what_simp_needs_to_differentiate():
+    from pyleanx_analysis.chapters import derivatives as d
+
+    thm = d.square_plus_one
+    assert theorem_packs(thm) == {"calculus"}
+    assert "import Mathlib.Analysis.Calculus.Deriv.Pow" in thm.to_lean()
+    assert "Deriv.Pow" not in ch.markov.to_lean()          # measure theory does not need it
+    for t in d.THEOREMS:
+        assert t.sanity_check().ok
+
+
+def test_a_wrong_derivative_is_found_through_the_definition():
+    from pyleanx_analysis.chapters import derivatives as d
+
+    wrong = pl.Theorem(
+        "wrong_product_rule", [d.f, d.x],
+        assumptions={"hf": pl.Forall(d.t, d.f(d.t) == an.sin(d.t) * d.t)},
+        conclusion=an.deriv(d.f, d.x) == an.cos(d.x) * d.x,
+        proof=pl.proof(pl.conclude()))
+    assert "looks false" in str(wrong.sanity_check())

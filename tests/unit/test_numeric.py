@@ -168,3 +168,29 @@ def test_equilateral_and_vertical_angle_figures_are_drawn():
     bad_v = pl.Theorem("vert_wrong", [A, B, C, D, O], assumptions=vert,
                        conclusion=ang(A, O, C) == ang(A, O, D), proof=pl.proof(pl.conclude()))
     assert "The statement looks false" in str(bad_v.sanity_check())
+
+
+def test_functions_are_compared_pointwise_and_only_for_equality():
+    f = pl.symbol("f", pl.Fn(pl.Real, pl.Real))
+    g = pl.fun(lambda s: s * s, pl.Real)
+    h = pl.fun(lambda s: s * s + 1, pl.Real)
+    assert evaluate(f == g, {f.uid: lambda v: v * v}) is True
+    assert evaluate(f == h, {f.uid: lambda v: v * v}) is False   # differ everywhere
+    with pytest.raises(Unsupported):
+        evaluate(f == 0, {f.uid: lambda v: v})
+
+
+def test_a_pack_can_declare_the_lean_modules_its_rules_need():
+    from pyleanx import justify
+
+    saved = (list(justify._RULES), dict(justify._PACKS))
+    try:
+        pl.domain_pack("needs_imports", sorts={"Point"}, imports=("Mathlib.Toy.Module",))
+        A, B = geo.points("A B")
+        thm = pl.Theorem("t", [A, B], conclusion=geo.dist(A, B) == geo.dist(B, A),
+                         proof=pl.proof(pl.conclude()))
+        assert "import Mathlib.Toy.Module" in thm.to_lean()
+    finally:
+        justify._RULES[:] = saved[0]
+        justify._PACKS.clear()
+        justify._PACKS.update(saved[1])

@@ -81,14 +81,15 @@ class DomainPack:
         register_hint(pattern, text)
 
 
-def domain_pack(name: str, *, sorts: Iterable[str] = (),
-                symbols: Iterable[str] = ()) -> DomainPack:
+def domain_pack(name: str, *, sorts: Iterable[str] = (), symbols: Iterable[str] = (),
+                imports: Iterable[str] = ()) -> DomainPack:
     """Declare a domain pack; its rules apply to theorems using ``sorts`` (sort names) or a
-    Lean symbol starting with one of ``symbols``. Declaring it again replaces the
-    declaration (its registered rules stay)."""
+    Lean symbol starting with one of ``symbols``, and ``imports`` (the Lean modules its
+    rules need) are imported for them. Declaring it again replaces the declaration (its
+    registered rules stay)."""
     from .justify import register_pack
 
-    register_pack(name, sorts=sorts, symbols=symbols)
+    register_pack(name, sorts=sorts, symbols=symbols, imports=imports)
     return DomainPack(name)
 
 

@@ -124,6 +124,13 @@ def resolve_imports(
         mods.update(statement_imports(thm))
         mods.update(tactic_imports(thm.proof))
         mods.update(thm.imports)
+        if thm.proof is not None:  # the Lean modules the active packs' rules need
+            from .justify import packs
+            from .render.lean import theorem_packs
+
+            registered = packs()
+            for name in theorem_packs(thm):
+                mods.update(registered[name].imports)
         if unicode_types:
             mods.update(i for s in statement_sorts(thm) for i in s.unicode_imports)
     mods.update(extra)

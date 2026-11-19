@@ -79,6 +79,7 @@ class Pack:
     name: str
     sorts: frozenset[str] = frozenset()      # sort names, e.g. {"Point"}
     symbols: tuple[str, ...] = ()            # Lean name prefixes, e.g. ("MeasureTheory.",)
+    imports: tuple[str, ...] = ()            # Lean modules its rules need
 
 
 _RULES: list[Rule] = []
@@ -88,10 +89,12 @@ _ACTIVE: contextvars.ContextVar[frozenset[str] | None] = contextvars.ContextVar(
     "pyleanx_active_packs", default=None)
 
 
-def register_pack(name: str, *, sorts: Iterable[str] = (), symbols: Iterable[str] = ()) -> Pack:
+def register_pack(name: str, *, sorts: Iterable[str] = (), symbols: Iterable[str] = (),
+                  imports: Iterable[str] = ()) -> Pack:
     """Declare a domain pack: its rules apply to theorems using one of ``sorts`` or a symbol
-    whose Lean name starts with one of ``symbols``. Registering again replaces it."""
-    pack = Pack(name, frozenset(sorts), tuple(symbols))
+    whose Lean name starts with one of ``symbols``, and the Lean modules in ``imports`` (what
+    its rules need) are imported for those theorems. Registering again replaces it."""
+    pack = Pack(name, frozenset(sorts), tuple(symbols), tuple(imports))
     _PACKS[name] = pack
     return pack
 

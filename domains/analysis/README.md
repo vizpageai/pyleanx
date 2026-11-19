@@ -60,6 +60,20 @@ and as a textbook writes it:
 Verified on 2026-11-19 with the pinned Lean and Mathlib (batch check, standard axioms only:
 `propext`, `Classical.choice`, `Quot.sound`): `python -m pyleanx_analysis.chapters.integration`.
 
+## Chapter: derivatives of functions given by a formula (`pyleanx_analysis.chapters.derivatives`)
+
+"Let f(t) = t² + 1; then f′(x) = 2x": the proof says that f is that function (from the
+hypothesis, by `funext`) and differentiates the formula. The calculus pack imports the
+derivative rules (sums, products, powers, sin, cos) the differentiation needs.
+
+| Theorem | Steps | Lean |
+|---|---:|---|
+| f(t) = t² + 1 ⇒ f′(x) = 2x | 2 | verified |
+| f(t) = sin(t)·t ⇒ f′(x) = cos(x)·x + sin(x) | 2 | verified |
+
+`thm.sanity_check()` evaluates the derivative of the defined function numerically, so a
+wrong derivative (for instance a product rule missing a term) is reported with the point.
+
 ## Tests
 
 ```bash

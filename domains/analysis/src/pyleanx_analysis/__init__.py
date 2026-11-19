@@ -45,10 +45,20 @@ pack = pl.domain_pack(
 _rules.register(pack)
 pack.facts("pyleanx_analysis.facts", prefix="ana", title="Analysis (pyleanx-analysis)")
 
+#: the calculus pack: active in theorems about derivatives; it imports the derivative rules
+#: (sums, products, powers, sin and cos) that let `simp` differentiate a formula
+calculus_pack = pl.domain_pack(
+    "calculus",
+    symbols=("deriv", "HasDerivAt", "Differentiable", "DifferentiableAt"),
+    imports=("Mathlib.Analysis.Calculus.Deriv.Add", "Mathlib.Analysis.Calculus.Deriv.Mul",
+             "Mathlib.Analysis.Calculus.Deriv.Pow",
+             "Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv"),
+)
+
 from . import hints as _hints  # noqa: E402
 from . import numeric as _numeric  # noqa: E402
 
 _hints.register(pack)
 _numeric.register(pack)
 
-__all__ = ["integration", "pack", "real", "__version__"]
+__all__ = ["calculus_pack", "integration", "pack", "real", "__version__"]

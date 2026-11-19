@@ -37,6 +37,11 @@ def _close(a: float, b: float) -> bool:
     return abs(a - b) <= _TOL * max(1.0, abs(a), abs(b))
 
 
+#: where two real functions are compared (spread out, irrational, avoiding special points)
+_FUNCTION_POINTS = (-2.7182818, -1.4142136, -0.5772157, 0.3010300, 0.6931472, 1.2599210,
+                    1.7320508, 2.2360680, 3.1415927, 4.6692016)
+
+
 def _vector_distance(a: Any, b: Any) -> float:
     """Distance of two vector values (points), for comparing them."""
     if not (isinstance(a, tuple) and isinstance(b, tuple) and len(a) == len(b)):
@@ -158,6 +163,16 @@ def evaluate(e: Expr, env: dict[int, Any]) -> Any:
         return f(*(evaluate(a, env) for a in e.args))
     if isinstance(e, Compare):
         a, b = evaluate(e.lhs, env), evaluate(e.rhs, env)
+        if callable(a) or callable(b):
+            # functions are equal when they agree everywhere; a point where they differ is
+            # a counterexample (agreement at the points tried proves nothing)
+            if e.op not in ("eq", "ne") or not (callable(a) and callable(b)):
+                raise Unsupported("comparison of functions")
+            try:
+                same = all(_close(float(a(p)), float(b(p))) for p in _FUNCTION_POINTS)
+            except (TypeError, ValueError, OverflowError, ZeroDivisionError) as exc:
+                raise Unsupported("comparison of functions") from exc
+            return same if e.op == "eq" else not same
         if isinstance(a, tuple) or isinstance(b, tuple):
             if e.op in ("eq", "ne"):
                 same = _vector_distance(a, b) <= 1e-9
