@@ -110,3 +110,44 @@ class VerificationResult:
                 lines.append(f"- {d.severity}: `{d.message.splitlines()[0]}`"
                              + (f" ({d.span_label})" if d.span_label else ""))
         return "\n\n".join(lines)
+
+
+# --- checkers (the kernels, as PyTorch has devices) -------------------------------------
+#: built-in checkers, imported when first used: name -> (module, function)
+_BUILTIN_CHECKERS = {
+    "batch": ("pyleanx.backend.subprocess_backend", "verify_all"),  # fresh Lean, archived
+    "repl": ("pyleanx.backend.repl_check", "check_all"),            # persistent Lean
+}
+_CHECKERS: dict[str, Any] = {}
+
+
+def register_checker(name: str, checker: Any) -> None:
+    """Register ``checker(theorems, project=None, *, timeout=None, ...)`` returning one
+    :class:`VerificationResult` per theorem (e.g. a Lean running on another machine).
+
+    A checker produces the results ``verified`` is read from: registering one is trusting
+    it, as the pinned Lean binary is trusted. It must run Lean and the ``#print axioms``
+    audit on the exact generated source; ``Theorem.verify`` and ``check`` keep using the
+    built-in ``batch`` and ``repl`` checkers.
+    """
+    if name in _BUILTIN_CHECKERS:
+        raise ValueError(f"{name!r} is a built-in checker")
+    _CHECKERS[name] = checker
+
+
+def get_checker(name: str) -> Any:
+    """The checker called ``name`` ("batch", "repl", or a registered one)."""
+    if name in _CHECKERS:
+        return _CHECKERS[name]
+    if name in _BUILTIN_CHECKERS:
+        import importlib
+
+        module, fn = _BUILTIN_CHECKERS[name]
+        return getattr(importlib.import_module(module), fn)
+    raise KeyError(f"no checker {name!r}; available: {', '.join(checkers())}")
+
+
+def checkers() -> list[str]:
+    """Names of the available checkers."""
+    return [*_BUILTIN_CHECKERS, *_CHECKERS]
+

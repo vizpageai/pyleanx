@@ -194,9 +194,10 @@ class Theorem:
         timeout: float | None = None,
     ) -> VerificationResult:
         """Check the *current* proof with Lean and audit its axioms."""
-        from .backend.subprocess_backend import verify_all
+        from .backend.interface import get_checker
 
-        return verify_all([self], project=project, use_cache=use_cache, timeout=timeout)[0]
+        return get_checker("batch")([self], project=project, use_cache=use_cache,
+                                    timeout=timeout)[0]
 
     def check(self, project: LeanProject | str | None = None, *,
               timeout: float | None = None) -> VerificationResult:
@@ -205,9 +206,9 @@ class Theorem:
         The same Lean source, error attribution and ``#print axioms`` audit as
         :meth:`verify`; the result says ``backend="repl"`` and is not archived.
         """
-        from .backend.repl_check import check_all
+        from .backend.interface import get_checker
 
-        return check_all([self], project=project, timeout=timeout)[0]
+        return get_checker("repl")([self], project=project, timeout=timeout)[0]
 
     def sanity_check(self, samples: int = 300, seed: int = 0) -> Any:
         """Try the statement and each step on random numbers (no Lean; proves nothing).

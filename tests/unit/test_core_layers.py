@@ -160,3 +160,20 @@ def test_no_import_cycles_at_module_level():
 
     cycles = [c for v in graph if v not in seen and (c := visit(v, []))]
     assert cycles == []
+
+
+def test_checkers_are_looked_up_by_name():
+    from pyleanx.backend import interface
+
+    assert interface.get_checker("batch").__name__ == "verify_all"
+    assert interface.get_checker("repl").__name__ == "check_all"
+    try:
+        interface.register_checker("remote", lambda thms, **kw: [])
+        assert "remote" in interface.checkers()
+        import pytest
+        with pytest.raises(ValueError, match="built-in"):
+            interface.register_checker("batch", lambda thms, **kw: [])
+        with pytest.raises(KeyError, match="available"):
+            interface.get_checker("nowhere")
+    finally:
+        interface._CHECKERS.pop("remote", None)

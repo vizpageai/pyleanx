@@ -130,6 +130,11 @@ Extension interface: `pl.domain_pack(...)` with `rule`, `facts`, `function`, `ap
 `sampler`, `construction` and `hint` (explanation hints are now registrable); the geometry
 pack is written with it (golden Lean and the 77 sanity reports unchanged).
 
+Kernels: `Theorem.verify` and `Theorem.check` reach Lean through named checkers
+(`backend.interface.get_checker("batch" | "repl")`); `register_checker` adds another
+(a Lean on another machine). Registering a checker is trusting it, as the pinned Lean binary
+is trusted: it must run Lean and the axiom audit on the exact generated source.
+
 Import structure: there is no cycle among module-level imports (a test enforces it). Some
 modules import others inside functions (late binding, e.g. a statement imports the
 renderer when it is printed, as `torch.Tensor.__repr__` imports its formatter); a static
