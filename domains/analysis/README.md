@@ -44,7 +44,7 @@ textbook does not say either; with this package installed, neither does the proo
 | Vocabulary | `an.real` (sequences, limits, continuity, derivatives, classical theorems) and `an.integration` (Lebesgue measure, integrability, intervals, maximal averages), also at top level |
 | Facts (`pyleanx_analysis.facts`) | Markov's inequality, monotonicity and additivity of the integral, \|∫f\| ≤ ∫\|f\|, the integral over a set |
 | Justification rules (`rules.py`) | side conditions a textbook never writes: \|f\| integrable from f, integrability on a set or an interval, \|f\| ≥ 0 a.e., ∫\|f\| ≥ 0, compact sets and subsets of finite-measure sets have finite measure. Active only in theorems using measure-theoretic vocabulary |
-| Numeric sanity checks (`numeric.py`) | random smooth functions (some integrable over ℝ, each knowing its properties); a hypothesis `∀ t, f t = e(t)` defines `f`; derivatives (Richardson extrapolation) and integrals (adaptive Simpson) to about 1e-10. A wrong derivative or a wrong value of an integral is reported with the sample |
+| Numeric sanity checks (`numeric.py`) | random smooth functions (some integrable over ℝ, each knowing its properties) and random sequences (rational, alternating, geometric, oscillating); a hypothesis `∀ t, f t = e(t)` (or `∀ n, a n = e(n)`) defines `f` (or `a`); derivatives (Richardson extrapolation) and integrals (adaptive Simpson) to about 1e-10. A wrong derivative or a wrong value of an integral is reported with the sample |
 | Explanations (`hints.py`) | failures about integrability, finiteness of measures, measurability, limits and derivatives |
 
 ## Chapter: integrals of absolute values (`pyleanx_analysis.chapters.integration`)

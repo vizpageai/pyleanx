@@ -87,7 +87,8 @@ def sample_sequence(rng: random.Random) -> SampledSequence:
         r = rng.uniform(-0.95, 0.95)
         return SampledSequence(lambda n: c + d * r ** n, f"n ↦ {c:.3g} + {d:.3g}·{r:.3g}ⁿ")
     b = rng.uniform(0.3, 2.0)
-    return SampledSequence(lambda n: c + d * math.sin(b * n), f"n ↦ {c:.3g} + {d:.3g}·sin({b:.3g}n)")
+    return SampledSequence(lambda n: c + d * math.sin(b * n),
+                           f"n ↦ {c:.3g} + {d:.3g}·sin({b:.3g}n)")
 
 
 # --- derivatives and integrals ---------------------------------------------------------
