@@ -226,6 +226,28 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [ ] Benchmark re-run with the upgraded baseline proposer.
 - Unit tests: 248 passed; ruff and mypy clean.
 
+### The core (2026-11-19)
+Design and status: [core.md](core.md). Built on the existing code, without reimplementing it:
+guardrails (golden Lean of the 72 written proofs; a layering test: core modules import no
+domain pack and name none of the geometry pack's Lean symbols); the justification engine
+(`pyleanx.justify`: rules in ordered slots, registered by packs, active per theorem by
+vocabulary; geometry's rules moved into the geometry pack); the derivation graph
+(`pyleanx.derivation`); statement operations (`pyleanx.ops`); the numeric sampling framework
+with geometry's evaluators and figures in the pack; a registry of fact domains with the
+built-in packs in `pyleanx.packs`. Fixed on the way: `pl.similarly(replace=…)` (never
+worked: variables cannot be dict keys) and a unit test that failed only on CI.
+- **Lean evidence**: geometry proofs' Lean byte-identical; the other 55 written proofs changed
+  only by losing geometry alternatives and were re-verified locally (batch, one module per
+  process, standard axioms): **72/72 pass**. GitHub CI on `45a4f17` (before these changes):
+  examples and benchmark jobs passed (all 72 written proofs on Linux); the integration job's
+  only failure was the CI-only unit test, fixed in `2c01a82`.
+- **Measured and dropped**: remembering the winning alternative (K6) gave no speed-up
+  (warm checks 70–75 s either way). Lean's profiler shows why: parsing (14.5 s) and linting
+  (5.5 s) of the 888 KB of generated alternatives dominate, not the search (3.6 s). Next
+  (K7): emit the core rules once per file as a Lean macro; a core-Lean prototype works.
+- Unit tests 434; ruff, mypy clean; `mkdocs build --strict` clean. The commits since
+  `45a4f17` are local (pushing needs the maintainer's GitHub login on this machine).
+
 ### CI to green, and usability after 0.1.0 preparation (2026-11-18)
 - **CI findings and fixes.** The first CI runs after the 0.1.0 preparation failed in the Lean job (public annotations; GitHub logs need a login). Fixed: (1) `all_geometry_facts_check` hit "deterministic timeout at whnf": the gap filler tried ~3,570 "lemma applied to a cited fact" alternatives for a step citing 35 facts, and Lean's heartbeat budget is per declaration; these pairs are now generated only when lemmas × facts ≤ 150 (the step drops to 860 alternatives; the generated Lean of every benchmark proof is unchanged). CI then passed the integration tests. (2) Tutorial blocks that are excerpts of example files were executed by the doc test; they are `py` fragments now, and a unit test checks that runnable blocks only use names defined on their page. (3) The example step stopped at once: two notebook helper modules had no expected outcome (now `HELPERS`, unit-tested). (4) `examples/theorem_bank.py` failed: `TheoremBank.index_catalogs` asked Lean for the 90 facts PyLeanX proves itself; it now indexes only the 135 Mathlib declarations (Lean: example ok in 61 s).
 - **CI structure.** The Lean job is a matrix of three parallel jobs (integration tests, every example script, the naturalness benchmark); failures in the example runner and the benchmark are `::error` annotations; `naturalness.py --lean` exits 1 when Lean rejects a written proof (before, a regression was only recorded).

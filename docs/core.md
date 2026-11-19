@@ -74,6 +74,7 @@ the benchmark results (`benchmarks/lean_results.json`).
 | K4 | Numeric sampling framework; geometry evaluators and constructions move to the pack | sanity results unchanged on the benchmark |
 | K5 | Packs for the remaining domains; fact registry with one `Fact` type | Lean unchanged |
 | K6 | Remembered winners: the alternative that closed a step is recorded (REPL) and tried first next time | a measurable speed-up of warm re-checks; a step whose winner no longer applies falls back to the full search |
+| K7 | Compact justification: the core's rules become one Lean macro emitted once per file (`pyleanx_by [h₁, h₂]` builds the `first` block from the cited facts); each step is one line | all 72 proofs re-verified with Lean; parse and lint time measured before and after |
 
 ## Status (2026-11-19)
 
@@ -86,6 +87,16 @@ the benchmark results (`benchmarks/lean_results.json`).
 | K4 | done | `pyleanx/numeric.py` registries; `pyleanx/_geometry_numeric.py`. Sanity reports of 77 cases identical, sampled values included |
 | K5 | partly | fact-search registry and `pyleanx/packs.py` done. Facts already share one type (`Name`, with `LibraryFact` for facts proved in PyLeanX and `TheoremRef` for cited theorems). Still to do: the theorem bank's catalogue list (`_domain.all_catalogs`) from the registry, and exact statement contracts per fact ([foundations](foundations.md) F2) |
 | K6 | tried, not kept | Implemented and measured on the 7 Euclid proofs (REPL): cold check 750 s (Mathlib import); warm re-checks 75 s and 70 s with remembered winners first, 70 s without. No gain: a warm check's time is not spent on failing alternatives. The change was reverted (it also made `check()` able to accept a step that `verify()` times out on). Next: profile where a warm check spends its time before optimising |
+
+**Where a check spends its time** (Lean's profiler, batch run of the 7 Euclid proofs, 78 s
+wall time including the import): parsing 14.5 s, elaboration 7.0 s, linting 5.5 s, tactic
+execution 3.6 s, type-class inference 2.3 s, kernel type checking 0.4 s. The generated file
+is 888 KB, because every step spells out its alternatives (and their side-goal closers) as
+text. The search itself is cheap; *reading* it is not, which is why reordering it (K6) did
+not help. K7 follows from this: a Lean macro defined once per file can build a step's
+alternatives from its cited facts (checked with core Lean: a macro looping over the facts
+proves steps by a reversed fact, by applying one fact to another and by `omega`, and
+rejects a false step with the same error a `first` block gives).
 
 Remaining domain knowledge in core modules: none of the geometry pack's names (enforced by
 a test). The numeric prelude (ℝ, ℕ, ℤ, `Real.sqrt`, `exp`, `log`, `sin`, `cos`, `π`) and
