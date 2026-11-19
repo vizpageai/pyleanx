@@ -801,117 +801,12 @@ class Justify(Tactic):
         return (*_JUSTIFY_IMPORTS, *(i for t in self.facts for i in term_imports(t)))
 
     def _core(self) -> list[str]:
+        from .justify import alternatives
         from .render.lean import render_term
 
         fs = [render_term(t) for t in self.facts]
-        h = (" [" + ", ".join(fs) + "]") if fs else ""
-        simp_args = fs + [f"-{a}" for a in self.avoid]
-        hs = (" [" + ", ".join(simp_args) + "]") if simp_args else ""
-        # A textbook does not distinguish ∠ACB from ∠BCA, "D between A and B" from "D between
-        # B and A", or triangle ABC from triangle BAC; neither do the side conditions here.
-        close = ("first | assumption | exact Ne.symm ‹_› | "
-                 # the vertices of a triangle are distinct
-                 "(with_reducible exact ne₁₂_of_not_collinear ‹_›) | "
-                 "(with_reducible exact (ne₁₂_of_not_collinear ‹_›).symm) | "
-                 "(with_reducible exact ne₁₃_of_not_collinear ‹_›) | "
-                 "(with_reducible exact (ne₁₃_of_not_collinear ‹_›).symm) | "
-                 "(with_reducible exact ne₂₃_of_not_collinear ‹_›) | "
-                 "(with_reducible exact (ne₂₃_of_not_collinear ‹_›).symm) | "
-                 "exact Eq.symm ‹_› | "
-                 "exact ne_of_gt ‹_› | exact Sbtw.wbtw ‹_› | rfl | omega | fun_prop | "
-                 "positivity | linarith | "
-                 "(rw [EuclideanGeometry.angle_comm]; assumption) | "
-                 "(apply sbtw_comm.mp; assumption) | "
-
-                 "(convert ‹¬ Collinear ℝ _› using 2; ext; "
-                 "simp only [Set.mem_insert_iff, Set.mem_singleton_iff]; tauto) | "
-                 "(simp_all; done)")
-        # side conditions left by applying one cited fact may be closed by another cited fact
-        # ("by A, since B"), possibly for every element of a set ("∀ i ∈ s, …")
-        side = [f for f, t in zip(fs, self.facts, strict=True)
-                if not isinstance(t, Expr) and " " not in f]
-        if side:
-            close += "".join(f" | exact {f} | (intros; exact {f}) | (apply {f} <;> assumption)"
-                             f" | (intros; apply {f})" for f in side)
-        alts = ["assumption", "contradiction"]
-        # Cheap first: matching with reducible unfolding only fails at once on a mismatch.
-        # (Unrestricted matching of, say, ∠ACB against π/3 unfolds `angle` and `Real.pi`, or
-        # {B, A, C} against {A, B, C} unfolds set literals, until Lean's time budget for the
-        # whole step is gone; then no later alternative can run.)
-        alts += [f"(with_reducible exact {f})" for f in fs]
-        alts += [f"(with_reducible exact ({f}).symm)" for f in fs if " " not in f]
-        lemmas0 = [f for f, t in zip(fs, self.facts, strict=True) if not isinstance(t, Expr)]
-        # side conditions after a cheap application are closed cheaply too (the full
-        # closing list, with simp_all and convert, comes with the unrestricted `apply` below)
-        cheap = ("first | assumption | exact Ne.symm ‹_› | "
-                 "(with_reducible exact ne₁₂_of_not_collinear ‹_›) | "
-                 "(with_reducible exact (ne₁₂_of_not_collinear ‹_›).symm) | "
-                 "(with_reducible exact ne₁₃_of_not_collinear ‹_›) | "
-                 "(with_reducible exact (ne₁₃_of_not_collinear ‹_›).symm) | "
-                 "(with_reducible exact ne₂₃_of_not_collinear ‹_›) | "
-                 "(with_reducible exact (ne₂₃_of_not_collinear ‹_›).symm) | "
-                 "exact Sbtw.wbtw ‹_› | rfl | linarith")
-        alts += [f"((with_reducible apply {f}); all_goals ({cheap}))" for f in lemmas0]
-        alts += [f"linarith{h}", f"(simp only [EuclideanGeometry.angle_comm] at *; linarith{h})"]
-        alts += [f"exact {f}" for f in fs]
-        alts += [f"exact ({f}).symm" for f in fs if " " not in f]  # a cited equation, reversed
-        # a conjunction A ∧ B ∧ … from its parts, cited in order
-        if len(fs) >= 2:
-            parts = ", ".join(f if " " not in f else f"({f})" for f in fs)
-            alts.append(f"exact ⟨{parts}⟩")
-        # a part of a cited conjunction (e.g. one property of a parallelogram hypothesis)
-        alts += [f"exact {f}{proj}" for f in fs if " " not in f
-                 for proj in (".1", ".2", ".2.1", ".2.2", ".1.1", ".1.2")]
         lemmas = [f for f, t in zip(fs, self.facts, strict=True) if not isinstance(t, Expr)]
-        alts += [f"(apply {f}; all_goals ({close}))" for f in lemmas]
-        # a cited lemma applied to another cited fact ("by L, since h"). Matching with
-        # reducible unfolding only is tried first, in both orientations, so a fact stated the
-        # other way round (A ≠ C for C ≠ A) fails at once instead of unfolding definitions.
-        args = [g for g in fs if " " not in g]
-        # Lean's time budget is per declaration, so the pairs are capped: a step citing
-        # dozens of facts would otherwise try thousands of applications and time out.
-        pairs = len(lemmas) * len(args) <= 150
-        alts += [f"(with_reducible exact {f} {g})" for f in lemmas for g in args
-                 if pairs and g != f]
-        alts += [f"(with_reducible exact ({f} {g}).symm)" for f in lemmas for g in args
-                 if pairs and g != f]
-        # ... and to two cited facts, in either order ("by L, from h₁ and h₂")
-        if len(lemmas) * len(args) ** 2 <= 120:  # a cited family ("CPCTC") would explode
-            alts += [f"exact {f} {g} {k}" for f in lemmas for g in args for k in args
-                     if len({f, g, k}) == 3]
-        alts += [f"exact {f} {g}" for f in lemmas for g in args if pairs and g != f]
-        # rewriting with a cited equation, then tidying up
-        alts += [f"(rw [{f}]; done)" for f in lemmas]
-        alts += [f"(rw [{f}]; simp{hs}; done)" for f in lemmas]
-        # normalising everything with a cited rule (e.g. ∠ABC = ∠CBA), then closing
-        alts += [f"(simp only [{f}] at *; first | assumption | linarith | (simp_all; done))"
-                 for f in lemmas]
-        # substituting a cited equation (f(x) = 3x + 1), then algebra, also inside |…|
-        alts += [f"(simp only [{f}]; first | ring1 | (congr 1; ring1))" for f in lemmas]
-        # One half of a conjunction / one direction of an equivalence. Matching is limited
-        # to reducible definitions and instances, so trying the wrong half fails at once
-        # instead of unfolding definitions (a timeout there would end the whole search).
-        alts += [f"(with_reducible_and_instances apply {half}; "
-                 f"with_reducible_and_instances apply {f}; all_goals ({close}))"
-                 for f in lemmas for half in ("And.left", "And.right", "Iff.mp", "Iff.mpr")]
-        # a cited fact about the same points listed in another order ({A, B, C} = {B, A, C})
-        alts += [f"(convert {f} using {d}; ext; simp only [Set.mem_insert_iff, "
-                 f"Set.mem_singleton_iff]; tauto)" for f in fs if " " not in f for d in (2, 1)]
-        alts += ["rfl", "ring1", "omega", "positivity", "fun_prop", f"linarith{h}",
-                 # ∠ABC = ∠CBA, as in any textbook
-                 f"(simp only [EuclideanGeometry.angle_comm] at *; linarith{h})",
-                 "(congr 1; ring1)", "(push_cast; ring1)",
-                 f"(norm_num{hs}; done)", f"(simp{hs}; done)", f"(simp{hs}; ring1)",
-                 f"nlinarith{h}", "(field_simp; done)", "(field_simp; ring1)",
-                 f"(simp_all{hs}; done)",
-                 f"(constructor; all_goals ({close}))",
-                 # |AB| = |BA|, as in any textbook
-                 "(simp only [dist_comm] at *; first | assumption | linarith | ring1 | "
-                 "(simp_all; done))"]
-        if not self.avoid:  # aesop's and grind's simp sets cannot be restricted here
-            alts.append("(aesop; done)")
-            alts.append("grind")
-        return list(dict.fromkeys(alts))  # an alternative tried twice cannot succeed twice
+        return alternatives(fs, lemmas, self.avoid)
 
     def alternatives(self) -> list[str]:
         core = self._core()

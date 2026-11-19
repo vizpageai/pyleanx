@@ -7,8 +7,6 @@ import re
 import sys
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src" / "pyleanx"
 
@@ -50,7 +48,6 @@ def test_the_core_imports_no_domain_pack():
     assert {k: v for k, v in bad.items() if v} == {}
 
 
-@pytest.mark.xfail(strict=True, reason="K1: geometry rules still in proofs.py")
 def test_the_core_names_no_geometry():
     # Geometry's rules (∠ABC = ∠CBA, distinct vertices, betweenness) are registered by the
     # geometry pack (pyleanx.geometry), not written into the core.

@@ -1,0 +1,350 @@
+"""The justification engine: how a written step is proved from what it cites.
+
+A step of a written proof (``pl.claim(P, because=…)``) becomes ``have h : P := by first |
+…``: Lean tries the alternatives in order and the kernel checks whichever succeeds. This
+module assembles those alternatives from *rules*, the way each PyTorch operation brings
+its own derivative: the core registers the domain-free rules (use a hypothesis or a cited
+fact, symmetry of = and ≠, parts of a conjunction, a lemma applied to cited facts,
+rewriting, arithmetic decision procedures), and a domain pack registers the rules of its
+vocabulary (the geometry pack: ∠ABC = ∠CBA, the vertices of a triangle are distinct, …).
+
+Rules live in ordered *slots*:
+
+* ``"step"``: the alternatives tried for the step itself;
+* ``"close"``: closers for the side goals left after applying a cited lemma;
+* ``"cheap_close"``: the closers used after a cheap (reducible-only) application.
+
+Within a slot, rules run by ``priority`` (then registration order). A pack's rules are
+active only in theorems that use the pack's vocabulary (see :func:`register_pack`), so a
+proof about integers is not searched with geometry's rules. Lean's heartbeat budget is
+shared by every alternative of every step of a theorem, so cheap rules come first and
+the number of alternatives per step is bounded.
+
+Nothing here can make a step count as proved: Lean checks every alternative it uses.
+"""
+
+from __future__ import annotations
+
+import contextvars
+from collections.abc import Callable, Iterable, Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass, replace
+
+SLOTS = ("step", "close", "cheap_close")
+
+
+@dataclass(frozen=True)
+class Step:
+    """What a rule sees of a step: the cited facts as Lean text, and the closers in force."""
+
+    facts: tuple[str, ...]      # every cited fact, rendered
+    lemmas: tuple[str, ...]     # cited facts that are names or applied lemmas (not statements)
+    avoid: tuple[str, ...] = ()  # facts the step must not use (Theorem(avoid=…))
+    close: str = ""             # "first | …" of the "close" slot (filled by the engine)
+    cheap: str = ""             # "first | …" of the "cheap_close" slot
+
+    @property
+    def names(self) -> tuple[str, ...]:
+        """Cited facts that are single names (can be applied, reversed, projected)."""
+        return tuple(f for f in self.facts if " " not in f)
+
+    @property
+    def h(self) -> str:
+        """`` [f₁, f₂]`` for ``linarith``-like tactics (empty if nothing is cited)."""
+        return (" [" + ", ".join(self.facts) + "]") if self.facts else ""
+
+    @property
+    def hs(self) -> str:
+        """`` [f₁, -avoided]`` for ``simp``-like tactics."""
+        args = list(self.facts) + [f"-{a}" for a in self.avoid]
+        return (" [" + ", ".join(args) + "]") if args else ""
+
+
+Make = Callable[[Step], Iterable[str]]
+
+
+@dataclass(frozen=True)
+class Rule:
+    slot: str
+    priority: float
+    make: Make
+    pack: str = "core"
+    name: str = ""
+
+
+@dataclass(frozen=True)
+class Pack:
+    """A domain pack's identity for the engine: the vocabulary that activates its rules."""
+
+    name: str
+    sorts: frozenset[str] = frozenset()      # sort names, e.g. {"Point"}
+    symbols: tuple[str, ...] = ()            # Lean name prefixes, e.g. ("MeasureTheory.",)
+
+
+_RULES: list[Rule] = []
+_PACKS: dict[str, Pack] = {}
+#: packs active while one theorem is rendered; None = all registered packs
+_ACTIVE: contextvars.ContextVar[frozenset[str] | None] = contextvars.ContextVar(
+    "pyleanx_active_packs", default=None)
+
+
+def register_pack(name: str, *, sorts: Iterable[str] = (), symbols: Iterable[str] = ()) -> Pack:
+    """Declare a domain pack: its rules apply to theorems using one of ``sorts`` or a symbol
+    whose Lean name starts with one of ``symbols``. Registering again replaces it."""
+    pack = Pack(name, frozenset(sorts), tuple(symbols))
+    _PACKS[name] = pack
+    return pack
+
+
+def add_rule(slot: str, priority: float, make: Make | str | Iterable[str], *,
+             pack: str = "core", name: str = "") -> Rule:
+    """Register a rule. ``make`` is a function of the :class:`Step`, or fixed tactic text.
+
+    Registering a rule with the same ``(pack, name)`` again replaces it, so a module can be
+    reloaded without doubling its rules.
+    """
+    if slot not in SLOTS:
+        raise ValueError(f"unknown slot {slot!r}; slots are {SLOTS}")
+    if pack != "core" and pack not in _PACKS:
+        raise ValueError(f"register the pack {pack!r} (register_pack) before its rules")
+    if isinstance(make, str):
+        text = make
+        fn: Make = lambda _s: (text,)  # noqa: E731
+    elif callable(make):
+        fn = make
+    else:
+        texts = tuple(make)
+        fn = lambda _s: texts  # noqa: E731
+    r = Rule(slot, priority, fn, pack, name)
+    if name:
+        _RULES[:] = [x for x in _RULES if (x.pack, x.name) != (pack, name)]
+    _RULES.append(r)
+    return r
+
+
+def rules(slot: str, active: frozenset[str] | None = None) -> list[Rule]:
+    """The rules of ``slot`` in force, in order (``active=None``: every pack)."""
+    found = [r for r in _RULES if r.slot == slot
+             and (r.pack == "core" or active is None or r.pack in active)]
+    order = {id(r): i for i, r in enumerate(_RULES)}
+    return sorted(found, key=lambda r: (r.priority, order[id(r)]))
+
+
+def packs() -> dict[str, Pack]:
+    return dict(_PACKS)
+
+
+def packs_using(sorts: Iterable[str], symbols: Iterable[str]) -> frozenset[str]:
+    """The packs whose vocabulary occurs among ``sorts`` and Lean ``symbols``."""
+    sorts, symbols = set(sorts), set(symbols)
+    return frozenset(p.name for p in _PACKS.values()
+                     if p.sorts & sorts
+                     or any(s.startswith(pre) for s in symbols for pre in p.symbols))
+
+
+@contextmanager
+def active_packs(names: frozenset[str] | None) -> Iterator[None]:
+    """Within the block, only the core rules and those of ``names`` apply."""
+    token = _ACTIVE.set(names)
+    try:
+        yield
+    finally:
+        _ACTIVE.reset(token)
+
+
+def current_packs() -> frozenset[str] | None:
+    return _ACTIVE.get()
+
+
+def _texts(slot: str, step: Step, active: frozenset[str] | None) -> list[str]:
+    return [t for r in rules(slot, active) for t in r.make(step)]
+
+
+def alternatives(facts: Iterable[str], lemmas: Iterable[str],
+                 avoid: Iterable[str] = ()) -> list[str]:
+    """The tactic alternatives for one step, in order, without repetitions."""
+    active = current_packs()
+    step = Step(tuple(facts), tuple(lemmas), tuple(avoid))
+    step = replace(step, cheap="first | " + " | ".join(_texts("cheap_close", step, active)))
+    step = replace(step, close="first | " + " | ".join(_texts("close", step, active)))
+    # an alternative tried twice cannot succeed the second time
+    return list(dict.fromkeys(_texts("step", step, active)))
+
+
+# =====================================================================================
+# The core rules (domain-free)
+# =====================================================================================
+
+# --- closers of side goals ------------------------------------------------------------
+for _p, _t in ((10, "assumption"), (20, "exact Ne.symm ‹_›"), (40, "exact Eq.symm ‹_›"),
+               (50, "exact ne_of_gt ‹_›"), (70, "rfl"), (80, "omega"), (90, "fun_prop"),
+               (100, "positivity"), (110, "linarith"), (150, "(simp_all; done)")):
+    add_rule("close", _p, _t, name=f"close:{_t}")
+for _p, _t in ((10, "assumption"), (20, "exact Ne.symm ‹_›"), (70, "rfl"), (110, "linarith")):
+    add_rule("cheap_close", _p, _t, name=f"cheap:{_t}")
+
+
+def _side_by_cited(s: Step) -> Iterable[str]:
+    # a side condition left by applying one cited fact may be another cited fact ("by A,
+    # since B"), possibly for every element of a set ("∀ i ∈ s, …")
+    for f in s.lemmas:
+        if " " not in f:
+            yield from (f"exact {f}", f"(intros; exact {f})", f"(apply {f} <;> assumption)",
+                        f"(intros; apply {f})")
+
+
+add_rule("close", 1000, _side_by_cited, name="close:cited")
+
+
+# --- the step itself ------------------------------------------------------------------
+def _r(priority: float, name: str) -> Callable[[Make], Make]:
+    def deco(fn: Make) -> Make:
+        add_rule("step", priority, fn, name=name)
+        return fn
+    return deco
+
+
+add_rule("step", 10, ("assumption", "contradiction"), name="hypothesis")
+
+
+@_r(20, "cited, reducible")
+def _cited_reducible(s: Step) -> Iterable[str]:
+    # Cheap first: matching with reducible unfolding only fails at once on a mismatch.
+    # (Unrestricted matching of, say, an angle against π/3 unfolds definitions until
+    # Lean's time budget for the whole theorem is gone; then nothing later can run.)
+    return [f"(with_reducible exact {f})" for f in s.facts]
+
+
+@_r(30, "cited reversed, reducible")
+def _cited_reversed_reducible(s: Step) -> Iterable[str]:
+    return [f"(with_reducible exact ({f}).symm)" for f in s.names]
+
+
+@_r(40, "apply cited, cheap side goals")
+def _apply_cheap(s: Step) -> Iterable[str]:
+    return [f"((with_reducible apply {f}); all_goals ({s.cheap}))" for f in s.lemmas]
+
+
+@_r(50, "linear arithmetic")
+def _linarith(s: Step) -> Iterable[str]:
+    return [f"linarith{s.h}"]
+
+
+@_r(60, "cited")
+def _cited(s: Step) -> Iterable[str]:
+    return [f"exact {f}" for f in s.facts]
+
+
+@_r(70, "cited reversed")
+def _cited_reversed(s: Step) -> Iterable[str]:
+    return [f"exact ({f}).symm" for f in s.names]
+
+
+@_r(80, "conjunction of cited")
+def _conjunction(s: Step) -> Iterable[str]:
+    if len(s.facts) < 2:
+        return []
+    return ["exact ⟨" + ", ".join(f if " " not in f else f"({f})" for f in s.facts) + "⟩"]
+
+
+@_r(90, "part of cited")
+def _projection(s: Step) -> Iterable[str]:
+    return [f"exact {f}{proj}" for f in s.names
+            for proj in (".1", ".2", ".2.1", ".2.2", ".1.1", ".1.2")]
+
+
+@_r(100, "apply cited")
+def _apply(s: Step) -> Iterable[str]:
+    return [f"(apply {f}; all_goals ({s.close}))" for f in s.lemmas]
+
+
+def _pairs(s: Step) -> bool:
+    # Lean's time budget is per declaration, so the pairs are capped: a step citing dozens
+    # of facts would otherwise try thousands of applications and time out.
+    return len(s.lemmas) * len(s.names) <= 150
+
+
+@_r(110, "lemma of cited, reducible")
+def _lemma_of_cited_reducible(s: Step) -> Iterable[str]:
+    # "by L, since h"; reducible matching first, in both orientations, so a fact stated the
+    # other way round fails at once instead of unfolding definitions
+    if not _pairs(s):
+        return []
+    return ([f"(with_reducible exact {f} {g})" for f in s.lemmas for g in s.names if g != f]
+            + [f"(with_reducible exact ({f} {g}).symm)" for f in s.lemmas for g in s.names
+               if g != f])
+
+
+@_r(130, "lemma of two cited")
+def _lemma_of_two(s: Step) -> Iterable[str]:
+    # "by L, from h₁ and h₂", in either order
+    if len(s.lemmas) * len(s.names) ** 2 > 120:  # a cited family ("CPCTC") would explode
+        return []
+    return [f"exact {f} {g} {k}" for f in s.lemmas for g in s.names for k in s.names
+            if len({f, g, k}) == 3]
+
+
+@_r(140, "lemma of cited")
+def _lemma_of_cited(s: Step) -> Iterable[str]:
+    if not _pairs(s):
+        return []
+    return [f"exact {f} {g}" for f in s.lemmas for g in s.names if g != f]
+
+
+@_r(150, "rewrite with cited")
+def _rewrite(s: Step) -> Iterable[str]:
+    return ([f"(rw [{f}]; done)" for f in s.lemmas]
+            + [f"(rw [{f}]; simp{s.hs}; done)" for f in s.lemmas])
+
+
+@_r(170, "normalise with cited")
+def _normalise(s: Step) -> Iterable[str]:
+    # normalising everything with a cited rule, then closing
+    return [f"(simp only [{f}] at *; first | assumption | linarith | (simp_all; done))"
+            for f in s.lemmas]
+
+
+@_r(180, "substitute cited")
+def _substitute(s: Step) -> Iterable[str]:
+    # substituting a cited equation (f(x) = 3x + 1), then algebra, also inside |…|
+    return [f"(simp only [{f}]; first | ring1 | (congr 1; ring1))" for f in s.lemmas]
+
+
+@_r(190, "half of cited")
+def _half(s: Step) -> Iterable[str]:
+    # one half of a conjunction / one direction of an equivalence; matching limited to
+    # reducible definitions and instances, so the wrong half fails at once
+    return [f"(with_reducible_and_instances apply {half}; "
+            f"with_reducible_and_instances apply {f}; all_goals ({s.close}))"
+            for f in s.lemmas for half in ("And.left", "And.right", "Iff.mp", "Iff.mpr")]
+
+
+@_r(200, "cited up to set order")
+def _set_order(s: Step) -> Iterable[str]:
+    # a cited fact about the same elements listed in another order ({A, B, C} = {B, A, C})
+    return [f"(convert {f} using {d}; ext; simp only [Set.mem_insert_iff, "
+            f"Set.mem_singleton_iff]; tauto)" for f in s.names for d in (2, 1)]
+
+
+@_r(210, "decision procedures")
+def _decide(s: Step) -> Iterable[str]:
+    return ["rfl", "ring1", "omega", "positivity", "fun_prop", f"linarith{s.h}"]
+
+
+@_r(220, "normalise and decide")
+def _normalise_decide(s: Step) -> Iterable[str]:
+    return ["(congr 1; ring1)", "(push_cast; ring1)",
+            f"(norm_num{s.hs}; done)", f"(simp{s.hs}; done)", f"(simp{s.hs}; ring1)",
+            f"nlinarith{s.h}", "(field_simp; done)", "(field_simp; ring1)",
+            f"(simp_all{s.hs}; done)", f"(constructor; all_goals ({s.close}))"]
+
+
+@_r(1000, "general search")
+def _general(s: Step) -> Iterable[str]:
+    if s.avoid:  # aesop's and grind's simp sets cannot be restricted here
+        return []
+    return ["(aesop; done)", "grind"]
+
+
+__all__ = ["SLOTS", "Pack", "Rule", "Step", "active_packs", "add_rule", "alternatives",
+           "current_packs", "packs", "packs_using", "register_pack", "rules"]

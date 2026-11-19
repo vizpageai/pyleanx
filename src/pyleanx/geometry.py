@@ -54,6 +54,36 @@ def point(name: str) -> Var:
     return make_var(name, Point, caller_origin())
 
 
+# -------------------------------------------------------------------------------------
+# Justification rules of plane geometry (see pyleanx.justify): what a textbook leaves
+# implicit. They apply only to theorems about points.
+# -------------------------------------------------------------------------------------
+from . import justify as _j  # noqa: E402
+
+_j.register_pack("geometry", sorts={"Point"})
+# the vertices of a triangle are distinct (from ¬Collinear {A, B, C}), in either order
+_DISTINCT = tuple(f"(with_reducible exact {e})" for n in ("ne₁₂", "ne₁₃", "ne₂₃")
+                  for e in (f"{n}_of_not_collinear ‹_›", f"({n}_of_not_collinear ‹_›).symm"))
+for _slot in ("close", "cheap_close"):
+    _j.add_rule(_slot, 30, _DISTINCT, pack="geometry", name=f"{_slot}:distinct vertices")
+    # "D strictly between A and B" gives "D weakly between A and B"
+    _j.add_rule(_slot, 60, "exact Sbtw.wbtw ‹_›", pack="geometry", name=f"{_slot}:sbtw")
+# ∠ACB = ∠BCA; "between A and B" = "between B and A"; triangle ABC = triangle BAC
+_j.add_rule("close", 120, "(rw [EuclideanGeometry.angle_comm]; assumption)", pack="geometry",
+            name="close:angle symmetric")
+_j.add_rule("close", 130, "(apply sbtw_comm.mp; assumption)", pack="geometry",
+            name="close:between symmetric")
+_j.add_rule("close", 140, "(convert ‹¬ Collinear ℝ _› using 2; ext; simp only "
+            "[Set.mem_insert_iff, Set.mem_singleton_iff]; tauto)", pack="geometry",
+            name="close:triangle vertex order")
+# ∠ABC = ∠CBA and |AB| = |BA|, as in any textbook
+_j.add_rule("step", 55, lambda s: [f"(simp only [EuclideanGeometry.angle_comm] at *; "
+                                   f"linarith{s.h})"],
+            pack="geometry", name="angles up to orientation")
+_j.add_rule("step", 230, "(simp only [dist_comm] at *; first | assumption | linarith | ring1 | "
+            "(simp_all; done))", pack="geometry", name="distances up to orientation")
+
+
 def points(names: str | Iterable[str]) -> tuple[Var, ...]:
     """``A, B, C = geo.points("A B C")``."""
     parts = names.replace(",", " ").split() if isinstance(names, str) else list(names)
