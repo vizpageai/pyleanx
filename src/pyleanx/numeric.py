@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .expr import App, BinOp, Cast, Compare, Expr, Lit, Logic, Neg, NotP, PropConst, Quant, Var
-from .terms import Apply, Const
+from .terms import Apply, BigOp, Const, Lam
 
 _TOL = 1e-7
 
@@ -64,6 +64,14 @@ _APPLY: dict[str, Any] = {}
 _SAMPLERS: dict[str, Any] = {}
 #: construction hooks, in registration order (see :class:`Construction`)
 _CONSTRUCTIONS: dict[str, Any] = {}
+#: big operators (∑, ∏, ∫) by kind: handler(e, env) -> value, or NotImplemented
+_BIGOPS: dict[str, Any] = {}
+
+
+def register_bigop(kind: str, handler: Any) -> None:
+    """Evaluate big operators of ``kind`` ("sum", "prod", "integral") with
+    ``handler(e, env)``; the handler returns ``NotImplemented`` for cases it does not cover."""
+    _BIGOPS[kind] = handler
 
 
 def register_function(lean_name: str, fn: Any) -> None:
@@ -101,6 +109,9 @@ class Construction:
     rng: random.Random
     uses: dict[int, int]            # how many hypotheses mention each variable
     owner: dict[int, int] = field(default_factory=dict)  # uid -> hypothesis that placed it
+    #: hypotheses (indices into ``hyps``) that hold by construction: a definition such as
+    #: ∀ t, f t = 3t + 1 used to build f's sample. They are not evaluated again.
+    defined: set[int] = field(default_factory=set)
 
     def may_place(self, uid: int, i: int) -> bool:
         """May hypothesis ``i`` place variable ``uid``? (One placed by another hypothesis
@@ -171,6 +182,28 @@ def evaluate(e: Expr, env: dict[int, Any]) -> Any:
             return (not a) or evaluate(e.rhs, env)
         if e.op == "iff":
             return a == evaluate(e.rhs, env)
+    if isinstance(e, Lam):
+        # a function: a Python closure over the sample
+        params = e.vars
+
+        def closure(*vals: Any) -> Any:
+            bound = {v.uid: x for v, x in zip(params, vals, strict=True)}
+            return evaluate(e.body, {**env, **bound})
+        return closure
+    if isinstance(e, BigOp):
+        handler = _BIGOPS.get(e.kind)
+        if handler is not None:
+            value = handler(e, env)
+            if value is not NotImplemented:
+                return value
+        raise Unsupported(f"{e.kind}")
+    if isinstance(e, Apply) and isinstance(e.fn, Var):
+        # a function-valued variable whose sample is a Python function (a pack's sampler, or
+        # a construction from a defining hypothesis such as ∀ t, f t = 3t + 1)
+        fn = evaluate(e.fn, env)
+        if callable(fn):
+            return fn(*(evaluate(a, env) for a in e.args))
+        raise Unsupported(f"no function value for {e.fn.name}")
     if isinstance(e, Apply) and isinstance(e.fn, Const):
         handler = _APPLY.get(e.fn.name)
         if handler is not None:
@@ -226,6 +259,8 @@ def _fmt(v: Any) -> str:
         return "(" + ", ".join(_fmt(x) for x in v) + ")"
     if isinstance(v, float) and v.is_integer():
         return str(int(v))
+    if callable(v):  # a sampled function: its description, or the hypothesis defining it
+        return str(getattr(v, "label", "(as a hypothesis defines it)"))
     return f"{v:.4g}"
 
 
@@ -292,13 +327,19 @@ def _detail(prop: Expr, env: dict[int, Any]) -> str:
     return f": the left side is {_fmt(a)}, the right side {_fmt(b)}"
 
 
-def _construct(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> None:
+def _construct(hyps: list[Expr], env: dict[int, Any], rng: random.Random) -> list[Expr]:
     """Place the values the hypotheses determine, as one draws a figure: any
     ``x = expression`` is computed, and registered construction hooks place the rest (the
     geometry pack: a point strictly between A and B goes on the segment, …). Every
     hypothesis is still evaluated afterwards; nothing is assumed."""
     hyps = list(_conjuncts(hyps))
     c = Construction(hyps, env, rng, _uses(hyps))
+    _fill(c)
+    return [h for i, h in enumerate(hyps) if i not in c.defined]
+
+
+def _fill(c: Construction) -> None:
+    hyps, env = c.hyps, c.env
     hooks = [(hook, hook.setup(c)) for hook in _CONSTRUCTIONS.values()]
     for _ in range(2):  # a second pass resolves values defined from constructed ones
         for hook, state in hooks:
@@ -368,9 +409,9 @@ def sanity_check(thm: Any, samples: int = 300, seed: int = 0) -> SanityReport:
     while rep.samples < samples and tries < samples * 40:
         tries += 1
         env = {v.uid: _sample(s, rng) for v, s in sorts}
-        _construct(hyps, env, rng)
+        to_check = _construct(hyps, env, rng)
         try:
-            if not all(evaluate(h, env) for h in hyps):
+            if not all(evaluate(h, env) for h in to_check):
                 continue
         except Unsupported as exc:
             rep.note = f"a hypothesis uses {exc}, which cannot be evaluated; nothing was checked"

@@ -53,14 +53,18 @@ def _goal(message: str) -> str:
 def register_hint(pattern: str, hint: str) -> None:
     """Explain Lean messages matching ``pattern`` (a regular expression) with ``hint``.
 
-    Domain packs add hints for their own failures; the core's come first.
+    Domain packs add hints for their own failures; they are consulted before the core's.
     """
     re.compile(pattern)  # a bad pattern fails here, not when a proof fails
-    _HINTS.append((pattern, hint))
+    _PACK_HINTS.append((pattern, hint))
+
+
+#: hints registered by domain packs; consulted before the core's (they are more specific)
+_PACK_HINTS: list[tuple[str, str]] = []
 
 
 def _hint(message: str) -> str:
-    for pattern, hint in _HINTS:
+    for pattern, hint in (*_PACK_HINTS, *_HINTS):
         if re.search(pattern, message):
             return hint
     return ""

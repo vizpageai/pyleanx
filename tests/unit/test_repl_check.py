@@ -151,8 +151,8 @@ def test_numeric_check_says_when_nothing_was_checked():
                        assumptions={"h": geo.angle(A, C, B) == pl.analysis.pi() / 3},
                        conclusion=geo.dist(A, B) > 0, proof=pl.proof(pl.conclude()))
     assert "no random sample satisfies the hypotheses" in str(sixty.sanity_check())
-    f = pl.symbol("f", pl.Fn(pl.Real, pl.Real))
-    fun = pl.Theorem("fn", [f], conclusion=f(1) == f(1), proof=pl.proof(pl.conclude()))
+    g = pl.symbol("g", pl.Fn(pl.Nat, pl.Nat))   # a sort no pack samples
+    fun = pl.Theorem("fn", [g], conclusion=g(1) == g(1), proof=pl.proof(pl.conclude()))
     assert "cannot be sampled" in str(fun.sanity_check())
 
 

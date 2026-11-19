@@ -60,12 +60,12 @@ def test_the_core_names_no_geometry():
 def test_generated_lean_of_every_written_proof_is_unchanged():
     # A change here must be re-verified with Lean, then recorded with
     # `python scripts/golden_lean.py --update` (see docs/core.md).
-    sys.path.insert(0, str(ROOT / "scripts"))
-    try:
-        import golden_lean
-    finally:
-        sys.path.remove(str(ROOT / "scripts"))
-    assert golden_lean.changed() == []
+    # A fresh process: the core alone, whatever packs this test session has imported.
+    import subprocess
+
+    proc = subprocess.run([sys.executable, str(ROOT / "scripts" / "golden_lean.py")],
+                          capture_output=True, text=True, encoding="utf-8", cwd=ROOT)
+    assert proc.returncode == 0, proc.stdout[-2000:] + proc.stderr[-2000:]
 
 
 def test_a_third_party_domain_registers_its_facts(tmp_path, monkeypatch):
@@ -96,7 +96,7 @@ def test_a_domain_pack_registers_through_one_object():
     from pyleanx import diagnose, justify, numeric
 
     saved = (list(justify._RULES), dict(justify._PACKS), dict(numeric._SAMPLERS),
-             list(diagnose._HINTS))
+             list(diagnose._PACK_HINTS))
     try:
         toy = pl.domain_pack("toy", sorts={"Toy"})
         toy.rule("step", 15, "toy_tactic", name="t")
@@ -112,4 +112,11 @@ def test_a_domain_pack_registers_through_one_object():
         justify._PACKS.update(saved[1])
         numeric._SAMPLERS.clear()
         numeric._SAMPLERS.update(saved[2])
-        diagnose._HINTS[:] = saved[3]
+        diagnose._PACK_HINTS[:] = saved[3]
+
+
+def test_the_core_never_imports_a_domain_package():
+    # Domain packages (domains/*) depend on the core, never the other way round.
+    hits = [p.relative_to(SRC).as_posix() for p in SRC.rglob("*.py")
+            if "pyleanx_analysis" in p.read_text(encoding="utf-8")]
+    assert hits == []

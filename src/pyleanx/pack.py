@@ -61,6 +61,12 @@ class DomainPack:
 
         register_sampler(sort_name, sampler)
 
+    def bigop(self, kind: str, handler: Any) -> None:
+        """Evaluate big operators of ``kind`` (e.g. "integral") with ``handler(e, env)``."""
+        from .numeric import register_bigop
+
+        register_bigop(kind, handler)
+
     def construction(self, hook: Any) -> None:
         """Place values the hypotheses determine (see ``numeric.register_construction``)."""
         from .numeric import register_construction

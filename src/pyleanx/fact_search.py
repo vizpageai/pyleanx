@@ -54,7 +54,10 @@ def domains() -> tuple[Domain, ...]:
     """The registered domains (the built-in packs first)."""
     import importlib
 
-    importlib.import_module("pyleanx.packs")  # registers the built-in packs
+    # Built-in packs only: an installed domain package takes part once it is imported (by
+    # the proof's author, or by pyleanx.packs.load_plugins), never implicitly here, so the
+    # Lean a proof generates does not depend on what was looked up before.
+    importlib.import_module("pyleanx.packs")
     return tuple(_REGISTRY.values())
 
 _STOP = {"a", "an", "the", "of", "is", "are", "and", "or", "to", "in", "on", "for", "by",

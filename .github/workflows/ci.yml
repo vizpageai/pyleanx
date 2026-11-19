@@ -27,6 +27,8 @@ jobs:
       - run: ruff check .
       - run: mypy src/pyleanx
       - run: mypy --platform win32 src/pyleanx
+      - run: pip install -e domains/analysis
+      - run: mypy domains/analysis/src
 
   unit:
     runs-on: ${{ matrix.os }}
@@ -42,6 +44,10 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: pip install -e ".[dev]"
       - run: pytest tests/unit -q --cov=pyleanx --cov-report=term-missing --cov-fail-under=80
+      # the analysis domain package, in its own process (importing a pack changes the
+      # Lean its theorems generate, so the core's tests run without it)
+      - run: pip install -e domains/analysis
+      - run: pytest domains/analysis/tests -q
 
   lean-integration:
     # Full proof verification against the pinned Lean + Mathlib (release gate). The three
@@ -81,6 +87,11 @@ jobs:
       - name: Every example script
         if: matrix.suite == 'examples'
         run: python scripts/run_examples.py
+      - name: The analysis package's chapter (Lean)
+        if: matrix.suite == 'examples'
+        run: |
+          pip install -e domains/analysis
+          python -m pyleanx_analysis.chapters.integration
       - name: Naturalness benchmark (every written proof, with Lean)
         if: matrix.suite == 'benchmark'
         run: python benchmarks/naturalness.py --lean

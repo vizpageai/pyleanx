@@ -27,3 +27,30 @@ BUILTIN = (
 
 for _module, _prefix, _title in BUILTIN:
     register_domain(_module, prefix=_prefix, title=_title)
+
+#: entry-point group through which installed domain packages announce themselves
+PLUGIN_GROUP = "pyleanx.packs"
+_LOADED: dict[str, str] = {}   # entry-point name -> module, or the error that stopped it
+
+
+def load_plugins() -> dict[str, str]:
+    """Import every installed domain package (entry points in the ``pyleanx.packs``
+    group); importing a package registers its pack. Returns name -> module (or the error).
+
+    A domain package declares, in its ``pyproject.toml``::
+
+        [project.entry-points."pyleanx.packs"]
+        topology = "mypkg_topology"
+    """
+    import importlib
+    from importlib.metadata import entry_points
+
+    for ep in entry_points(group=PLUGIN_GROUP):
+        if ep.name in _LOADED:
+            continue
+        try:
+            importlib.import_module(ep.value.split(":")[0])
+            _LOADED[ep.name] = ep.value
+        except Exception as exc:  # noqa: BLE001 - a broken plugin must not break the core
+            _LOADED[ep.name] = f"failed to load: {type(exc).__name__}: {exc}"
+    return dict(_LOADED)
