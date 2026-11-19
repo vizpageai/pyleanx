@@ -104,6 +104,39 @@ class Derivation:
         """The steps that cite ``name`` directly."""
         return tuple(n.name for n in self.nodes if name in n.cites)
 
+    def _rows(self) -> list[tuple[str, str, str, str, str]]:
+        from .prose import plain
+
+        rows = []
+        for n in self.nodes:
+            stmt = ""
+            try:
+                if n.statement is not None:
+                    stmt = plain(n.statement)
+                elif isinstance(n.tactic, Chain) and n.tactic.links:
+                    # a chain states its first term related to its last
+                    stmt = f"{plain(n.tactic.first)} … {plain(n.tactic.links[-1][1])}"
+            except Exception:  # noqa: BLE001 - display only
+                stmt = str(n.statement or "")
+            facts = ", ".join(f.split(".")[-1] for f in n.facts)
+            rows.append((", ".join(n.introduces) or "–", n.kind, stmt,
+                         ", ".join(n.cites), facts))
+        return rows
+
+    def __str__(self) -> str:
+        lines = [f"Derivation of {self.theorem}:"]
+        for intro, kind, stmt, cites, facts in self._rows():
+            why = "; ".join(x for x in (cites and f"cites {cites}", facts and f"by {facts}") if x)
+            lines.append(f"  {intro:12s} {kind:11s} {stmt}" + (f"   ({why})" if why else ""))
+        return "\n".join(lines)
+
+    def _repr_markdown_(self) -> str:  # Jupyter
+        out = [f"**Derivation of `{self.theorem}`**", "",
+               "| name | kind | statement | cites | facts |", "|---|---|---|---|---|"]
+        for row in self._rows():
+            out.append("| " + " | ".join(c.replace("|", "\\|") for c in row) + " |")
+        return "\n".join(out)
+
 
 def _cited(facts: Iterable[Any], known: Iterable[str]) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """Split cited terms into names of the proof's own hypotheses/steps, and library facts."""

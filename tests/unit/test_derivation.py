@@ -61,3 +61,11 @@ def test_nested_proofs_cases_and_fixed_hypotheses():
     assert d["hle"].scope[:2] == ("hx", "hy")       # the nested step sees the fixed hypothesis
     assert {"hy", "hpos", "hle"} <= d.introduced
     assert pl.derivation(thm).theorem == "t"
+
+
+def test_a_derivation_prints_as_a_table():
+    d = _pyth().derivation()
+    text = str(d)
+    assert text.startswith("Derivation of p:") and "cites hABC, hC, hD, hBD" in text
+    md = d._repr_markdown_()
+    assert md.count("\n|") >= len(d) + 1 and "| h2 | claim |" in md
