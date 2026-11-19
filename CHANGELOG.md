@@ -8,6 +8,20 @@ see [docs/stability.md](docs/stability.md)).
 ## [Unreleased]
 
 ### Added
+- **Domain packages**: separate distributions built on the core and never imported by it,
+  discovered through the `pyleanx.packs` entry point (`pyleanx.packs.load_plugins`;
+  `pyleanx doctor` lists them, `pyleanx facts` searches their facts). A package takes part
+  once imported, so the Lean a proof generates depends only on the proof and the packages
+  imported. [docs/domains.md](docs/domains.md).
+- **`pyleanx-analysis`** (`domains/analysis`): real and measure-theoretic analysis as a
+  domain package: vocabulary, facts (Markov's inequality, …), justification rules for
+  integrability, a.e. nonnegativity and finiteness of measures, numeric sanity checks of
+  functions, derivatives and integrals, explanation hints, and a Lean-verified chapter in
+  which Markov's inequality and an interval bound are one-step proofs (three steps
+  without the package).
+- `pyleanx new FILE`: a template written proof to start from.
+- Numeric evaluator: function-valued variables, λ terms, big operators through handlers
+  (`register_bigop`), hypotheses that hold by construction (`Construction.defined`).
 - **The core** ([docs/core.md](docs/core.md)): the domain-free engine PyLeanX is built on,
   by its PyTorch equivalence, with guardrail tests (golden Lean of every written proof; no
   domain pack imported or named by a core module).

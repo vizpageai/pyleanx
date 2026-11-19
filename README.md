@@ -150,6 +150,7 @@ pyleanx show-lean examples/square_identity.py
 pyleanx check examples/square_identity.py          # exit 0
 pyleanx check examples/bad_proof.py                # exit 1, with diagnostics
 pyleanx check examples/implication.py --json       # machine-readable
+pyleanx new my_proof.py                            # a template written proof to start from
 pyleanx check my_proof.py --watch                  # re-check on every save, in seconds
 ```
 
@@ -217,6 +218,27 @@ pl.Theorem("angle_sum", [A, B, C], assumptions={"h": B != A},
 
 Each module's lemma catalog names declarations checked against the pinned Mathlib; see
 [examples/domains.py](examples/domains.py) and the module docstrings for limitations.
+
+## Domain packages
+
+Mathematics beyond the core comes in separate packages built on PyLeanX's public API, the
+way torchvision is built on torch. [`pyleanx-analysis`](domains/analysis) brings real and
+measure-theoretic analysis: its vocabulary and facts, justification rules for the side
+conditions a textbook never writes (|f| is integrable when f is, |f| ≥ 0 a.e., compact
+sets have finite measure, …), and numeric checks of functions, derivatives and integrals.
+With it, Markov's inequality is a one-step proof:
+
+```python
+import pyleanx_analysis as an
+from pyleanx_analysis import facts
+
+markov = pl.Theorem("markov_inequality", [f, alpha],
+                    assumptions={"hf": an.integrable(f)},
+                    conclusion=alpha * an.measure(level) <= an.l1_norm(f),
+                    proof=pl.proof(pl.conclude(because=facts.markov)))
+```
+
+See [Domain packages](docs/domains.md) for writing one.
 
 ## Seeing a Mathlib theorem as Lean states it
 

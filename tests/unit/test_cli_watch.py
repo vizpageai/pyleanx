@@ -41,3 +41,14 @@ def test_check_watch_survives_a_broken_edit(tmp_path, capsys):
     script.write_text("THEOREMS = [1 / 0]\n", encoding="utf-8")
     assert watch(str(script), project=None, poll=0.01, rounds=1, check=None) == 0
     assert "ZeroDivisionError" in capsys.readouterr().out
+
+
+def test_new_writes_a_template_that_loads_and_never_overwrites(tmp_path, capsys):
+    from pyleanx.cli import load_theorems, main
+
+    target = tmp_path / "my_proof.py"
+    assert main(["new", str(target)]) == 0
+    thms = load_theorems(str(target))
+    assert [t.name for t in thms] == ["am_gm_two"] and thms[0].sanity_check().ok
+    assert main(["new", str(target)]) == 1                      # never overwrites
+    assert "exists" in capsys.readouterr().err

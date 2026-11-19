@@ -190,6 +190,53 @@ def cmd_show_lean(args: argparse.Namespace) -> int:
     return 0
 
 
+_TEMPLATE = '''"""{title}
+
+Write the proof step by step; each step cites, by name, the facts it follows from.
+
+    pyleanx sanity {file}          # try every step on random numbers (seconds, no Lean)
+    pyleanx check {file} --watch   # re-check with Lean every time you save
+    pyleanx facts <words>          # find a fact to cite
+"""
+
+import pyleanx as pl
+
+x, y = pl.symbols("x y", pl.Real)
+
+# The statement: variables, hypotheses (named), conclusion.
+am_gm = pl.Theorem(
+    "am_gm_two", [x, y],
+    assumptions={{"hx": x >= 0, "hy": y >= 0}},
+    conclusion=x * y <= ((x + y) / 2) ** 2,
+    proof=pl.proof(
+        # 1. a step: what it states, and why
+        pl.claim((x - y) ** 2 >= 0, because=pl.mathlib.sq_nonneg, name="hsq"),
+        # Hence the conclusion, from the steps above
+        pl.conclude(because="hsq"),
+    ),
+)
+
+THEOREMS = [am_gm]   # what `pyleanx check` and `pyleanx sanity` look at
+
+if __name__ == "__main__":
+    print(am_gm.sanity_check())
+    print(am_gm.prose(am_gm.check()))
+'''
+
+
+def cmd_new(args: argparse.Namespace) -> int:
+    """Write a template script with one written proof (never overwrites a file)."""
+    path = Path(args.file)
+    if path.exists():
+        print(f"{path} exists; choose another name", file=sys.stderr)
+        return 1
+    title = path.stem.replace("_", " ").capitalize()
+    path.write_text(_TEMPLATE.format(title=title, file=path.name), encoding="utf-8")
+    print(f"wrote {path}: edit the proof, then `pyleanx sanity {path}` and "
+          f"`pyleanx check {path} --watch`")
+    return 0
+
+
 def cmd_sanity(args: argparse.Namespace) -> int:
     """Numeric sanity check of a script's theorems (no Lean; exit 1 if a step looks false)."""
     thms = load_theorems(args.script)
@@ -565,6 +612,10 @@ def build_parser() -> argparse.ArgumentParser:
                            help="re-check every time the script is saved, keeping Lean "
                                 "loaded (seconds per check after the first)")
         s.set_defaults(func=func)
+
+    s = sub.add_parser("new", help="write a template script with a written proof")
+    s.add_argument("file")
+    s.set_defaults(func=cmd_new)
 
     s = sub.add_parser("sanity", help="try a (trusted) script's theorems on random numbers "
                        "(no Lean)")
