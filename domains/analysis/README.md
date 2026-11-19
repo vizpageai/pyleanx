@@ -99,8 +99,11 @@ proofs still verify. Lean's verdicts on 2026-11-19 (local batch checks, standard
 | Hardy–Littlewood weak type (`hardy_littlewood_weak_type`) | 2 of 5 (3 one at a time) | the sign of 4‖f‖₁/α; μ(K) ≠ ∞ |
 | Splitting estimate, integrals over disjoint intervals | 2 of 2 each | none |
 
-Step by step (one bookkeeping step removed at a time), the Hilbert kernel's Hörmander
-estimate loses 6 of 9 and its decay estimate 1 of 3; the steps still needed are the
+Step by step (one bookkeeping step removed at a time): the Calderón–Zygmund intervals
+module loses 6 of 11 (the endpoints' 2 of 4 each, 2 of 3 in the main theorem; the steps
+still needed are topological, "the complement is closed" and "the set is bounded above",
+for which the package has no rules yet), the harmonic-analysis lecture 1 of 1, the Hilbert
+kernel's Hörmander estimate 6 of 9 and its decay estimate 1 of 3; the steps still needed are the
 integrability of kernel products such as b(w)/(x − w) on a set, which takes an argument
 (continuity away from the singularity, boundedness) rather than a rule.
 
