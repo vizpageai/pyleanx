@@ -73,6 +73,22 @@ the benchmark results (`benchmarks/lean_results.json`).
 | K3 | Statement operations as one API | Lean unchanged |
 | K4 | Numeric sampling framework; geometry evaluators and constructions move to the pack | sanity results unchanged on the benchmark |
 | K5 | Packs for the remaining domains; fact registry with one `Fact` type | Lean unchanged |
-| K6 | Remembered winners: the alternative that closed a step is recorded (REPL) and tried first next time | a step whose winner no longer applies falls back to the full search |
+| K6 | Remembered winners: the alternative that closed a step is recorded (REPL) and tried first next time | a measurable speed-up of warm re-checks; a step whose winner no longer applies falls back to the full search |
 
-Status is tracked in the [roadmap](roadmap.md).
+## Status (2026-11-19)
+
+| Phase | State | Evidence |
+|---|---|---|
+| K0 | done | `tests/unit/test_core_layers.py`, `tests/golden/lean_fingerprints.json`, `scripts/golden_lean.py` |
+| K1 | done | `pyleanx/justify.py`; geometry rules registered by `pyleanx/geometry.py`. Geometry proofs: Lean byte-identical. The other 55 proofs lost only geometry alternatives and were re-verified with Lean: all pass (benchmark 72/72) |
+| K2 | done | `pyleanx/derivation.py`; the unknown-hypothesis check reads it (same names as before on all 72 proofs) |
+| K3 | done | `pyleanx/ops.py`; pack activation uses `ops.vocabulary` |
+| K4 | done | `pyleanx/numeric.py` registries; `pyleanx/_geometry_numeric.py`. Sanity reports of 77 cases identical, sampled values included |
+| K5 | partly | fact-search registry and `pyleanx/packs.py` done. Facts already share one type (`Name`, with `LibraryFact` for facts proved in PyLeanX and `TheoremRef` for cited theorems). Still to do: the theorem bank's catalogue list (`_domain.all_catalogs`) from the registry, and exact statement contracts per fact ([foundations](foundations.md) F2) |
+| K6 | tried, not kept | Implemented and measured on the 7 Euclid proofs (REPL): cold check 750 s (Mathlib import); warm re-checks 75 s and 70 s with remembered winners first, 70 s without. No gain: a warm check's time is not spent on failing alternatives. The change was reverted (it also made `check()` able to accept a step that `verify()` times out on). Next: profile where a warm check spends its time before optimising |
+
+Remaining domain knowledge in core modules: none of the geometry pack's names (enforced by
+a test). The numeric prelude (ℝ, ℕ, ℤ, `Real.sqrt`, `exp`, `log`, `sin`, `cos`, `π`) and
+general constructs (sums, integrals) stay in the core by design.
+
+Status is also tracked in the [roadmap](roadmap.md).

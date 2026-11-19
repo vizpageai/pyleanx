@@ -8,6 +8,22 @@ see [docs/stability.md](docs/stability.md)).
 ## [Unreleased]
 
 ### Added
+- **The core** ([docs/core.md](docs/core.md)): the domain-free engine PyLeanX is built on,
+  by its PyTorch equivalence, with guardrail tests (golden Lean of every written proof; no
+  domain pack imported or named by a core module).
+  - `pyleanx.justify`: the justification engine. A step's tactic search is assembled from
+    rules in ordered slots; packs register their rules (`register_pack`, `add_rule`) and
+    they apply only to theorems that use the pack's vocabulary. Geometry's rules moved
+    from the core into the geometry pack.
+  - `pyleanx.derivation` (`thm.derivation()`, `pl.derivation`): the derivation graph of a
+    written proof (statements, citations, scope, dependencies).
+  - `pyleanx.ops`: statement operations as one API (`substitute`, `exchange`, `free_vars`,
+    `same`, `sorts`, `symbols`, `vocabulary`).
+  - The numeric sanity check is a framework (`register_function`, `register_apply`,
+    `register_sampler`, `register_construction`); points and figures are the geometry
+    pack's.
+  - Fact search keeps a registry of domains (`register_domain`); the built-in packs are
+    listed in `pyleanx.packs`, and third-party packs register the same way.
 - [Citable facts](docs/facts.md): a generated page listing all 390 facts of the domain
   modules with the label that selects each one in `because=`.
 - A step that cites a hypothesis no part of the proof defines (`because="hz"` where only `hx`
@@ -33,6 +49,8 @@ see [docs/stability.md](docs/stability.md)).
   rejects now fails the benchmark job.
 
 ### Fixed
+- `pl.similarly(replace=…)` takes a pair `(x, e)` or a list of pairs; the documented
+  `replace={x: e}` never worked (variables cannot be dictionary keys).
 - A failed gap-filled step no longer shows `grind`'s search state as "Still to show: False
   [grind] …"; it gets a hint about checking the cited facts instead.
 - A one-word label (`because="SSS"`, `"SAS"`) cites its fact; it was taken as a Lean name.

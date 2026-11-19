@@ -1,5 +1,9 @@
 # Architecture
 
+The domain-free core (statements, their operations, the derivation graph, the
+justification engine, kernels) and how domain packs plug into it are described in
+[The core](core.md). This page follows a theorem through the pipeline.
+
 ```
  Python user / AI agent
         │  pl.symbols, operators, pl.Theorem, tactics
