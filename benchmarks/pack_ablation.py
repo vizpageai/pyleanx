@@ -105,8 +105,11 @@ def main(argv: list[str]) -> int:
             variants.append((t, *v))
     results = pl.verify_all([v for _, v, _ in variants], timeout=3600, use_cache=False)
     ok = 0
-    for (t, _variant, names), r in zip(variants, results, strict=True):
+    show = "--show" in argv      # print each verified variant as a reader sees it
+    for (t, variant, names), r in zip(variants, results, strict=True):
         ok += r.verified
+        if show and r.verified:
+            print(variant.prose(r), flush=True)
         print(f"{'removable' if r.verified else 'still needed':12s} {t.name}: "
               f"{len(names)} bookkeeping step(s) {names}", flush=True)
         if not r.verified:

@@ -74,6 +74,32 @@ derivative rules (sums, products, powers, sin, cos) the differentiation needs.
 `thm.sanity_check()` evaluates the derivative of the defined function numerically, so a
 wrong derivative (for instance a product rule missing a term) is reported with the point.
 
+## What the package removes from existing proofs
+
+The harmonic-analysis chapters in PyLeanX's `examples/` were written for the core alone, so
+they state their side conditions as steps. `benchmarks/pack_ablation.py` deletes those
+steps (and the citations of them) and lets Lean decide, with this package imported, which
+proofs still verify. Lean's verdicts on 2026-11-19 (local batch checks, standard axioms):
+
+| Proof | Bookkeeping steps removed, all together | Remaining |
+|---|---:|---|
+| Calderón–Zygmund: average over an interval (`cz_interval_average`) | **7 of 7** (16 → 9 steps) | none |
+| Hilbert kernel smoothness (`hilbert_kernel_smooth`) | **5 of 5** | none |
+| The maximal function's level set is open (`maximal_level_set_open`) | **9 of 9** | none |
+| Level-set bound (`maximal_level_set_bound`) | 3 of 5 | μ(K) ≠ ∞; the sign of 8‖f·1_{\|f\|>α/2}‖₁/α |
+| Hardy–Littlewood weak type (`hardy_littlewood_weak_type`) | 2 of 5 (3 one at a time) | the sign of 4‖f‖₁/α; μ(K) ≠ ∞ |
+| Splitting estimate, integrals over disjoint intervals | 2 of 2 each | none |
+
+Step by step (one bookkeeping step removed at a time), the Hilbert kernel's Hörmander
+estimate loses 6 of 9 and its decay estimate 1 of 3; the steps still needed are the
+integrability of kernel products such as b(w)/(x − w) on a set, which takes an argument
+(continuity away from the singularity, boundedness) rather than a rule.
+
+Two of the package's rules came from this experiment: the first run on the Calderón–
+Zygmund decomposition removed 6 of the 7 steps one at a time but not all together, because
+"|f| is integrable on a closed interval when f is locally integrable" and "A ⊆ B holds
+almost everywhere" had no rule. With them, all 7 go.
+
 ## Tests
 
 ```bash
