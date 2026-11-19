@@ -219,6 +219,12 @@ class Theorem:
 
         return sanity_check(self, samples=samples, seed=seed)
 
+    def derivation(self) -> Any:
+        """The proof's steps and what each cites (see :mod:`pyleanx.derivation`)."""
+        from .derivation import derivation
+
+        return derivation(self)
+
     def prose(self, result: VerificationResult | None = None) -> Any:
         """The proof as readable steps (see :func:`pyleanx.prose`)."""
         from .prose import prose

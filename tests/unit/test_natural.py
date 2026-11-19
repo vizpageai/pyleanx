@@ -139,3 +139,12 @@ def test_a_one_word_label_selects_its_fact():
     # other one-word reasons are still names
     assert [f.name for f in pl.claim(A != B, because="hAB").facts] == ["hAB"]
     assert [f.name for f in pl.claim(A != B, because="sss").facts] == ["sss"]
+
+
+def test_similarly_replace_takes_pairs():
+    x = pl.symbol("x", pl.Real)
+    s = pl.similarly("h1", replace=(x, -x))
+    assert len(s.mapping) == 1 and s.mapping[0][0] is x
+    assert len(pl.similarly("h1", replace=[(x, -x), (x, x + 1)]).mapping) == 2
+    with pytest.raises(pl.TacticError, match=r"replace=\[\(x, -x\)\]"):
+        pl.similarly("h1", replace=x)

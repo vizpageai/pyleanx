@@ -138,7 +138,7 @@ pl.similarly("h1", exchange=(A, B), name="h2"),          # 3. |BC|² = |BD|·|BA
 ```
 
 `similarly` repeats an earlier step with variables exchanged (`exchange=(A, B)`, or a list of
-pairs) or replaced (`replace={x: -x}`): its statement, its reasons and its own proof. A cited
+pairs) or replaced (`replace=(x, -x)`, or a list of pairs): its statement, its reasons and its own proof. A cited
 hypothesis is replaced by the one that states the exchanged fact (`hAD` becomes `hBD`). Lean
 checks the new step in full; nothing is assumed by symmetry.
 

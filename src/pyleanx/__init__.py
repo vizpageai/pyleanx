@@ -37,6 +37,7 @@ from .binders import free_vars, prop_symbol, symbol, symbols
 
 # ---- general Lean vocabulary (M11-M13): any type, fun, ∑/∫, definitions, structured proofs
 from .defs import define, define_type, mk, structure  # noqa: E402
+from .derivation import Derivation, derivation
 from .diagnose import explain_failure
 from .errors import (
     IdentifierError,
@@ -198,7 +199,8 @@ __all__ = [
     "constructor", "assumption", "linarith", "nlinarith", "norm_num", "simp", "intro", "exact",
     "apply", "rw", "rewrite", "rev", "use", "steps", "branches", "raw_tactic", "ref", "hyp",
     # verification
-    "verify_all", "check_all", "explain_failure", "fact", "search_facts",
+    "verify_all", "check_all", "explain_failure", "fact", "search_facts", "derivation",
+    "Derivation",
     "VerificationResult", "Status", "Diagnostic", "AxiomPolicy",
     "DEFAULT_POLICY", "STANDARD_AXIOMS", "LeanProject", "find_project", "ResultCache",
     "render_module", "mathlib", "ProofSession", "StepResult", "Goals", "shutdown_sessions",

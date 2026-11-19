@@ -1706,8 +1706,9 @@ def similarly(ref: object, *, exchange: object = None, replace: object = None,
         pl.claim(AC ** 2 == AD * AB, because=[leg_rule, "hABC", "hC", "hD", "hAD"], name="h1"),
         pl.similarly("h1", exchange=(A, B), name="h2"),        # BC² = BD·BA
 
-    ``exchange=(A, B)`` (or a list of pairs) swaps variables; ``replace={x: e}`` maps them
-    one way. The new step has the earlier statement, reasons and sub-proof with the
+    ``exchange=(A, B)`` (or a list of pairs) swaps variables; ``replace=(x, e)`` (or a list
+    of pairs) maps them one way. (Variables cannot be dictionary keys: ``x == y`` builds
+    an equation.) The new step has the earlier statement, reasons and sub-proof with the
     substitution applied; a cited hypothesis is replaced by the one stating the exchanged
     fact when there is one (``hAD`` -> ``hBD``). Lean checks the resulting step in full.
     """
@@ -1728,11 +1729,14 @@ def similarly(ref: object, *, exchange: object = None, replace: object = None,
             a, b = pair
             pairs += [(a, b), (b, a)]
     if replace is not None:
-        if not isinstance(replace, dict) or not all(isinstance(v, Var) for v in replace):
-            raise TacticError("pl.similarly(replace={x: e}): a dict from variables to terms")
-        pairs += [(v, _lift(e)) for v, e in replace.items()]
+        rep = list(replace) if isinstance(replace, list) else [replace]
+        for pair in rep:
+            if not (isinstance(pair, tuple) and len(pair) == 2 and isinstance(pair[0], Var)):
+                raise TacticError("pl.similarly(replace=(x, e)): a pair (variable, term) or a "
+                                  "list of them, e.g. replace=[(x, -x)]")
+            pairs.append((pair[0], _lift(pair[1])))
     if not pairs:
-        raise TacticError("pl.similarly needs exchange=(A, B) or replace={x: e}")
+        raise TacticError("pl.similarly needs exchange=(A, B) or replace=(x, e)")
     if name:
         validate_identifier(name, "pl.similarly name")
     return Similarly(ref=ref, mapping=tuple(pairs), name=name, note=note, origin=caller_origin())
@@ -1827,34 +1831,6 @@ def _all_tactics(t: Tactic) -> Iterable[Tactic]:
         yield from _all_tactics(x)
 
 
-def _introduced_names(t: Tactic) -> set[str]:
-    """Every hypothesis name some step of the proof introduces (in any scope)."""
-    import dataclasses
-
-    out = {"this"}
-    for s in _all_tactics(t):
-        # dataclass fields only: some tactics have methods with these names
-        fields = ({f.name: getattr(s, f.name) for f in dataclasses.fields(s)}
-                  if dataclasses.is_dataclass(s) else {})
-        for attr in ("name", "ih", "ref"):
-            v = fields.get(attr)
-            if isinstance(v, str) and v:
-                out.add(v)
-        for attr in ("names", "succ_names"):
-            out.update(x for x in fields.get(attr) or () if isinstance(x, str))
-        out.update(h[0] for h in fields.get("hyps") or () if isinstance(h, tuple))
-        for alt in fields.get("alternatives") or ():
-            out.update(x for x in alt if isinstance(x, str))
-        for c in fields.get("cases") or ():
-            if isinstance(getattr(c, "name", None), str):
-                out.add(c.name)
-        if isinstance(s, Let):
-            out.add(s.eq_name)
-        if isinstance(s, Induction):
-            out.add(s.var)
-    return out
-
-
 def check_cited_names(t: Tactic | None, hyps: Iterable[str], theorem: str) -> None:
     """Refuse a step that cites a hypothesis no part of the proof defines (a typo).
 
@@ -1866,7 +1842,9 @@ def check_cited_names(t: Tactic | None, hyps: Iterable[str], theorem: str) -> No
 
     if t is None or contains_raw(t):
         return
-    known = _introduced_names(t) | set(hyps)
+    from .derivation import _all_names
+
+    known = _all_names(t) | set(hyps) | {"this"}
     for s in _all_tactics(t):
         facts = getattr(s, "facts", ())
         cited: list[Term] = list(facts) if isinstance(facts, tuple) else []

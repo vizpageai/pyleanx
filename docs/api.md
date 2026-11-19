@@ -356,7 +356,7 @@ See the tutorial [Writing proofs like a mathematician](tutorials/written-proofs.
 | `because=thm` / `pl.cite(thm)` (a proved `pl.Theorem`) | the cited theorem and its proof are emitted first and re-checked; unproved → error; a failed cited proof rejects its citers |
 | `pl.Theorem(…, avoid=[lemmas])` | `simp [-lemma]` in gap fillers, plus a Lean check that fails if the proof term refers to them |
 | `thm.prose(result=None)`, `pl.prose(thm, result)` | the proof as numbered, nested steps (text / Jupyter) |
-| `pl.similarly("h1", exchange=(A, B), name="h2")`, `replace={x: e}` | the step `h1` again with the substitution (statement, reasons, sub-proof); hypotheses renamed to the exchanged ones |
+| `pl.similarly("h1", exchange=(A, B), name="h2")`, `replace=(x, e)` or a list of pairs | the step `h1` again with the substitution (statement, reasons, sub-proof); hypotheses renamed to the exchanged ones |
 | `because="AA similarity"` (any reason containing a space, or a one-word label such as `"SSS"`) | the fact with that description (`pl.fact`, `pl.search_facts`); unclear descriptions are refused with candidates; every label is in [Citable facts](facts.md) |
 
 The gap filler uses cited facts directly, applies them (discharging side conditions from the
