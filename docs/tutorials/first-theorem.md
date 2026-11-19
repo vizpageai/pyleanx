@@ -70,6 +70,41 @@ Positivity of an expression built from squares and positive terms: `pl.positivit
 sq = pl.Theorem("shifted_square", [x], conclusion=(x - 1)**2 + 1 > 0, proof=pl.positivity())
 ```
 
+## A proof in steps
+
+A tactic proves a statement in one go. Most mathematics is written in *steps*, each with
+its reason; PyLeanX writes proofs that way too. A step cites, by name, the facts it follows
+from, here `pl.mathlib.sq_nonneg` ((a − b)² ≥ 0 for every real a, b), and Lean checks every
+step:
+
+```python
+am_gm = pl.Theorem(
+    "am_gm_two", [x, y],
+    conclusion=x * y <= ((x + y) / 2) ** 2,
+    proof=pl.proof(
+        pl.claim((x - y) ** 2 >= 0, because=pl.mathlib.sq_nonneg, name="hsq"),
+        pl.conclude(because="hsq"),
+    ),
+)
+am_gm_result = am_gm.verify()
+print(am_gm.prose(am_gm_result))
+assert am_gm_result.verified
+```
+
+```text
+Theorem (am_gm_two). For all x, y ∈ ℝ: xy ≤ ((x + y)/2)².
+Proof.
+  1. (x - y)² ≥ 0.  (sq_nonneg)
+  Hence xy ≤ ((x + y)/2)² (by step 1). ∎
+  ✔ Checked by Lean (axioms: propext, Classical.choice, Quot.sound).
+```
+
+The final step needs no tactic: from (x − y)² ≥ 0 the conclusion is a matter of algebra,
+and PyLeanX's justification engine finds it (Lean checks what it finds). Two commands help
+while writing: `am_gm.sanity_check()` tries every step on random numbers in a fraction of a
+second, and `pyleanx new my_proof.py` writes this proof into a file to start from.
+[Writing proofs like a mathematician](written-proofs.md) goes further.
+
 ## When a proof is wrong
 
 Lean says so, and PyLeanX tells you where.

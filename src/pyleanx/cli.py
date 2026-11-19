@@ -203,10 +203,10 @@ import pyleanx as pl
 
 x, y = pl.symbols("x y", pl.Real)
 
-# The statement: variables, hypotheses (named), conclusion.
+# The statement: variables, conclusion (and hypotheses, named, if there are any:
+# assumptions={{"hx": x > 0}}).
 am_gm = pl.Theorem(
     "am_gm_two", [x, y],
-    assumptions={{"hx": x >= 0, "hy": y >= 0}},
     conclusion=x * y <= ((x + y) / 2) ** 2,
     proof=pl.proof(
         # 1. a step: what it states, and why
