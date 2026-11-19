@@ -93,6 +93,7 @@ jobs:
           pip install -e domains/analysis
           python -m pyleanx_analysis.chapters.integration
           python -m pyleanx_analysis.chapters.derivatives
+          python -m pyleanx_analysis.chapters.calderon_zygmund
       - name: Naturalness benchmark (every written proof, with Lean)
         if: matrix.suite == 'benchmark'
         run: python benchmarks/naturalness.py --lean

@@ -74,6 +74,15 @@ derivative rules (sums, products, powers, sin, cos) the differentiation needs.
 `thm.sanity_check()` evaluates the derivative of the defined function numerically, so a
 wrong derivative (for instance a product rule missing a term) is reported with the point.
 
+## Chapter: the Calderón–Zygmund interval estimate (`pyleanx_analysis.chapters.calderon_zygmund`)
+
+Stein, *Singular Integrals*, ch. I §3: if f is locally integrable, a ∈ I = [c − r, c + r]
+and a ∉ {Mf > α}, then ∫_I |f| ≤ 2α|I|. The proof is Stein's: I ⊆ J = [a − 2r, a + 2r];
+J has average at most α because a ∉ {Mf > α}; |J| = 2|I|. It has 9 steps; the core-only
+version in PyLeanX's `examples/calderon_zygmund.py` has 16, seven of them side conditions
+(f and |f| integrable on J, |f| ≥ 0 a.e., I ⊆ J a.e., 2r > 0, r ≥ 0, 2r ≥ 0) that this
+package's rules now supply. Verified by Lean on 2026-11-19 (standard axioms).
+
 ## What the package removes from existing proofs
 
 The harmonic-analysis chapters in PyLeanX's `examples/` were written for the core alone, so

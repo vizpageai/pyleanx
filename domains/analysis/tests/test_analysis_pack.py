@@ -105,3 +105,13 @@ def test_a_wrong_derivative_is_found_through_the_definition():
         conclusion=an.deriv(d.f, d.x) == an.cos(d.x) * d.x,
         proof=pl.proof(pl.conclude()))
     assert "looks false" in str(wrong.sanity_check())
+
+
+def test_the_calderon_zygmund_chapter_is_the_textbook_proof():
+    from pyleanx_analysis.chapters import calderon_zygmund as cz
+
+    thm = cz.interval_average
+    assert "analysis" in theorem_packs(thm)
+    assert len(thm.proof.flat()) == 9          # the core example needs 16
+    text = str(thm.prose())
+    assert "integrable" not in text            # no side conditions in the proof
