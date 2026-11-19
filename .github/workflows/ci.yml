@@ -87,11 +87,12 @@ jobs:
       - name: Every example script
         if: matrix.suite == 'examples'
         run: python scripts/run_examples.py
-      - name: The analysis package's chapter (Lean)
+      - name: The analysis package's chapters (Lean)
         if: matrix.suite == 'examples'
         run: |
           pip install -e domains/analysis
           python -m pyleanx_analysis.chapters.integration
+          python -m pyleanx_analysis.chapters.derivatives
       - name: Naturalness benchmark (every written proof, with Lean)
         if: matrix.suite == 'benchmark'
         run: python benchmarks/naturalness.py --lean
