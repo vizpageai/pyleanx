@@ -1,0 +1,78 @@
+# The core
+
+PyLeanX is to Lean what PyTorch is to its kernels: a Python front end whose core is small,
+domain-free and extensible, and whose results are computed by an engine it does not
+reimplement. This page states what belongs to the core, why, how it maps onto the way
+Lean checks a proof, and the order in which it is built. It complements the
+[foundations plan](foundations.md), which is about mathematical content built on the core.
+
+## The equivalence
+
+| PyTorch | PyLeanX core | Lean mechanism it drives |
+|---|---|---|
+| `Tensor` | **Statement**: a typed term in a context of variables and hypotheses (`expr`, `types`, `terms`, `binders`) | a *type* in `Prop` (Curry–Howard: a statement is a type, a proof a term of it) |
+| tensor operations | **Statement operations**: substitute, exchange variables, instantiate, specialise a fact, free variables (`pyleanx.ops`) | instantiation and application of terms |
+| autograd graph (recorded as you compute) | **Derivation graph**: each step, what it states and what it depends on, recorded as you write (`pyleanx.derivation`) | a tactic block of `have` steps, each adding a hypothesis to the local context |
+| an op's registered derivative | **Justification rules** a vocabulary registers (`pyleanx.justify`) | the tactics tried inside each `have … := by first \| …` |
+| `backward()` | **Justification**: for every step, generate the tactic search that proves it from what it cites | elaboration and tactic execution; the kernel re-checks the result |
+| devices (CPU, CUDA) | **Kernels**: batch `lean` process, persistent REPL (`backend`) | the Lean kernel; `#print axioms` audit |
+| gradients flow to the leaves | **Verdicts flow to the steps**: errors attributed to the step, explained in its words | message positions and goals (`⊢`) |
+| eager mode / `torch.compile` | `sanity_check`, `check()` while writing / `verify()` for the record | REPL environment reuse / fresh process |
+| `nn.Module`, torchvision | **Domain packs**: vocabulary, facts, rules, numeric samplers, notation | Mathlib theories and PyLeanX's shipped facts |
+| optimizers, ADMM | **Proof methods** (induction, ε–δ, similar triangles, CZ decomposition) | built from the core's moves |
+| datasets, training scripts | **Examples, lectures, notebooks** | tests of the core, written later |
+
+## What the core contains
+
+1. **Statements**: sorts, expressions, binders, definitions; a *declaration* mechanism
+   (symbol, Lean name, sort, notation, imports). No particular mathematical symbol.
+2. **Statement operations**: one API for the term algebra that proof moves are built from.
+3. **Derivation graph**: the explicit structure of a written proof: nodes (hypotheses,
+   steps, choices), edges (citations, scope), names. Scope checks, "similarly", error
+   attribution and explanations read it.
+4. **Justification engine**: a step is (goal, cited facts, local definitions, avoided
+   facts); its tactic search is assembled from *rules* in ordered *slots*. The core ships
+   the domain-free rules (hypotheses, cited facts, symmetry of `=`/`≠`, conjunction
+   parts, application of lemmas to cited facts, rewriting, arithmetic decision procedures).
+   A pack's rules are active in a theorem only when the theorem uses the pack's symbols.
+5. **Compilation**: deterministic Lean with source maps and import closure.
+6. **Kernels and trust**: pinned toolchain, batch and REPL checkers, transitive axiom audit,
+   fingerprinted evidence and cache. Only this layer reports "verified", on Lean's word.
+7. **Feedback frameworks**: attribution of Lean messages to steps; explanation hooks; the
+   numeric sampling framework (evaluators and figure constructions are registered).
+8. **Extension interface**: packs register vocabulary, facts, justification rules,
+   numeric evaluators/constructions and notation. Adding a domain never edits the core.
+
+Not in the core: any mathematical vocabulary beyond logic and the numeric prelude, any
+facts, domain heuristics, examples and lectures, the theorem bank, agents, the CLI.
+
+## Constraints from Lean's mechanism
+
+* **Python never elaborates.** Implicit arguments, type-class instances, coercions and
+  definitional unfolding are Lean's; the core only produces the surface text.
+* **One budget per declaration.** Every alternative tried in every step of a theorem
+  shares Lean's heartbeat budget, so rules are ordered cheap-first (`with_reducible`
+  matching fails at once on a mismatch) and their number is bounded per step.
+* **`first` reports only its last failure.** Explanations cannot rely on the error of the
+  "right" alternative; they use the step's statement, citations and the remaining goal.
+* **The kernel is the authority.** Any rule may be wrong; at worst a proof fails to
+  check. No rule, cache or memo can make a step count as proved without Lean.
+
+## Build order and gates
+
+Every phase keeps all unit tests and the API snapshot green. The **golden Lean test**
+records a fingerprint of the generated Lean of every written proof in the benchmark; a
+phase that changes generated Lean must re-verify the affected proofs with Lean and update
+the benchmark results (`benchmarks/lean_results.json`).
+
+| Phase | Work | Gate |
+|---|---|---|
+| K0 | This page; golden Lean fingerprints; layering test of allowed imports | tests pass on the current code |
+| K1 | Justification engine: rules in ordered slots; core rules; geometry rules moved to the geometry pack, active when a theorem uses geometry | geometry proofs: Lean byte-identical; other proofs: lose only geometry alternatives and re-verify with Lean |
+| K2 | Derivation graph; scope checks and "similarly" read it | behaviour and Lean unchanged |
+| K3 | Statement operations as one API | Lean unchanged |
+| K4 | Numeric sampling framework; geometry evaluators and constructions move to the pack | sanity results unchanged on the benchmark |
+| K5 | Packs for the remaining domains; fact registry with one `Fact` type | Lean unchanged |
+| K6 | Remembered winners: the alternative that closed a step is recorded (REPL) and tried first next time | a step whose winner no longer applies falls back to the full search |
+
+Status is tracked in the [roadmap](roadmap.md).
