@@ -23,6 +23,13 @@ INTEGRABILITY = (
     "exact (MeasureTheory.Integrable.abs ‹_›).integrableOn",
     "exact MeasureTheory.Integrable.intervalIntegrable ‹_›",
     "exact MeasureTheory.LocallyIntegrable.integrableOn_isCompact ‹_› (isCompact_closedBall _ _)",
+    # |f| on a closed interval, from f locally integrable
+    "exact MeasureTheory.Integrable.abs "
+    "(MeasureTheory.LocallyIntegrable.integrableOn_isCompact ‹_› (isCompact_closedBall _ _))",
+)
+#: almost-everywhere statements that hold everywhere
+AE_FROM_EVERYWHERE = (
+    "exact HasSubset.Subset.eventuallyLE ‹_›",   # A ⊆ B gives A ⊆ B almost everywhere
 )
 #: nonnegativity of functions almost everywhere, and of integrals
 NONNEGATIVITY = (
@@ -39,7 +46,7 @@ FINITE_MEASURE = (
     "exact lt_top_iff_ne_top.mpr ‹_›",
 )
 
-ALL = INTEGRABILITY + NONNEGATIVITY + FINITE_MEASURE
+ALL = INTEGRABILITY + NONNEGATIVITY + FINITE_MEASURE + AE_FROM_EVERYWHERE
 
 
 def register(pack: DomainPack) -> None:

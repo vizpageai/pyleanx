@@ -57,18 +57,26 @@ def _same(a: Any, b: Any) -> bool:
     return a is b
 
 
-def without_bookkeeping(thm: pl.Theorem) -> tuple[pl.Theorem, list[str]] | None:
-    """The proof with its top-level bookkeeping steps removed (None if it has none)."""
+def bookkeeping_steps(thm: pl.Theorem) -> list[Claim]:
+    """The top-level bookkeeping steps of a written proof."""
     hyps = [h.prop for h in thm.assumptions]
     steps = list(thm.proof.tactics) if isinstance(thm.proof, Steps) else [thm.proof]
-    removed = [s for s in steps if isinstance(s, Claim) and s.prop is not None
-               and nb.bookkeeping_kind(s.prop, hyps) and s.proof is None]
+    return [s for s in steps if isinstance(s, Claim) and s.prop is not None
+            and nb.bookkeeping_kind(s.prop, hyps) and s.proof is None]
+
+
+def without_bookkeeping(thm: pl.Theorem, only: set[str] | None = None,
+                        suffix: str = "lean") -> tuple[pl.Theorem, list[str]] | None:
+    """The proof with its top-level bookkeeping steps (or those named in ``only``) removed;
+    None if there is nothing to remove."""
+    steps = list(thm.proof.tactics) if isinstance(thm.proof, Steps) else [thm.proof]
+    removed = [s for s in bookkeeping_steps(thm) if only is None or s.name in only]
     if not removed:
         return None
     names = {s.name for s in removed}
     gone = {id(s) for s in removed}   # identity: == on statements builds an equation
     kept = [_drop_citations(s, names) for s in steps if id(s) not in gone]
-    variant = pl.Theorem(f"{thm.name}_lean", list(thm.variables),
+    variant = pl.Theorem(f"{thm.name}_{suffix}", list(thm.variables),
                          assumptions={h.name: h.prop for h in thm.assumptions},
                          conclusion=thm.conclusion, proof=pl.proof(*kept))
     return variant, sorted(names)
@@ -80,9 +88,20 @@ def main(argv: list[str]) -> int:
         pack = argv[argv.index("--pack") + 1]
     importlib.import_module(pack)
     modules = set(argv[0].split(","))
+    each = "--each" in argv   # one variant per bookkeeping step
+    keep: set[str] = set()      # --keep a,b: remove every bookkeeping step but these
+    if "--keep" in argv:
+        keep = set(argv[argv.index("--keep") + 1].split(","))
     variants = []
     for _, m, t in nb.collect():
-        if m in modules and (v := without_bookkeeping(t)) is not None:
+        if m not in modules:
+            continue
+        if each:
+            for i, s in enumerate(bookkeeping_steps(t)):
+                if (v := without_bookkeeping(t, {s.name}, f"without{i}")) is not None:
+                    variants.append((t, *v))
+        elif (v := without_bookkeeping(
+                t, {s.name for s in bookkeeping_steps(t)} - keep if keep else None)) is not None:
             variants.append((t, *v))
     results = pl.verify_all([v for _, v, _ in variants], timeout=3600, use_cache=False)
     ok = 0
