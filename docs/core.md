@@ -130,6 +130,11 @@ Extension interface: `pl.domain_pack(...)` with `rule`, `facts`, `function`, `ap
 `sampler`, `construction` and `hint` (explanation hints are now registrable); the geometry
 pack is written with it (golden Lean and the 77 sanity reports unchanged).
 
+Import structure: there is no cycle among module-level imports (a test enforces it). Some
+modules import others inside functions (late binding, e.g. a statement imports the
+renderer when it is printed, as `torch.Tensor.__repr__` imports its formatter); a static
+graph that counts those shows one large component, which is not an import-order problem.
+
 Remaining domain knowledge in core modules: none of the geometry pack's names (enforced by
 a test). The numeric prelude (ℝ, ℕ, ℤ, `Real.sqrt`, `exp`, `log`, `sin`, `cos`, `π`) and
 general constructs (sums, integrals) stay in the core by design.

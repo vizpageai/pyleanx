@@ -120,3 +120,43 @@ def test_the_core_never_imports_a_domain_package():
     hits = [p.relative_to(SRC).as_posix() for p in SRC.rglob("*.py")
             if "pyleanx_analysis" in p.read_text(encoding="utf-8")]
     assert hits == []
+
+
+def test_no_import_cycles_at_module_level():
+    # Imports inside functions (late binding, as torch.Tensor.__repr__ imports its
+    # formatter) are allowed; a cycle among module-level imports is not.
+    graph: dict[str, set[str]] = {}
+    for p in SRC.rglob("*.py"):
+        if "__pycache__" in p.parts:
+            continue
+        mod = ".".join(p.relative_to(SRC).with_suffix("").parts)
+        deps: set[str] = set()
+        for node in ast.parse(p.read_text(encoding="utf-8")).body:
+            if isinstance(node, ast.If) and "TYPE_CHECKING" in ast.unparse(node.test):
+                continue
+            for m in ([node, *ast.walk(node)] if isinstance(node, (ast.If, ast.Try)) else [node]):
+                if isinstance(m, ast.ImportFrom) and m.level:
+                    base = mod.split(".")[:-m.level] if p.name != "__init__.py" \
+                        else mod.split(".")[:len(mod.split(".")) - m.level + 1]
+                    if m.module:
+                        deps.add(".".join([*base, m.module]))
+                    else:
+                        deps.update(".".join([*base, a.name]) for a in m.names)
+        graph[mod] = deps
+
+    seen: dict[str, int] = {}  # 1 = on the current path, 2 = done
+
+    def visit(v: str, path: list[str]) -> list[str] | None:
+        seen[v] = 1
+        for w in graph.get(v, ()):
+            if w not in graph:
+                continue
+            if seen.get(w) == 1:
+                return [*path, v, w]
+            if w not in seen and (found := visit(w, [*path, v])):
+                return found
+        seen[v] = 2
+        return None
+
+    cycles = [c for v in graph if v not in seen and (c := visit(v, []))]
+    assert cycles == []
