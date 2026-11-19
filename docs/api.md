@@ -397,6 +397,19 @@ and the shipped facts `geo.corresponding_angles` (both
 pairs of angles) and `geo.similar_sides`. Shipped facts are Lean theorems with proofs,
 emitted into every file that cites them.
 
+## The core: operations, derivations, packs, checkers
+
+See [The core](core.md) for the design. The objects users meet:
+
+| Call | What it gives |
+|---|---|
+| `pl.finset_range(n)` | {0, …, n − 1}; `pl.sum(pl.finset_range(n), lambda k: k**2, sort=pl.Nat)` is written ∑_{k<n} k² and evaluated by the sanity check |
+| `pyleanx.ops.substitute(e, (x, 0))`, `ops.exchange(e, (A, B))`, `ops.free_vars(e)`, `ops.same(a, b)`, `ops.vocabulary(thm)` | operations on statements (pairs, since variables cannot be dict keys) |
+| `thm.derivation()` / `pl.derivation(thm)` | the proof's steps, what each cites and has in scope; prints as a table (`depends_on`, `cited_by`) |
+| `pl.domain_pack(name, sorts=…, symbols=…, imports=…)` | a domain pack: `.rule`, `.facts`, `.function`, `.apply`, `.sampler`, `.bigop`, `.construction`, `.hint` ([Domain packages](domains.md)) |
+| `pyleanx.packs.load_plugins()` | import the installed domain packages (entry point `pyleanx.packs`) |
+| `pyleanx.backend.interface.get_checker("batch" \| "repl")`, `register_checker` | the kernels `verify` and `check` use; registering one is trusting it |
+
 ## Libraries and generated bindings
 
 ```
@@ -463,6 +476,9 @@ pyleanx show-lean SCRIPT [--project P] [--mathlib-imports] [--unicode-types]
 pyleanx compile SCRIPT [-o OUT.lean]
 pyleanx check SCRIPT [--json] [--include-source] [--no-cache] [--timeout S] [--allow-raw-tactics]
 pyleanx check SCRIPT --watch     # re-check on every save, Lean kept loaded
+pyleanx new FILE                 # a template written proof to start from
+pyleanx sanity SCRIPT            # try every step on random numbers (no Lean)
+pyleanx facts WORDS...           # find citable facts (installed domain packages too)
 pyleanx cache stats|clear
 pyleanx bank index|search|show|list [QUERY] [--bank FILE] [--json]
 pyleanx infoview NAME... [--import MODULE]... [--json]
