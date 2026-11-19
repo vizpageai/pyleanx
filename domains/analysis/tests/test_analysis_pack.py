@@ -115,3 +115,17 @@ def test_the_calderon_zygmund_chapter_is_the_textbook_proof():
     assert len(thm.proof.flat()) == 9          # the core example needs 16
     text = str(thm.prose())
     assert "integrable" not in text            # no side conditions in the proof
+
+
+def test_sequences_are_sampled_and_defined_by_hypotheses():
+    seq = pl.symbol("a", pl.Fn(pl.Nat, pl.Real))
+    n, m = pl.symbols("n m", pl.Nat)
+
+    def thm(name: str, hyps: dict, concl: object) -> pl.Theorem:
+        return pl.Theorem(name, [seq, n], assumptions=hyps, conclusion=concl,
+                          proof=pl.proof(pl.conclude()))
+
+    assert "looks false" in str(thm("dec", {}, seq(n + 1) <= seq(n)).sanity_check())
+    harmonic = {"ha": pl.Forall(m, seq(m) == 1 / (pl.cast(m, pl.Real) + 1))}
+    assert thm("h_dec", harmonic, seq(n + 1) < seq(n)).sanity_check().ok
+    assert "looks false" in str(thm("h_inc", harmonic, seq(n + 1) > seq(n)).sanity_check())

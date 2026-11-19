@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from pyleanx.pack import DomainPack
 
 FUNCTION_SORT = "Real → Real"
+SEQUENCE_SORT = "Nat → Real"
 
 
 class SampledFunction:
@@ -58,6 +59,35 @@ def sample_function(rng: random.Random) -> SampledFunction:
         lambda x: c[0] * math.exp(-x * x) + c[1] * math.exp(-((x - m) / s) ** 2),
         integrable=True,
         label=f"x ↦ {c[0]:.3g}·e^(−x²) + {c[1]:.3g}·e^(−((x − {m:.3g})/{s:.3g})²)")
+
+
+class SampledSequence:
+    """A random real sequence, labelled for counterexamples."""
+
+    def __init__(self, fn: Any, label: str) -> None:
+        self.fn, self.label = fn, label
+
+    def __call__(self, n: float) -> float:
+        return float(self.fn(int(n)))
+
+    def __repr__(self) -> str:
+        return self.label
+
+
+def sample_sequence(rng: random.Random) -> SampledSequence:
+    """A random real sequence: rational, alternating, geometric or bounded oscillating."""
+    kind = rng.randrange(4)
+    c, d = rng.uniform(-3, 3), rng.uniform(-3, 3)
+    if kind == 0:
+        return SampledSequence(lambda n: c + d / (n + 1), f"n ↦ {c:.3g} + {d:.3g}/(n + 1)")
+    if kind == 1:
+        return SampledSequence(lambda n: c + d * (-1) ** n / (n + 1),
+                               f"n ↦ {c:.3g} + {d:.3g}·(−1)ⁿ/(n + 1)")
+    if kind == 2:
+        r = rng.uniform(-0.95, 0.95)
+        return SampledSequence(lambda n: c + d * r ** n, f"n ↦ {c:.3g} + {d:.3g}·{r:.3g}ⁿ")
+    b = rng.uniform(0.3, 2.0)
+    return SampledSequence(lambda n: c + d * math.sin(b * n), f"n ↦ {c:.3g} + {d:.3g}·sin({b:.3g}n)")
 
 
 # --- derivatives and integrals ---------------------------------------------------------
@@ -179,6 +209,7 @@ class _Definitions:
 
 def register(pack: DomainPack) -> None:
     pack.sampler(FUNCTION_SORT, sample_function)
+    pack.sampler(SEQUENCE_SORT, sample_sequence)
     pack.function("deriv", derivative)
     pack.bigop("integral", _integral_op)
     for head in ("Continuous", "ContinuousOn"):
