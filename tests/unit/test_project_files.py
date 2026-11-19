@@ -35,6 +35,7 @@ def test_ci_failures_become_annotations(monkeypatch, capsys):
         import run_examples
     finally:
         sys.path.remove(str(ROOT / "scripts"))
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)  # this test may itself run on CI
     run_examples.annotate("quiet", "outside CI nothing is printed")
     assert capsys.readouterr().out == ""
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
