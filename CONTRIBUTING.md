@@ -28,6 +28,9 @@ pytest tests/integration -q                # real Lean; slow (minutes)
 python scripts/run_examples.py             # every example, expected outcomes
 mkdocs build --strict                      # documentation
 python benchmarks/naturalness.py --lean    # every written proof; slow, see below
+python scripts/golden_lean.py              # generated Lean of the written proofs unchanged
+pip install -e domains/analysis && pytest domains/analysis/tests -q   # a domain package,
+                                           # in its own process (see below)
 ```
 
 CI runs the same on Linux, Windows and macOS (unit tests) and Linux (Lean, examples, a
@@ -49,7 +52,16 @@ clean wheel install).
   proof prints and what `because="…"` descriptions match. Facts that form a family share one
   label on purpose ("CPCTC"); otherwise a label should pick out one fact
   (`test_every_label_selects_its_fact`).
-- **Gap filler changes** (`Justify` in `proofs.py`) can make existing proofs slower or fail
+- **The core stays domain-free** (`docs/core.md`): a core module never imports a domain
+  pack or names a domain's Lean symbols (`tests/unit/test_core_layers.py`). Subject matter
+  goes into a pack (`pl.domain_pack`), preferably a separate package under `domains/`.
+- **Golden Lean**: a change that alters the Lean generated for the written proofs must be
+  re-verified with Lean, then recorded with `python scripts/golden_lean.py --update`.
+- **Domain packages** (`domains/*`) depend on `pyleanx`, never the other way round. Check
+  every new justification rule against the pinned Mathlib before adding it, and run the
+  package's tests in their own `pytest` process: importing a pack changes the Lean its
+  theorems generate, so the core's tests must run without it.
+- **Gap filler changes** (rules in `justify.py` or a pack) can make existing proofs slower or fail
   through Lean's per-declaration time budget. Put new alternatives after the cheap ones and
   run the benchmark with Lean: `python benchmarks/naturalness.py --lean --only <module>` checks
   one example module per process (each holds Mathlib in memory) and records verdicts with a
