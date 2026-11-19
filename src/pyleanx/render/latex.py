@@ -132,6 +132,13 @@ def _leftmost(e: Expr) -> Expr:
     return e
 
 
+def _rightmost(e: Expr) -> Expr:
+    """The last factor of a product (what a following factor is written next to)."""
+    while isinstance(e, BinOp) and e.op == "mul":
+        e = e.rhs
+    return e
+
+
 def _paren(text: str) -> str:
     return r"\left(" + text + r"\right)"
 
@@ -258,6 +265,10 @@ class _Latex:
         bars = ("|", r"\lvert", r"\left|", r"\|", r"\left\|")
         ends = ("|", r"\rvert", r"\right|")
         if rhs.startswith(bars) or lhs.rstrip().endswith(ends):
+            juxtapose = False
+        # cos x · x, f(x) · y: a function application followed by a plain variable would
+        # run together ("cos x x"); sin x cos x reads fine
+        if isinstance(_rightmost(e.lhs), App) and isinstance(first, Var):
             juxtapose = False
         sep = " " if juxtapose else r" \cdot "
         return f"{lhs}{sep}{rhs}", 70

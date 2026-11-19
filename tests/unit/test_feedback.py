@@ -127,3 +127,13 @@ def test_a_grind_failure_is_explained_without_its_search_dump():
     assert _goal(msg) == ""
     assert "no automatic justification closed the step" in _hint(msg)
     assert _goal("unsolved goals\nx : ℝ\n⊢ x ≤ x + 1") == "x ≤ x + 1"
+
+
+def test_a_function_value_times_a_variable_is_written_with_a_dot():
+    from pyleanx import analysis as an
+    from pyleanx.prose import plain
+
+    x = pl.symbol("x", pl.Real)
+    assert plain(an.cos(x) * x) == "cos x · x"          # not "cos xx"
+    assert plain(an.sin(x) * an.cos(x)) == "sin x cos x"
+    assert plain(2 * x) == "2x"
