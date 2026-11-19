@@ -87,3 +87,29 @@ def test_a_third_party_domain_registers_its_facts(tmp_path, monkeypatch):
         fact_search._REGISTRY.update(saved)
         fact_search._catalog.cache_clear()
         fact_search._idf.cache_clear()
+
+
+def test_a_domain_pack_registers_through_one_object():
+    import random
+
+    import pyleanx as pl
+    from pyleanx import diagnose, justify, numeric
+
+    saved = (list(justify._RULES), dict(justify._PACKS), dict(numeric._SAMPLERS),
+             list(diagnose._HINTS))
+    try:
+        toy = pl.domain_pack("toy", sorts={"Toy"})
+        toy.rule("step", 15, "toy_tactic", name="t")
+        toy.sampler("Toy", lambda rng: rng.random())
+        toy.hint(r"toy failure", "check the toy")
+        with justify.active_packs(frozenset({"toy"})):
+            assert "toy_tactic" in justify.alternatives(["h"], ["h"])
+        assert 0 <= numeric._sample("Toy", random.Random(0)) < 1
+        assert diagnose._hint("a toy failure here") == "check the toy"
+    finally:
+        justify._RULES[:] = saved[0]
+        justify._PACKS.clear()
+        justify._PACKS.update(saved[1])
+        numeric._SAMPLERS.clear()
+        numeric._SAMPLERS.update(saved[2])
+        diagnose._HINTS[:] = saved[3]

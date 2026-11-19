@@ -46,6 +46,25 @@ Lean checks a proof, and the order in which it is built. It complements the
 Not in the core: any mathematical vocabulary beyond logic and the numeric prelude, any
 facts, domain heuristics, examples and lectures, the theorem bank, agents, the CLI.
 
+## Writing a domain pack
+
+A pack declares itself once and registers everything it contributes through one object;
+the core is never edited. The geometry pack (`pyleanx.geometry`) is written this way.
+
+```py
+import pyleanx as pl
+
+topo = pl.domain_pack("topology", sorts={"TopSpace"}, symbols=("TopologicalSpace.",))
+topo.facts("mypkg.topology", prefix="top", title="Topology")    # its LEMMAS, citable by name
+topo.rule("step", 55, lambda s: [f"(simp only [interior_interior] at *; exact{s.h})"],
+          name="interior idempotent")                           # a justification rule
+topo.sampler("TopSpace", lambda rng: ...)                       # values for sanity checks
+topo.hint(r"failed to synthesize TopologicalSpace", "say which topology the set carries")
+```
+
+Its rules apply only to theorems that use its sorts or symbols. Nothing a pack registers
+is trusted: Lean checks every proof the rules help produce.
+
 ## Constraints from Lean's mechanism
 
 * **Python never elaborates.** Implicit arguments, type-class instances, coercions and
@@ -98,6 +117,10 @@ not help. K7 follows from this: a Lean macro defined once per file can build a s
 alternatives from its cited facts (checked with core Lean: a macro looping over the facts
 proves steps by a reversed fact, by applying one fact to another and by `omega`, and
 rejects a false step with the same error a `first` block gives).
+
+Extension interface: `pl.domain_pack(...)` with `rule`, `facts`, `function`, `apply`,
+`sampler`, `construction` and `hint` (explanation hints are now registrable); the geometry
+pack is written with it (golden Lean and the 77 sanity reports unchanged).
 
 Remaining domain knowledge in core modules: none of the geometry pack's names (enforced by
 a test). The numeric prelude (ℝ, ℕ, ℤ, `Real.sqrt`, `exp`, `log`, `sin`, `cos`, `π`) and

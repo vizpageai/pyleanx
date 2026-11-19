@@ -86,6 +86,7 @@ from .fact_search import fact, search_facts
 from .faithful import SameStatement, same_statement  # noqa: E402
 from .infoview import DeclView, infoview
 from .libs import add_library, build_library, list_libraries, remove_library  # noqa: E402
+from .pack import DomainPack, domain_pack
 from .project import LeanProject, find_project
 from .proofgraph import ProofGraph, proof_graph  # noqa: E402
 from .proofs import (  # noqa: E402
@@ -200,7 +201,7 @@ __all__ = [
     "apply", "rw", "rewrite", "rev", "use", "steps", "branches", "raw_tactic", "ref", "hyp",
     # verification
     "verify_all", "check_all", "explain_failure", "fact", "search_facts", "derivation",
-    "Derivation",
+    "Derivation", "domain_pack", "DomainPack",
     "VerificationResult", "Status", "Diagnostic", "AxiomPolicy",
     "DEFAULT_POLICY", "STANDARD_AXIOMS", "LeanProject", "find_project", "ResultCache",
     "render_module", "mathlib", "ProofSession", "StepResult", "Goals", "shutdown_sessions",

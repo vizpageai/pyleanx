@@ -24,12 +24,11 @@ from .numeric import (
     _close,
     _free_uids,
     evaluate,
-    register_apply,
-    register_construction,
-    register_function,
-    register_sampler,
 )
+from .pack import DomainPack
 from .terms import Apply, Const, TypeTerm
+
+pack = DomainPack("geometry")
 
 
 def _point(v: Any) -> tuple[float, float]:
@@ -116,9 +115,9 @@ def _between(a: Any, p: Any, b: Any, strict: bool) -> bool:
 
 
 # --- evaluation -----------------------------------------------------------------------
-register_function("dist", _dist)
-register_function("EuclideanGeometry.angle", _angle)
-register_sampler("Point", lambda rng: (rng.uniform(-5, 5), rng.uniform(-5, 5)))
+pack.function("dist", _dist)
+pack.function("EuclideanGeometry.angle", _angle)
+pack.sampler("Point", lambda rng: (rng.uniform(-5, 5), rng.uniform(-5, 5)))
 
 
 def _betweenness(name: str) -> Any:
@@ -130,15 +129,15 @@ def _betweenness(name: str) -> Any:
     return ev
 
 
-register_apply("Sbtw", _betweenness("Sbtw"))
-register_apply("Wbtw", _betweenness("Wbtw"))
-register_apply("Collinear", lambda args, env: _collinear(_set_points(args[1], env))
+pack.apply("Sbtw", _betweenness("Sbtw"))
+pack.apply("Wbtw", _betweenness("Wbtw"))
+pack.apply("Collinear", lambda args, env: _collinear(_set_points(args[1], env))
                if len(args) == 2 else NotImplemented)
-register_apply("dist", lambda args, env: _dist(evaluate(args[0], env), evaluate(args[1], env))
+pack.apply("dist", lambda args, env: _dist(evaluate(args[0], env), evaluate(args[1], env))
                if len(args) == 2 else NotImplemented)
-register_apply("affineSpan", lambda args, env: _Line(tuple(  # line[ℝ, a, b]
+pack.apply("affineSpan", lambda args, env: _Line(tuple(  # line[ℝ, a, b]
     _point(p) for p in _set_points(args[1], env))) if len(args) == 2 else NotImplemented)
-register_apply("AffineSubspace.direction",  # a line stands for its direction here
+pack.apply("AffineSubspace.direction",  # a line stands for its direction here
                lambda args, env: evaluate(args[0], env) if len(args) == 1 else NotImplemented)
 
 
@@ -174,10 +173,10 @@ def _midpoint(args: tuple, env: dict[int, Any]) -> Any:
     return ((x1 + x2) / 2, (y1 + y2) / 2)
 
 
-register_apply("AffineSubspace.Parallel", _parallel)
-register_apply("Submodule.IsOrtho", _orthogonal)
-register_apply("Membership.mem", _member)
-register_apply("midpoint", _midpoint)
+pack.apply("AffineSubspace.Parallel", _parallel)
+pack.apply("Submodule.IsOrtho", _orthogonal)
+pack.apply("Membership.mem", _member)
+pack.apply("midpoint", _midpoint)
 
 
 # --- drawing the figure ------------------------------------------------------------------
@@ -400,4 +399,4 @@ class _Figure:
         return False
 
 
-register_construction(_Figure(), name="geometry")
+pack.construction(_Figure())

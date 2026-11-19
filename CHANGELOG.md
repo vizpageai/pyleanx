@@ -25,6 +25,9 @@ see [docs/stability.md](docs/stability.md)).
   - Compact Lean: the side-goal closers of the justification search are one Lean macro per
     file instead of being repeated in every alternative; Lean's work for the Euclid proofs
     halves (parsing 19 s → 5 s).
+  - `pl.domain_pack(name, sorts=…, symbols=…)`: one object through which a pack registers
+    justification rules, citable facts, numeric evaluators, samplers and constructions,
+    and explanation hints (`register_hint`); the geometry pack is written with it.
   - Fact search keeps a registry of domains (`register_domain`); the built-in packs are
     listed in `pyleanx.packs`, and third-party packs register the same way.
 - [Citable facts](docs/facts.md): a generated page listing all 390 facts of the domain
