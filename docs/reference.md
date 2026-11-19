@@ -30,6 +30,31 @@ Generated from the docstrings. For a guided overview with examples, see the
                 nlinarith, norm_num, simp, intro, exact, apply, rw, rev, use, steps,
                 branches, raw_tactic, ref, hyp, Name]
 
+## The core: statements, derivations, justification, packs
+
+See [The core](core.md) for how these fit together.
+
+::: pyleanx.ops
+    options:
+      members: [free_vars, substitute, exchange, same, subterms, sorts, symbols, vocabulary]
+
+::: pyleanx.derivation
+    options:
+      members: [derivation, Derivation, Node]
+
+::: pyleanx.justify
+    options:
+      members: [Step, Rule, Pack, add_rule, register_pack, alternatives, rules, packs_using,
+                active_packs]
+
+::: pyleanx.pack
+    options:
+      members: [domain_pack, DomainPack]
+
+::: pyleanx.packs
+    options:
+      members: [load_plugins, BUILTIN]
+
 ## Verification
 
 ::: pyleanx.backend.interface
@@ -46,7 +71,8 @@ Generated from the docstrings. For a guided overview with examples, see the
 
 ::: pyleanx.numeric
     options:
-      members: [sanity_check, SanityReport, Finding]
+      members: [sanity_check, SanityReport, Finding, Construction, register_function,
+                register_apply, register_sampler, register_bigop, register_construction]
 
 ::: pyleanx.diagnose
     options:
@@ -54,7 +80,7 @@ Generated from the docstrings. For a guided overview with examples, see the
 
 ::: pyleanx.fact_search
     options:
-      members: [fact, search_facts]
+      members: [fact, search_facts, register_domain, domains]
 
 ::: pyleanx.backend.audit
     options:
