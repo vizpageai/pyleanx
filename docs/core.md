@@ -86,8 +86,10 @@ only has to check.
 from pyleanx import justify
 
 def certify(goal: justify.Goal) -> str | None:
-    # goal.statement: the step (an Expr); goal.given: ((Lean name, statement), …) of the
-    # cited hypotheses and steps; goal.facts: every cited fact as Lean text
+    # goal.statement: what the step proves (an Expr)
+    # goal.given / goal.context: (Lean name, statement) cited / everything in scope
+    # goal.usable: the cited statements, or everything in scope when nothing is cited
+    # goal.certify(sub): certificates of the other certifiers for a sub-goal
     ...
     return "linear_combination (x + 2) * h1 + h2"      # or None: no certificate
 
@@ -95,25 +97,50 @@ justify.register_certifier("ring.linear_combination", certify,
                            imports=("Mathlib.Tactic.LinearCombination",))
 ```
 
-Certificates are tried first in the step's `first | …`; the rules follow, so a wrong or
-missing certificate costs one failed alternative and nothing else. A certifier that raises
-is skipped with a warning. Certifiers must be deterministic (the generated Lean is
-fingerprinted); a pack registers its certifiers with `pack=` and they apply only where
-the pack is active. `thm.derivation().certificates("h1")` shows what the certifiers
-propose for a step.
+Certifiers run for claims, chain links, conclusions and `pl.auto()`: the derivation graph
+carries the goal through the steps that keep it (claims, choices, definitions, "it
+suffices to show"), and leaves it unknown after a step that changes it in a way it does
+not track (`fix`, cases, induction). Certificates are tried first in the step's
+`first | …`; the rules follow, so a wrong or missing certificate costs one failed
+alternative and nothing else. A certifier that raises is skipped with a warning.
+Certifiers must be deterministic (the generated Lean is fingerprinted); a pack registers
+its certifiers with `pack=` and they apply only where the pack is active.
+`thm.derivation().certificates("h1")` shows what the certifiers propose for a step.
 
-The core ships the slot, not a search. `pyleanx.ring_certificates` (opt-in: import it;
-needs `sympy`, `pip install pyleanx[certify]`) is the first certifier: for a step `P = Q`
-citing equalities `aᵢ = bᵢ` over ℤ, ℚ or ℝ it finds polynomials `cᵢ` with
-`P - Q = Σ cᵢ (aᵢ - bᵢ)` by linear algebra over ℚ, and emits
-`linear_combination c₁ * h₁ + …`, which Lean checks with one `ring1`.
+The core ships the slot, not a search. **`pyleanx.certifiers`** (opt-in: import it; needs
+`sympy` and `scipy`, `pip install pyleanx[certify]`; its linear programs are solved by HiGHS and every
+solution is re-verified exactly) registers
+four certifiers:
 
-Measured with pinned Lean (`benchmarks/certificates.py`, `#count_heartbeats` per theorem,
-8 one-step theorems from linear to Newton's identity in three variables): Lean's work
-falls from 19,376 to 5,043 thousand heartbeats (1.5–7× per step, most for nonlinear
-steps); with a deliberately wrong certificate first, every step is still proved by the
-rules at +10% work. Here certificates accelerate; they do not yet prove anything the
-rules cannot (see the [roadmap](roadmap.md) entry of 2026-11-20).
+| certifier | proves | how | Lean checks |
+|---|---|---|---|
+| `polynomial` | `P = Q` from cited equalities (ℕ, ℤ, ℚ, ℝ) | linear algebra over ℚ | `linear_combination c₁ * h₁ + …` (one `ring1`) |
+| `inequality` | `≤ < ≥ >` from cited (in)equalities | Positivstellensatz search as a linear program: cited inequalities, their products, inequality × square, diagonally dominant sums of squares, terms `positivity` knows (`√x`, `\|x\|`, `exp x`, `↑n`) | `linear_combination λ₁ * h₁ + λ₂ * sq_nonneg (a - b) + …` |
+| `witness` | `∃ x, P x` | solve the equations of `P` (sympy), else simple terms; the instance is proved by the other certifiers | `exact ⟨w, (by …), …⟩` |
+| `divisibility` | `a ∣ b` (ℕ, ℤ) from cited divisibilities and equalities | the quotient as an ideal-membership coefficient | `exact ⟨q, by linear_combination …⟩` |
+
+Terms that are not ring arithmetic (`Real.sin x`, `√x`, `x / y`, ℕ subtraction, `n % 3`) are
+opaque atoms, which is sound: a certificate valid for every value of the atom is valid for
+its actual value. So the same certifiers serve every Mathlib domain whose step is
+algebraic in such terms; a pack declares more nonnegative terms with
+`certifiers.inequality.register_nonneg("MeasureTheory.measure")`.
+
+**Measured** with pinned Lean (`benchmarks/certificates.py`): 20 one-step theorems from
+algebra, inequalities, analysis, trigonometry, logic and number theory, each checked under
+Lean's default budget (`maxHeartbeats 200000`), work counted with `#count_heartbeats`:
+
+| | steps proved | Lean's work (10⁶ heartbeats) |
+|---|---|---|
+| justification rules only | **10 / 20** | 38.7 |
+| certificates first | **20 / 20** | 13.7 |
+| a wrong certificate first | 10 / 20 (the rules' result) | 42.3 |
+
+The rules (`linarith`, `nlinarith`, `positivity`, `aesop`, `grind`, …) fail on AM–GM for two
+and three variables, Cauchy–Schwarz in ℝ², `x³y + xy³ ≤ x⁴ + y⁴`, `x > 1 → x³ > 1`, all three
+existence statements and both divisibilities over ℤ; certificates prove them. On the 10
+steps both prove, Lean's work falls from 15.9 to 7.1 (×10⁶) heartbeats; it rises on two
+(`√x + 1 > 0`, where `positivity` alone is cheaper, and `sin² x ≤ 1`). Every result depends
+only on `propext`, `Classical.choice`, `Quot.sound`.
 
 ## Constraints from Lean's mechanism
 

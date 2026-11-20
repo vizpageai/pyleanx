@@ -630,13 +630,20 @@ class Auto(Tactic):
             out.append("Aesop")
         for t in self.hints:
             out.extend(term_imports(t))
+        from .justify import certifier_imports
+
+        out.extend(certifier_imports())
         return tuple(out)
 
     def alternatives(self) -> list[str]:
+        from .justify import certificates, context_for
         from .render.lean import render_term
 
         h = (" [" + ", ".join(render_term(t) for t in self.hints) + "]") if self.hints else ""
-        alts = ["rfl", "ring1", f"(norm_num{h}; done)", f"(simp{h}; done)", f"linarith{h}",
+        ctx = context_for(self)
+        certs = ([t for _, t in certificates(ctx.goal, (), dict(ctx.scope))]
+                 if ctx.goal is not None else [])
+        alts = [*certs, "rfl", "ring1", f"(norm_num{h}; done)", f"(simp{h}; done)", f"linarith{h}",
                 "positivity", f"nlinarith{h}", "(field_simp; done)", "(field_simp; ring1)"]
         if self.aesop:
             alts.append("(aesop; done)")
@@ -821,8 +828,8 @@ class Justify(Tactic):
     def imports(self) -> tuple[str, ...]:
         from .justify import certifier_imports
 
-        extra = certifier_imports() if self.goal is not None else ()
-        return (*_JUSTIFY_IMPORTS, *(i for t in self.facts for i in term_imports(t)), *extra)
+        return (*_JUSTIFY_IMPORTS, *(i for t in self.facts for i in term_imports(t)),
+                *certifier_imports())
 
     def _core(self) -> list[str]:
         from .justify import alternatives
@@ -897,7 +904,10 @@ class Conclude(Tactic):
     def justification(self) -> Tactic:
         if self.proof is not None:
             return self.proof
-        return Justify(self.facts, self.unfold, self.avoid)
+        from .justify import context_for
+
+        ctx = context_for(self)
+        return Justify(self.facts, self.unfold, self.avoid, goal=ctx.goal, given=ctx.scope)
 
     def imports(self) -> tuple[str, ...]:
         return self.justification().imports()

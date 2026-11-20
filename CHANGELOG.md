@@ -11,9 +11,11 @@ see [docs/stability.md](docs/stability.md)).
 - **Certifiers** (`pyleanx.justify.register_certifier`): a step's statement and the
   statements in its scope go to Python, which may search for a *certificate* (tactic text
   Lean only checks); certificates are tried before the rules and are never trusted.
-  `Derivation.certificates(step)` shows them. First certifier, opt-in:
-  `pyleanx.ring_certificates` (`pip install pyleanx[certify]`) finds `linear_combination`
-  coefficients for polynomial equalities over ℤ, ℚ, ℝ. [docs/core.md](docs/core.md).
+  `Derivation.certificates(step)` shows them; claims, chain links, conclusions and
+  `pl.auto()` get them. **`pyleanx.certifiers`** (opt-in, `pip install pyleanx[certify]`):
+  polynomial equalities, inequalities (Positivstellensatz by linear programming),
+  existential witnesses and divisibility, with non-ring terms as atoms. On 20 steps from
+  six domains, Lean proves 20 with certificates and 10 without. [docs/core.md](docs/core.md).
 - **Domain packages**: separate distributions built on the core and never imported by it,
   discovered through the `pyleanx.packs` entry point (`pyleanx.packs.load_plugins`;
   `pyleanx doctor` lists them, `pyleanx facts` searches their facts). A package takes part

@@ -233,7 +233,27 @@ class Goal:
     statement: Any                         # the Expr the step states
     given: tuple[tuple[str, Any], ...]     # cited hypotheses/steps: (Lean name, statement)
     facts: tuple[str, ...]                 # every cited fact, as Lean text
+    #: every named hypothesis and step in scope (Lean's local context), cited or not
+    context: tuple[tuple[str, Any], ...] = ()
+    depth: int = 0                         # how many certifiers this goal is nested in
 
+    @property
+    def usable(self) -> tuple[tuple[str, Any], ...]:
+        """The cited statements; with nothing cited, everything in scope (as ``linarith``
+        uses the whole local context)."""
+        return self.given if self.given else self.context
+
+    def certify(self, statement: Any) -> list[str]:
+        """Certificates for a sub-goal with the same context (for certifiers that reduce a
+        goal to another: a witness, then the instantiated body). Depth-limited."""
+        if self.depth >= MAX_DEPTH:
+            return []
+        sub = Goal(statement, self.given, self.facts, self.context, self.depth + 1)
+        return [t for _, t in _run(sub)]
+
+
+#: how deeply certifiers may call each other through :meth:`Goal.certify`
+MAX_DEPTH = 3
 
 Certify = Callable[[Goal], "str | Iterable[str] | None"]
 
@@ -247,11 +267,18 @@ class Certifier:
     imports: tuple[str, ...] = ()   # Lean modules its certificates need
 
 
+@dataclass(frozen=True)
+class StepContext:
+    """What a step's certifiers may see: its goal (if known) and the statements in scope."""
+
+    goal: Any = None
+    scope: tuple[tuple[str, Any], ...] = ()
+
+
 _CERTIFIERS: list[Certifier] = []
-#: id(step) -> {Lean name: statement} of what is in scope at that step, while a theorem is
-#: rendered (from its derivation graph)
-_STATEMENTS: contextvars.ContextVar[dict[int, dict[str, Any]] | None] = \
-    contextvars.ContextVar("pyleanx_statements", default=None)
+#: id(step) -> its StepContext while a theorem is rendered (from its derivation graph)
+_STATEMENTS: contextvars.ContextVar[dict[int, StepContext] | None] = contextvars.ContextVar(
+    "pyleanx_statements", default=None)
 
 
 def register_certifier(name: str, certify: Certify, *, priority: float = 0,
@@ -286,46 +313,57 @@ def certifier_imports() -> tuple[str, ...]:
 
 
 @contextmanager
-def known_statements(statements: dict[int, dict[str, Any]] | None) -> Iterator[None]:
-    """Within the block, certifiers see, for each step (by ``id``), the statements of the
-    names in its scope (see :meth:`pyleanx.derivation.Derivation.given`)."""
-    token = _STATEMENTS.set(statements)
+def known_statements(contexts: dict[int, StepContext] | None) -> Iterator[None]:
+    """Within the block, certifiers see each step's :class:`StepContext` (by ``id`` of the
+    step; see :meth:`pyleanx.derivation.Derivation.contexts`)."""
+    token = _STATEMENTS.set(contexts)
     try:
         yield
     finally:
         _STATEMENTS.reset(token)
 
 
+def context_for(step: object) -> StepContext:
+    """The context of ``step`` while its theorem is rendered (else empty)."""
+    return (_STATEMENTS.get() or {}).get(id(step), StepContext())
+
+
 def statements_for(step: object) -> dict[str, Any]:
     """The statements in scope at ``step`` while its theorem is rendered (else empty)."""
-    return (_STATEMENTS.get() or {}).get(id(step), {})
+    return dict(context_for(step).scope)
 
 
-def certificates(statement: Any, facts: Iterable[str],
-                 statements: dict[str, Any] | None = None) -> list[tuple[str, str]]:
-    """``(certifier, tactic)`` for a step stating ``statement`` from ``facts``.
-
-    A certifier that raises is skipped with a warning: a certifier can only add
-    alternatives, never stop a proof from being checked.
-    """
+def _run(goal: Goal) -> list[tuple[str, str]]:
     import warnings
 
-    known = statements or {}
-    facts = tuple(facts)
-    goal = Goal(statement, tuple((f, known[f]) for f in facts if f in known), facts)
     out: list[tuple[str, str]] = []
     for c in certifiers(current_packs()):
         try:
             found = c.certify(goal)
-        except Exception as exc:  # noqa: BLE001 - see the docstring
+        except Exception as exc:  # noqa: BLE001 - see certificates()
             warnings.warn(f"certifier {c.pack}:{c.name} failed: {type(exc).__name__}: {exc}",
-                          RuntimeWarning, stacklevel=2)
+                          RuntimeWarning, stacklevel=3)
             continue
         if found is None:
             continue
         for text in ((found,) if isinstance(found, str) else found):
             out.append((c.name, text))
-    return out
+    return list(dict.fromkeys(out))
+
+
+def certificates(statement: Any, facts: Iterable[str],
+                 statements: dict[str, Any] | None = None) -> list[tuple[str, str]]:
+    """``(certifier, tactic)`` for a step stating ``statement`` from ``facts``, with
+    ``statements`` (Lean name -> statement) in scope.
+
+    A certifier that raises is skipped with a warning: a certifier can only add
+    alternatives, never stop a proof from being checked.
+    """
+    known = statements or {}
+    facts = tuple(facts)
+    goal = Goal(statement, tuple((f, known[f]) for f in facts if f in known), facts,
+                tuple(known.items()))
+    return _run(goal)
 
 
 def alternatives(facts: Iterable[str], lemmas: Iterable[str],
@@ -525,4 +563,5 @@ def _general(s: Step) -> Iterable[str]:
 __all__ = ["SLOTS", "Certifier", "Goal", "Pack", "Rule", "Step", "active_packs", "add_rule",
            "alternatives", "certificates", "certifier_imports", "certifiers",
            "current_packs", "known_statements", "packs", "packs_using", "register_certifier",
-           "register_pack", "rules", "statements_for", "unregister_certifier"]
+           "register_pack", "rules", "statements_for", "unregister_certifier",
+           "StepContext", "context_for", "MAX_DEPTH"]

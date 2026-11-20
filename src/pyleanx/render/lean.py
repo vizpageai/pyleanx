@@ -677,7 +677,7 @@ def render_module(
         if thm.proof is not None:
             from ..derivation import derivation
 
-            given = derivation(thm).given()
+            given = derivation(thm).contexts()
             with active_packs(theorem_packs(thm)), collecting_macros() as macros, \
                     known_statements(given):
                 rendered = [(step, render_tactic_lines(step)) for step in thm.proof.flat()]

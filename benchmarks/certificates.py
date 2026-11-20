@@ -1,17 +1,20 @@
-"""Does a certificate found in Python help Lean? Heartbeats with and without it.
+"""Do certificates found in Python help Lean? Proved steps and heartbeats, with and without.
 
-Each theorem below has one written step that follows from cited equalities by ring
-arithmetic. The same theorems are rendered three times:
+Each theorem below has one written step, from algebra, real inequalities, trigonometry,
+logic (existence) and number theory. The same theorems are rendered three times:
 
 * ``rules``: the ordinary alternatives only (Lean searches: linarith, nlinarith, …);
-* ``certified``: with :mod:`pyleanx.ring_certificates` (``linear_combination …`` first);
+* ``certified``: with :mod:`pyleanx.certifiers` (their certificates first);
 * ``wrong``: with a certifier that always proposes a wrong certificate, which Lean must
-  reject while the ordinary alternatives still prove the step.
+  reject while the ordinary alternatives still run.
 
-Lean's work is measured with ``#count_heartbeats in`` (deterministic, unlike wall time on
-a loaded machine). Run from the repository root (needs sympy and the lean-project):
+Each theorem is checked under Lean's default budget (``maxHeartbeats 200000``), so a step
+the rules cannot prove in time fails, and its work is measured with ``#count_heartbeats``
+(deterministic, unlike wall time on a loaded machine). Run from the repository root
+(needs sympy and the lean-project):
 
     python benchmarks/certificates.py            # writes benchmarks/certificates.json
+    python benchmarks/certificates.py --reparse  # re-read the saved Lean output
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ from pathlib import Path
 
 import pyleanx as pl
 from pyleanx import justify
+from pyleanx import numbers as nt
 from pyleanx.render.lean import render_module
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,54 +36,82 @@ LEAN_PROJECT = ROOT / "lean-project"
 OUT = ROOT / "benchmarks" / "certificates.json"
 
 
-def suite() -> list[pl.Theorem]:
+def suite() -> list[tuple[str, pl.Theorem]]:
+    """``(domain, theorem)``; every theorem is one cited step."""
     x, y, a, b, s, p = pl.symbols("x y a b s p", pl.Real)
-    c, e1, e2, e3 = pl.symbols("c e1 e2 e3", pl.Real)
+    c, d, e1, e2, e3 = pl.symbols("c d e1 e2 e3", pl.Real)
     m, n = pl.symbols("m n", pl.Int)
+    k, j = pl.symbols("k j", pl.Nat)
 
-    def one(name, vs, hyps, goal):  # a theorem whose proof is one cited step
+    def one(name, vs, hyps, goal):
         return pl.Theorem(name, vs, assumptions=hyps, conclusion=goal, proof=pl.proof(
             pl.claim(goal, because=list(hyps), name="h"), pl.conclude(because="h")))
 
     return [
-        one("linear_pair", [x, y], {"h1": x + y == 3, "h2": x - y == 1}, x == 2),
-        one("substitute_square", [x, y], {"h1": x == 2, "h2": y == x ** 2}, y == 4),
-        one("product_inverse", [x, y], {"h1": x * y == 1, "h2": x == 2}, 2 * y == 1),
-        one("int_shift_square", [m, n], {"h": m == n + 1}, m ** 2 == n ** 2 + 2 * n + 1),
-        one("power_sum_2", [a, b, s, p], {"hs": a + b == s, "hp": a * b == p},
-            a ** 2 + b ** 2 == s ** 2 - 2 * p),
-        one("power_sum_3", [a, b, s, p], {"hs": a + b == s, "hp": a * b == p},
-            a ** 3 + b ** 3 == s ** 3 - 3 * s * p),
-        one("power_sum_4", [a, b, s, p], {"hs": a + b == s, "hp": a * b == p},
-            a ** 4 + b ** 4 == s ** 4 - 4 * s ** 2 * p + 2 * p ** 2),
-        one("newton_three", [a, b, c, e1, e2, e3],
-            {"h1": a + b + c == e1, "h2": a * b + b * c + c * a == e2, "h3": a * b * c == e3},
-            a ** 3 + b ** 3 + c ** 3 == e1 ** 3 - 3 * e1 * e2 + 3 * e3),
+        ("algebra", one("substitute_square", [x, y], {"h1": x == 2, "h2": y == x ** 2},
+                        y == 4)),
+        ("algebra", one("power_sum_4", [a, b, s, p], {"hs": a + b == s, "hp": a * b == p},
+                        a ** 4 + b ** 4 == s ** 4 - 4 * s ** 2 * p + 2 * p ** 2)),
+        ("algebra", one("newton_three", [a, b, c, e1, e2, e3],
+                        {"h1": a + b + c == e1, "h2": a * b + b * c + c * a == e2,
+                         "h3": a * b * c == e3},
+                        a ** 3 + b ** 3 + c ** 3 == e1 ** 3 - 3 * e1 * e2 + 3 * e3)),
+        ("algebra", one("nat_square_eq", [k, j], {"h": k == j}, k * k == j * j)),
+        ("inequality", one("am_gm_two", [a, b], {}, 2 * a * b <= a ** 2 + b ** 2)),
+        ("inequality", one("am_gm_three", [a, b, c],
+                           {"ha": a >= 0, "hb": b >= 0, "hc": c >= 0},
+                           a ** 3 + b ** 3 + c ** 3 >= 3 * a * b * c)),
+        ("inequality", one("cauchy_schwarz_two", [a, b, c, d], {},
+                           (a * c + b * d) ** 2 <= (a ** 2 + b ** 2) * (c ** 2 + d ** 2))),
+        ("inequality", one("quartic_rearrangement", [x, y], {},
+                           x ** 3 * y + x * y ** 3 <= x ** 4 + y ** 4)),
+        ("inequality", one("cube_above_one", [x], {"hx": x > 1}, x ** 3 > 1)),
+        ("inequality", one("unit_square_product", [a, b],
+                           {"h": pl.And(0 <= a, a <= 1, 0 <= b, b <= 1)}, a * b <= 1)),
+        ("inequality", one("linear_bound", [x, y], {"h1": x + y <= 4, "h2": y >= 1}, x <= 3)),
+        ("analysis", one("sqrt_plus_one", [x], {}, pl.sqrt(x) + 1 > 0)),
+        ("trigonometry", one("sin_cos_square", [x],
+                             {"h": pl.sin(x) ** 2 + pl.cos(x) ** 2 == 1},
+                             (pl.sin(x) + pl.cos(x)) ** 2 == 1 + 2 * pl.sin(x) * pl.cos(x))),
+        ("trigonometry", one("sin_square_le_one", [x],
+                             {"h": pl.sin(x) ** 2 + pl.cos(x) ** 2 == 1},
+                             pl.sin(x) ** 2 <= 1)),
+        ("logic", one("exists_root", [], {},
+                      pl.Exists(y, pl.And(y ** 2 + 2 * y == 3, y > 0)))),
+        ("logic", one("exists_larger", [x], {}, pl.Exists(y, y > x))),
+        ("logic", one("exists_complement", [x], {}, pl.Exists(y, x + y == 3))),
+        ("number theory", one("difference_divides_cubes", [m, n], {},
+                              nt.divides(m - n, m ** 3 - n ** 3))),
+        ("number theory", one("divides_combination", [m, n], {"h": nt.divides(m, n)},
+                              nt.divides(m, 2 * n + 3 * n * n))),
+        ("number theory", one("nat_divides_square_plus", [k], {}, nt.divides(k, k ** 2 + k))),
     ]
 
 
 def _wrong(goal: justify.Goal) -> str | None:
-    # a deliberately wrong certificate: the first cited equality, unscaled
-    return f"linear_combination {goal.given[0][0]}" if goal.given else None
+    # a deliberately wrong certificate
+    return f"linear_combination {goal.given[0][0]}" if goal.given else "exact absurd"
 
 
 def render(variant: str, theorems: list[pl.Theorem]) -> str:
-    import pyleanx.ring_certificates as rc
+    import pyleanx.certifiers as certs
 
-    justify.unregister_certifier(rc.NAME)
+    certs.disable()
     justify.unregister_certifier("wrong")
     if variant == "certified":
-        justify.register_certifier(rc.NAME, rc.certify, priority=10, imports=rc.IMPORTS)
+        certs.enable()
     elif variant == "wrong":
-        justify.register_certifier("wrong", _wrong, imports=rc.IMPORTS)
+        justify.register_certifier("wrong", _wrong, imports=certs.IMPORTS)
     src = render_module(theorems).source
     lines = src.splitlines()
-    head = next(i for i, ln in enumerate(lines) if ln.startswith("import "))
-    lines.insert(head, "import Mathlib.Util.CountHeartbeats")
+    first_import = next(i for i, ln in enumerate(lines) if ln.startswith("import "))
+    lines.insert(first_import, "import Mathlib.Util.CountHeartbeats")
     out = []
     for ln in lines:
-        # (`#count_heartbeats` lifts the heartbeat limit, so nothing times out here)
-        out.append(("#count_heartbeats in\n" + ln) if ln.startswith("theorem ") else ln)
+        if ln.startswith("theorem "):
+            # count the work; check under the default budget
+            out += ["#count_heartbeats in", "set_option maxHeartbeats 200000 in"]
+        out.append(ln)
     return "\n".join(out) + "\n"
 
 
@@ -116,14 +148,15 @@ def parse(output: str, src: str, theorems: list[pl.Theorem]) -> dict[str, dict]:
             res[ax.group(1)]["axioms"] = []
         elif err := re.search(r":(\d+):\d+: error", ln):
             line = int(err.group(1))
-            owner = [name for start, name in starts if start - 1 <= line]
+            owner = [name for start, name in starts if start - 2 <= line]
             if owner:
                 res[owner[-1]]["errors"] += 1
     return res
 
 
 def main() -> int:
-    theorems = suite()
+    domains = suite()
+    theorems = [t for _, t in domains]
     build = ROOT / ".pyleanx" / "certificates"
     build.mkdir(parents=True, exist_ok=True)
     report: dict[str, dict] = {}
@@ -145,15 +178,15 @@ def main() -> int:
         print(variant, report[variant]["seconds"], "s", flush=True)
     OUT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8", newline="\n")
     std = ["propext", "Classical.choice", "Quot.sound"]
-    print(f"{'theorem':20s} {'rules':>12s} {'certified':>12s} {'wrong':>12s}")
-    for t in theorems:
+    print(f"{'domain':14s} {'theorem':26s} {'rules':>12s} {'certified':>12s} {'wrong':>12s}")
+    for domain, t in domains:
         cells = []
         for v in ("rules", "certified", "wrong"):
             r = report[v]["theorems"][t.name]
             ok = r["errors"] == 0 and r["axioms"] is not None and set(r["axioms"]) <= set(std)
             cells.append(f"{r['heartbeats'] if r['heartbeats'] is not None else '-':>9}"
                          f" {'ok' if ok else 'X':>2}")
-        print(f"{t.name:20s} " + " ".join(cells))
+        print(f"{domain:14s} {t.name:26s} " + " ".join(cells))
     return 0
 
 

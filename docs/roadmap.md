@@ -232,33 +232,42 @@ explained; to investigate on an idle machine before claiming batch speedups).
   step that reuses a name) and returns tactic text Lean only checks. Certificates come
   first in the step's `first | …`; the rules still follow. `Derivation.certificates(step)`.
   Without certifiers the generated Lean is byte-identical (golden test).
-- `pyleanx.ring_certificates` (opt-in; `pip install pyleanx[certify]`, sympy):
-  `linear_combination` coefficients for polynomial equalities over ℤ/ℚ/ℝ by linear
-  algebra over ℚ.
-- **Lean measurement** (`benchmarks/certificates.py`, pinned Lean 4.34.1 / Mathlib
-  d13f23b, `#count_heartbeats in` per theorem, heartbeats in thousands; identical across
-  two runs). All 24 theorem checks passed, axioms propext/Classical.choice/Quot.sound only.
+- **Certifiers across domains** (`pyleanx.certifiers`, opt-in; sympy, scipy optional):
+  `polynomial` (equalities over ℕ/ℤ/ℚ/ℝ), `inequality` (Positivstellensatz search by
+  linear programming: products of hypotheses, hypothesis × square, diagonally dominant
+  sums of squares, terms `positivity` knows), `witness` (∃: solve, then certify the
+  instance through `Goal.certify`), `divisibility` (ℕ/ℤ quotients, opening cited
+  divisibilities). Non-ring subterms are opaque atoms, so the certifiers apply to
+  trigonometric, analytic and arithmetic steps that are algebraic in such terms.
+  Certifiers now also run for conclusions and `pl.auto()` (the derivation graph tracks
+  the goal through claims, choices, definitions and `suffices`).
+- **Lean measurement 1** (8 equality steps, `#count_heartbeats`, heartbeat limit lifted):
+  19,376 → 5,043 thousand heartbeats; the rules prove all 8 too; a wrong certificate first
+  costs +10%.
+- **Lean measurement 2** (`benchmarks/certificates.py`, 20 steps in 6 domains, default
+  budget `maxHeartbeats 200000`, pinned Lean 4.34.1 / Mathlib d13f23b):
 
-  | theorem | rules only | certified | wrong certificate first |
-  |---|---|---|---|
-  | linear_pair | 457 | 246 | 627 |
-  | substitute_square | 408 | 199 | 592 |
-  | product_inverse | 267 | 178 | 444 |
-  | int_shift_square | 560 | 361 | 805 |
-  | power_sum_2 | 3477 | 490 | 3745 |
-  | power_sum_3 | 3231 | 732 | 3513 |
-  | power_sum_4 | 4688 | 1634 | 5011 |
-  | newton_three | 6288 | 1203 | 6646 |
-  | total | 19376 | 5043 (−74%) | 21383 (+10%) |
+  | domain | steps | rules only | certified | wrong certificate first |
+  |---|---|---|---|---|
+  | algebra | 4 | 4 | 4 | 4 |
+  | inequalities | 7 | 2 | 7 | 2 |
+  | analysis (√) | 1 | 1 | 1 | 1 |
+  | trigonometry | 2 | 2 | 2 | 2 |
+  | logic (∃) | 3 | 0 | 3 | 0 |
+  | number theory | 3 | 1 | 3 | 1 |
+  | **total** | **20** | **10** | **20** | **10** |
 
-  Findings: certificates cut Lean's work 1.5–7× per step, most for nonlinear steps. On this
-  suite they *accelerate* but do not *enable*: the rules prove every step too. A wrong
-  certificate is rejected and costs ~10%. Wall time per file is dominated by loading the
-  imports (≈40–46 s either way; one cold run took 530 s), so the gain shows in large files
-  and in budget-bound steps, not in a single small file.
-- Unit tests: `tests/unit/test_certificates.py` (slot, scope, failures, chains),
-  `tests/unit/test_ring_certificates.py` (skipped without sympy). Not done: certifiers for
-  inequalities (Farkas / sums of squares), goal states from the REPL.
+  Lean's work: rules 38.7, certified 13.7, wrong-first 42.3 (millions of heartbeats); on
+  the 10 steps the rules prove, 15.9 → 7.1. Certificates cost more on 2 steps
+  (`√x + 1 > 0`: 154 → 757 thousand; `sin² x ≤ 1`: 1,294 → 1,573). Axioms: the standard
+  three everywhere. Wall time per file is dominated by imports and machine load
+  (38–454 s for the same imports).
+- Unit tests: `tests/unit/test_certificates.py` (slot, scope, goals of conclusions and
+  `auto`, composition), `tests/unit/test_certifiers.py` (each certifier, negative cases: no
+  certificate for a false (in)equality or an impossible ∃; skipped without sympy).
+- Not done: sums of squares beyond the diagonally dominant cone (needs an SDP solver),
+  division (`x / y`) beyond atoms, goals after `fix`/`intro`/cases (goal states from the
+  REPL), modular arithmetic, inequalities over ℕ.
 
 ### Domain packages; pyleanx-analysis (2026-11-19, evening)
 - **Separate domain packages**: `domains/analysis` is its own distribution

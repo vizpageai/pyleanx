@@ -1,55 +1,10 @@
 {
   "rules": {
-    "seconds": 529.9,
-    "bytes": 80385,
+    "seconds": 454.3,
+    "bytes": 147821,
     "theorems": {
-      "linear_pair": {
-        "heartbeats": 457,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      },
       "substitute_square": {
-        "heartbeats": 408,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      },
-      "product_inverse": {
-        "heartbeats": 267,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      },
-      "int_shift_square": {
-        "heartbeats": 560,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      },
-      "power_sum_2": {
-        "heartbeats": 3477,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      },
-      "power_sum_3": {
-        "heartbeats": 3231,
+        "heartbeats": 486,
         "errors": 0,
         "axioms": [
           "propext",
@@ -58,7 +13,7 @@
         ]
       },
       "power_sum_4": {
-        "heartbeats": 4688,
+        "heartbeats": 4821,
         "errors": 0,
         "axioms": [
           "propext",
@@ -67,7 +22,161 @@
         ]
       },
       "newton_three": {
-        "heartbeats": 6288,
+        "heartbeats": 6393,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "nat_square_eq": {
+        "heartbeats": 296,
+        "errors": 0,
+        "axioms": []
+      },
+      "am_gm_two": {
+        "heartbeats": 1448,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "am_gm_three": {
+        "heartbeats": 4948,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "cauchy_schwarz_two": {
+        "heartbeats": 2163,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "quartic_rearrangement": {
+        "heartbeats": 1791,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "cube_above_one": {
+        "heartbeats": 1331,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "unit_square_product": {
+        "heartbeats": 1471,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "linear_bound": {
+        "heartbeats": 214,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "sqrt_plus_one": {
+        "heartbeats": 154,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "sin_cos_square": {
+        "heartbeats": 489,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "sin_square_le_one": {
+        "heartbeats": 1294,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "exists_root": {
+        "heartbeats": 4791,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "exists_larger": {
+        "heartbeats": 978,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "exists_complement": {
+        "heartbeats": 1442,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "difference_divides_cubes": {
+        "heartbeats": 1654,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx"
+        ]
+      },
+      "divides_combination": {
+        "heartbeats": 2280,
+        "errors": 1,
+        "axioms": [
+          "sorryAx"
+        ]
+      },
+      "nat_divides_square_plus": {
+        "heartbeats": 289,
         "errors": 0,
         "axioms": [
           "propext",
@@ -78,10 +187,297 @@
     }
   },
   "certified": {
-    "seconds": 46.3,
-    "bytes": 81218,
+    "seconds": 219.2,
+    "bytes": 153516,
     "theorems": {
-      "linear_pair": {
+      "substitute_square": {
+        "heartbeats": 311,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "power_sum_4": {
+        "heartbeats": 1745,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "newton_three": {
+        "heartbeats": 1320,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "nat_square_eq": {
+        "heartbeats": 192,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "am_gm_two": {
+        "heartbeats": 443,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "am_gm_three": {
+        "heartbeats": 1629,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "cauchy_schwarz_two": {
+        "heartbeats": 932,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "quartic_rearrangement": {
+        "heartbeats": 1142,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "cube_above_one": {
+        "heartbeats": 1180,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "unit_square_product": {
+        "heartbeats": 367,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "linear_bound": {
+        "heartbeats": 221,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "sqrt_plus_one": {
+        "heartbeats": 757,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "sin_cos_square": {
+        "heartbeats": 422,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "sin_square_le_one": {
+        "heartbeats": 1573,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "exists_root": {
+        "heartbeats": 205,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "exists_larger": {
+        "heartbeats": 207,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "exists_complement": {
+        "heartbeats": 116,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "difference_divides_cubes": {
+        "heartbeats": 435,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Quot.sound"
+        ]
+      },
+      "divides_combination": {
+        "heartbeats": 303,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "nat_divides_square_plus": {
+        "heartbeats": 164,
+        "errors": 0,
+        "axioms": [
+          "propext"
+        ]
+      }
+    }
+  },
+  "wrong": {
+    "seconds": 38.0,
+    "bytes": 149563,
+    "theorems": {
+      "substitute_square": {
+        "heartbeats": 743,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "power_sum_4": {
+        "heartbeats": 5361,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "newton_three": {
+        "heartbeats": 6968,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "nat_square_eq": {
+        "heartbeats": 614,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "am_gm_two": {
+        "heartbeats": 1577,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "am_gm_three": {
+        "heartbeats": 5370,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "cauchy_schwarz_two": {
+        "heartbeats": 2367,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "quartic_rearrangement": {
+        "heartbeats": 1939,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "cube_above_one": {
+        "heartbeats": 1609,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "unit_square_product": {
+        "heartbeats": 1679,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "linear_bound": {
+        "heartbeats": 423,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "sqrt_plus_one": {
         "heartbeats": 246,
         "errors": 0,
         "axioms": [
@@ -90,8 +486,8 @@
           "Quot.sound"
         ]
       },
-      "substitute_square": {
-        "heartbeats": 199,
+      "sin_cos_square": {
+        "heartbeats": 422,
         "errors": 0,
         "axioms": [
           "propext",
@@ -99,8 +495,8 @@
           "Quot.sound"
         ]
       },
-      "product_inverse": {
-        "heartbeats": 178,
+      "sin_square_le_one": {
+        "heartbeats": 1497,
         "errors": 0,
         "axioms": [
           "propext",
@@ -108,122 +504,53 @@
           "Quot.sound"
         ]
       },
-      "int_shift_square": {
-        "heartbeats": 361,
-        "errors": 0,
+      "exists_root": {
+        "heartbeats": 4802,
+        "errors": 1,
         "axioms": [
           "propext",
+          "sorryAx",
           "Classical.choice",
           "Quot.sound"
         ]
       },
-      "power_sum_2": {
-        "heartbeats": 490,
-        "errors": 0,
+      "exists_larger": {
+        "heartbeats": 980,
+        "errors": 1,
         "axioms": [
           "propext",
+          "sorryAx",
           "Classical.choice",
           "Quot.sound"
         ]
       },
-      "power_sum_3": {
-        "heartbeats": 732,
-        "errors": 0,
+      "exists_complement": {
+        "heartbeats": 1444,
+        "errors": 1,
         "axioms": [
           "propext",
+          "sorryAx",
           "Classical.choice",
           "Quot.sound"
         ]
       },
-      "power_sum_4": {
-        "heartbeats": 1634,
-        "errors": 0,
+      "difference_divides_cubes": {
+        "heartbeats": 1658,
+        "errors": 1,
         "axioms": [
           "propext",
-          "Classical.choice",
-          "Quot.sound"
+          "sorryAx"
         ]
       },
-      "newton_three": {
-        "heartbeats": 1203,
-        "errors": 0,
+      "divides_combination": {
+        "heartbeats": 2282,
+        "errors": 1,
         "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      }
-    }
-  },
-  "wrong": {
-    "seconds": 46.2,
-    "bytes": 80680,
-    "theorems": {
-      "linear_pair": {
-        "heartbeats": 627,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
+          "sorryAx"
         ]
       },
-      "substitute_square": {
-        "heartbeats": 592,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      },
-      "product_inverse": {
-        "heartbeats": 444,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      },
-      "int_shift_square": {
-        "heartbeats": 805,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      },
-      "power_sum_2": {
-        "heartbeats": 3745,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      },
-      "power_sum_3": {
-        "heartbeats": 3513,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      },
-      "power_sum_4": {
-        "heartbeats": 5011,
-        "errors": 0,
-        "axioms": [
-          "propext",
-          "Classical.choice",
-          "Quot.sound"
-        ]
-      },
-      "newton_three": {
-        "heartbeats": 6646,
+      "nat_divides_square_plus": {
+        "heartbeats": 292,
         "errors": 0,
         "axioms": [
           "propext",

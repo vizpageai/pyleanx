@@ -20,10 +20,11 @@ what was available.
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from .proofs import (
+    Auto,
     Branches,
     Cases,
     CaseSplit,
@@ -65,6 +66,9 @@ class Node:
 class Derivation:
     theorem: str
     nodes: tuple[Node, ...]
+    #: id(step) -> the goal it proves, where known (the theorem's conclusion, a claim's
+    #: statement, … carried through the steps that keep the goal)
+    goals: dict[int, Any] = field(default_factory=dict, compare=False, repr=False)
 
     def __iter__(self) -> Iterator[Node]:
         return iter(self.nodes)
@@ -129,11 +133,20 @@ class Derivation:
         facts = getattr(n.tactic, "facts", ()) or ()
         return certificates(stmt, [render_term(t) for t in facts], self.scope_statements(n))
 
-    def given(self) -> dict[int, dict[str, Any]]:
-        """``id(step) -> scope_statements`` for every claim and chain (used when the proof
-        is rendered, so certifiers see exactly what each step may cite)."""
-        return {id(n.tactic): self.scope_statements(n) for n in self.nodes
-                if isinstance(n.tactic, (Claim, Chain))}
+    def goal(self, node: Node) -> Any:
+        """The statement ``node`` proves, where known."""
+        stmt = _statement(node)
+        if stmt is not None and isinstance(node.tactic, (Claim, Chain)):
+            return stmt
+        return self.goals.get(id(node.tactic))
+
+    def contexts(self) -> dict[int, Any]:
+        """``id(step) -> StepContext(goal, scope statements)`` for the steps certifiers can
+        help (claims, chains, conclusions, ``auto``), used while the proof is rendered."""
+        from .justify import StepContext
+
+        return {id(n.tactic): StepContext(self.goal(n), tuple(self.scope_statements(n).items()))
+                for n in self.nodes if isinstance(n.tactic, (Claim, Chain, Conclude, Auto))}
 
     def cited_by(self, name: str) -> tuple[str, ...]:
         """The steps that cite ``name`` directly."""
@@ -282,6 +295,33 @@ def _all_names(t: Tactic | None) -> set[str]:
     return {x for n in out for x in n.introduces}
 
 
+def _track_goals(t: Tactic | None, goal: Any, out: dict[int, Any]) -> Any:
+    """Record the goal of every step under ``t``; return the goal after ``t``.
+
+    Steps that keep the goal (claims, chains, choices, definitions) pass it on; a step that
+    changes it in a way not tracked here (intro, cases, induction, …) leaves it unknown.
+    """
+    if t is None:
+        return goal
+    if goal is not None:
+        out[id(t)] = goal
+    if isinstance(t, Steps):
+        for s in t.tactics:
+            goal = _track_goals(s, goal, out)
+        return goal
+    if isinstance(t, Claim):
+        _track_goals(t.proof, t.prop, out)
+        return goal
+    if isinstance(t, Conclude):
+        _track_goals(t.proof, goal, out)
+        return None
+    if isinstance(t, Suffices):
+        return t.prop     # the steps after "it suffices to show P" prove P
+    if isinstance(t, (Chain, Choose, Have, Let, Obtain, Auto)):
+        return goal
+    return None
+
+
 def derivation(thm: Any) -> Derivation:
     """The derivation graph of a theorem's (prepared) proof."""
     hyps = [h.name for h in thm.assumptions]
@@ -290,7 +330,9 @@ def derivation(thm: Any) -> Derivation:
              for h in thm.assumptions]
     out: list[Node] = []
     _walk(thm.proof, tuple(hyps), every, out)
-    return Derivation(thm.name, (*nodes, *out))
+    goals: dict[int, Any] = {}
+    _track_goals(thm.proof, getattr(thm, "conclusion", None), goals)
+    return Derivation(thm.name, (*nodes, *out), goals)
 
 
 __all__ = ["Derivation", "Node", "derivation"]
