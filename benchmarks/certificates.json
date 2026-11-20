@@ -1,0 +1,236 @@
+{
+  "rules": {
+    "seconds": 529.9,
+    "bytes": 80385,
+    "theorems": {
+      "linear_pair": {
+        "heartbeats": 457,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "substitute_square": {
+        "heartbeats": 408,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "product_inverse": {
+        "heartbeats": 267,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "int_shift_square": {
+        "heartbeats": 560,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "power_sum_2": {
+        "heartbeats": 3477,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "power_sum_3": {
+        "heartbeats": 3231,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "power_sum_4": {
+        "heartbeats": 4688,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "newton_three": {
+        "heartbeats": 6288,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      }
+    }
+  },
+  "certified": {
+    "seconds": 46.3,
+    "bytes": 81218,
+    "theorems": {
+      "linear_pair": {
+        "heartbeats": 246,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "substitute_square": {
+        "heartbeats": 199,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "product_inverse": {
+        "heartbeats": 178,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "int_shift_square": {
+        "heartbeats": 361,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "power_sum_2": {
+        "heartbeats": 490,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "power_sum_3": {
+        "heartbeats": 732,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "power_sum_4": {
+        "heartbeats": 1634,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "newton_three": {
+        "heartbeats": 1203,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      }
+    }
+  },
+  "wrong": {
+    "seconds": 46.2,
+    "bytes": 80680,
+    "theorems": {
+      "linear_pair": {
+        "heartbeats": 627,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "substitute_square": {
+        "heartbeats": 592,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "product_inverse": {
+        "heartbeats": 444,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "int_shift_square": {
+        "heartbeats": 805,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "power_sum_2": {
+        "heartbeats": 3745,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "power_sum_3": {
+        "heartbeats": 3513,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "power_sum_4": {
+        "heartbeats": 5011,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "newton_three": {
+        "heartbeats": 6646,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      }
+    }
+  }
+}

@@ -100,6 +100,41 @@ class Derivation:
                  for j, x in enumerate(n.introduces)}
         return tuple(sorted(seen, key=lambda x: order.get(x, (len(self.nodes), 0))))
 
+    def scope_statements(self, node: Node) -> dict[str, Any]:
+        """Lean name -> statement of what is in scope at ``node`` (the latest earlier
+        hypothesis or step of that name; names that state several things are left out)."""
+        out: dict[str, Any] = {}
+        for n in self.nodes:
+            if n is node:
+                break
+            stmt = _statement(n)
+            for x in n.introduces:
+                if x in node.scope:
+                    if stmt is not None and len(n.introduces) == 1:
+                        out[x] = stmt
+                    else:
+                        out.pop(x, None)
+        return out
+
+    def certificates(self, name: str) -> list[tuple[str, str]]:
+        """``(certifier, tactic)`` the registered certifiers propose for the step ``name``
+        (see :func:`pyleanx.justify.register_certifier`); Lean checks whichever is used."""
+        from .justify import certificates
+        from .render.lean import render_term
+
+        n = self[name]
+        stmt = _statement(n)
+        if stmt is None:
+            return []
+        facts = getattr(n.tactic, "facts", ()) or ()
+        return certificates(stmt, [render_term(t) for t in facts], self.scope_statements(n))
+
+    def given(self) -> dict[int, dict[str, Any]]:
+        """``id(step) -> scope_statements`` for every claim and chain (used when the proof
+        is rendered, so certifiers see exactly what each step may cite)."""
+        return {id(n.tactic): self.scope_statements(n) for n in self.nodes
+                if isinstance(n.tactic, (Claim, Chain))}
+
     def cited_by(self, name: str) -> tuple[str, ...]:
         """The steps that cite ``name`` directly."""
         return tuple(n.name for n in self.nodes if name in n.cites)
@@ -136,6 +171,14 @@ class Derivation:
         for row in self._rows():
             out.append("| " + " | ".join(c.replace("|", "\\|") for c in row) + " |")
         return "\n".join(out)
+
+
+def _statement(n: Node) -> Any:
+    if n.statement is not None:
+        return n.statement
+    if isinstance(n.tactic, Chain) and n.tactic.links:
+        return n.tactic.statement()
+    return None
 
 
 def _cited(facts: Iterable[Any], known: Iterable[str]) -> tuple[tuple[str, ...], tuple[str, ...]]:

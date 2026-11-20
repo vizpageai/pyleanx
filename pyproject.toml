@@ -42,7 +42,9 @@ Changelog = "https://github.com/vizpageai/pyleanx/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 interactive = ["lean-interact==0.11.6"]
-dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6", "mypy>=1.11", "build>=1.2", "twine>=5"]
+certify = ["sympy>=1.12"]
+dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6", "mypy>=1.11", "build>=1.2", "twine>=5",
+       "sympy>=1.12"]
 docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.26"]
 
 [project.scripts]
@@ -72,7 +74,7 @@ no_implicit_optional = true
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["lean_interact", "lean_interact.*"]
+module = ["lean_interact", "lean_interact.*", "sympy", "sympy.*"]
 ignore_missing_imports = true
 
 [tool.coverage.run]

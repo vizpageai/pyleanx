@@ -8,6 +8,12 @@ see [docs/stability.md](docs/stability.md)).
 ## [Unreleased]
 
 ### Added
+- **Certifiers** (`pyleanx.justify.register_certifier`): a step's statement and the
+  statements in its scope go to Python, which may search for a *certificate* (tactic text
+  Lean only checks); certificates are tried before the rules and are never trusted.
+  `Derivation.certificates(step)` shows them. First certifier, opt-in:
+  `pyleanx.ring_certificates` (`pip install pyleanx[certify]`) finds `linear_combination`
+  coefficients for polynomial equalities over ℤ, ℚ, ℝ. [docs/core.md](docs/core.md).
 - **Domain packages**: separate distributions built on the core and never imported by it,
   discovered through the `pyleanx.packs` entry point (`pyleanx.packs.load_plugins`;
   `pyleanx doctor` lists them, `pyleanx facts` searches their facts). A package takes part

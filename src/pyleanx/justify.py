@@ -29,6 +29,7 @@ import contextvars
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
+from typing import Any
 
 SLOTS = ("step", "close", "cheap_close")
 
@@ -214,15 +215,135 @@ def _first(slot: str, step: Step, active: frozenset[str] | None) -> str:
     return "first | " + " | ".join(items)
 
 
+# --- certificates: search in Python, checking in Lean ---------------------------------
+# A rule writes tactics from the *text* of what a step cites, and Lean searches. A
+# certifier sees the *mathematics*: the statement of the step and the statements of the
+# cited hypotheses and steps, as PyLeanX expressions. It may search as long as it likes in
+# Python (linear algebra, a solver, numerics) and returns a certificate: tactic text that
+# Lean only has to check, e.g. ``linear_combination 2 * h1 - h2`` instead of a search by
+# ``linarith``/``nlinarith`` inside Lean's time budget. Certificates are tried before the
+# rules; a wrong one fails like any other alternative and the rules still run. Nothing a
+# certifier returns is trusted: the kernel checks the proof term built from it.
+
+
+@dataclass(frozen=True)
+class Goal:
+    """What a certifier sees of a step."""
+
+    statement: Any                         # the Expr the step states
+    given: tuple[tuple[str, Any], ...]     # cited hypotheses/steps: (Lean name, statement)
+    facts: tuple[str, ...]                 # every cited fact, as Lean text
+
+
+Certify = Callable[[Goal], "str | Iterable[str] | None"]
+
+
+@dataclass(frozen=True)
+class Certifier:
+    name: str
+    certify: Certify
+    priority: float = 0
+    pack: str = "core"
+    imports: tuple[str, ...] = ()   # Lean modules its certificates need
+
+
+_CERTIFIERS: list[Certifier] = []
+#: id(step) -> {Lean name: statement} of what is in scope at that step, while a theorem is
+#: rendered (from its derivation graph)
+_STATEMENTS: contextvars.ContextVar[dict[int, dict[str, Any]] | None] = \
+    contextvars.ContextVar("pyleanx_statements", default=None)
+
+
+def register_certifier(name: str, certify: Certify, *, priority: float = 0,
+                       pack: str = "core", imports: Iterable[str] = ()) -> Certifier:
+    """Register a certifier (registering the same ``(pack, name)`` again replaces it).
+
+    ``certify(goal)`` returns tactic text, several alternatives, or ``None`` (no
+    certificate). It must be deterministic: the generated Lean is fingerprinted.
+    """
+    if pack != "core" and pack not in _PACKS:
+        raise ValueError(f"register the pack {pack!r} (register_pack) before its certifiers")
+    c = Certifier(name, certify, priority, pack, tuple(imports))
+    _CERTIFIERS[:] = [x for x in _CERTIFIERS if (x.pack, x.name) != (pack, name)]
+    _CERTIFIERS.append(c)
+    return c
+
+
+def unregister_certifier(name: str, *, pack: str = "core") -> None:
+    _CERTIFIERS[:] = [x for x in _CERTIFIERS if (x.pack, x.name) != (pack, name)]
+
+
+def certifiers(active: frozenset[str] | None = None) -> list[Certifier]:
+    """The certifiers in force, in order (``active=None``: every pack)."""
+    found = [c for c in _CERTIFIERS
+             if c.pack == "core" or active is None or c.pack in active]
+    order = {id(c): i for i, c in enumerate(_CERTIFIERS)}
+    return sorted(found, key=lambda c: (c.priority, order[id(c)]))
+
+
+def certifier_imports() -> tuple[str, ...]:
+    return tuple(dict.fromkeys(i for c in _CERTIFIERS for i in c.imports))
+
+
+@contextmanager
+def known_statements(statements: dict[int, dict[str, Any]] | None) -> Iterator[None]:
+    """Within the block, certifiers see, for each step (by ``id``), the statements of the
+    names in its scope (see :meth:`pyleanx.derivation.Derivation.given`)."""
+    token = _STATEMENTS.set(statements)
+    try:
+        yield
+    finally:
+        _STATEMENTS.reset(token)
+
+
+def statements_for(step: object) -> dict[str, Any]:
+    """The statements in scope at ``step`` while its theorem is rendered (else empty)."""
+    return (_STATEMENTS.get() or {}).get(id(step), {})
+
+
+def certificates(statement: Any, facts: Iterable[str],
+                 statements: dict[str, Any] | None = None) -> list[tuple[str, str]]:
+    """``(certifier, tactic)`` for a step stating ``statement`` from ``facts``.
+
+    A certifier that raises is skipped with a warning: a certifier can only add
+    alternatives, never stop a proof from being checked.
+    """
+    import warnings
+
+    known = statements or {}
+    facts = tuple(facts)
+    goal = Goal(statement, tuple((f, known[f]) for f in facts if f in known), facts)
+    out: list[tuple[str, str]] = []
+    for c in certifiers(current_packs()):
+        try:
+            found = c.certify(goal)
+        except Exception as exc:  # noqa: BLE001 - see the docstring
+            warnings.warn(f"certifier {c.pack}:{c.name} failed: {type(exc).__name__}: {exc}",
+                          RuntimeWarning, stacklevel=2)
+            continue
+        if found is None:
+            continue
+        for text in ((found,) if isinstance(found, str) else found):
+            out.append((c.name, text))
+    return out
+
+
 def alternatives(facts: Iterable[str], lemmas: Iterable[str],
-                 avoid: Iterable[str] = ()) -> list[str]:
-    """The tactic alternatives for one step, in order, without repetitions."""
+                 avoid: Iterable[str] = (), *, goal: Any = None,
+                 given: dict[str, Any] | None = None) -> list[str]:
+    """The tactic alternatives for one step, in order, without repetitions.
+
+    With ``goal`` (the statement of the step) and ``given`` (the statements in its scope,
+    by Lean name), the certificates come first.
+    """
     active = current_packs()
-    step = Step(tuple(facts), tuple(lemmas), tuple(avoid))
+    facts = tuple(facts)
+    step = Step(facts, tuple(lemmas), tuple(avoid))
     step = replace(step, cheap=_first("cheap_close", step, active))
     step = replace(step, close=_first("close", step, active))
+    certs = [t for _, t in certificates(goal, facts, given)] if goal is not None else []
     # an alternative tried twice cannot succeed the second time
-    alts = list(dict.fromkeys(_texts("step", step, active)))
+    alts = list(dict.fromkeys([*certs, *_texts("step", step, active)]))
     return alts
 
 
@@ -401,5 +522,7 @@ def _general(s: Step) -> Iterable[str]:
     return ["(aesop; done)", "grind"]
 
 
-__all__ = ["SLOTS", "Pack", "Rule", "Step", "active_packs", "add_rule", "alternatives",
-           "current_packs", "packs", "packs_using", "register_pack", "rules"]
+__all__ = ["SLOTS", "Certifier", "Goal", "Pack", "Rule", "Step", "active_packs", "add_rule",
+           "alternatives", "certificates", "certifier_imports", "certifiers",
+           "current_packs", "known_statements", "packs", "packs_using", "register_certifier",
+           "register_pack", "rules", "statements_for", "unregister_certifier"]

@@ -73,6 +73,48 @@ once it is imported, by the author or by `pyleanx.packs.load_plugins()` (used by
 depends only on the proof and the packages imported. For the same reason the core's
 golden-Lean test runs in a fresh process, and a package's tests run in their own.
 
+## Certificates: search in Python, checking in Lean
+
+A justification rule writes tactic text from what a step *cites* and leaves the search to
+Lean's tactics, inside Lean's per-declaration time budget. A **certifier** sees the
+mathematics instead: the statement of the step and the statements of the hypotheses and
+steps in its scope (from the derivation graph). It may search in Python with any tool
+(linear algebra, a solver, numerics) and returns a *certificate*: tactic text that Lean
+only has to check.
+
+```py
+from pyleanx import justify
+
+def certify(goal: justify.Goal) -> str | None:
+    # goal.statement: the step (an Expr); goal.given: ((Lean name, statement), …) of the
+    # cited hypotheses and steps; goal.facts: every cited fact as Lean text
+    ...
+    return "linear_combination (x + 2) * h1 + h2"      # or None: no certificate
+
+justify.register_certifier("ring.linear_combination", certify,
+                           imports=("Mathlib.Tactic.LinearCombination",))
+```
+
+Certificates are tried first in the step's `first | …`; the rules follow, so a wrong or
+missing certificate costs one failed alternative and nothing else. A certifier that raises
+is skipped with a warning. Certifiers must be deterministic (the generated Lean is
+fingerprinted); a pack registers its certifiers with `pack=` and they apply only where
+the pack is active. `thm.derivation().certificates("h1")` shows what the certifiers
+propose for a step.
+
+The core ships the slot, not a search. `pyleanx.ring_certificates` (opt-in: import it;
+needs `sympy`, `pip install pyleanx[certify]`) is the first certifier: for a step `P = Q`
+citing equalities `aᵢ = bᵢ` over ℤ, ℚ or ℝ it finds polynomials `cᵢ` with
+`P - Q = Σ cᵢ (aᵢ - bᵢ)` by linear algebra over ℚ, and emits
+`linear_combination c₁ * h₁ + …`, which Lean checks with one `ring1`.
+
+Measured with pinned Lean (`benchmarks/certificates.py`, `#count_heartbeats` per theorem,
+8 one-step theorems from linear to Newton's identity in three variables): Lean's work
+falls from 19,376 to 5,043 thousand heartbeats (1.5–7× per step, most for nonlinear
+steps); with a deliberately wrong certificate first, every step is still proved by the
+rules at +10% work. Here certificates accelerate; they do not yet prove anything the
+rules cannot (see the [roadmap](roadmap.md) entry of 2026-11-20).
+
 ## Constraints from Lean's mechanism
 
 * **Python never elaborates.** Implicit arguments, type-class instances, coercions and

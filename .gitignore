@@ -13,3 +13,4 @@ example-bank.json
 pyleanx-basic.jsonl
 lean-project/pyleanx-libs.json
 site/
+/.pyleanx/

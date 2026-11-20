@@ -226,6 +226,40 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [ ] Benchmark re-run with the upgraded baseline proposer.
 - Unit tests: 248 passed; ruff and mypy clean.
 
+### Core: certifiers, search in Python and checking in Lean (2026-11-20)
+- `pyleanx.justify.register_certifier`: a certifier receives the step's statement and the
+  statements in its scope (from the derivation graph, scope-aware: a step never sees a later
+  step that reuses a name) and returns tactic text Lean only checks. Certificates come
+  first in the step's `first | …`; the rules still follow. `Derivation.certificates(step)`.
+  Without certifiers the generated Lean is byte-identical (golden test).
+- `pyleanx.ring_certificates` (opt-in; `pip install pyleanx[certify]`, sympy):
+  `linear_combination` coefficients for polynomial equalities over ℤ/ℚ/ℝ by linear
+  algebra over ℚ.
+- **Lean measurement** (`benchmarks/certificates.py`, pinned Lean 4.34.1 / Mathlib
+  d13f23b, `#count_heartbeats in` per theorem, heartbeats in thousands; identical across
+  two runs). All 24 theorem checks passed, axioms propext/Classical.choice/Quot.sound only.
+
+  | theorem | rules only | certified | wrong certificate first |
+  |---|---|---|---|
+  | linear_pair | 457 | 246 | 627 |
+  | substitute_square | 408 | 199 | 592 |
+  | product_inverse | 267 | 178 | 444 |
+  | int_shift_square | 560 | 361 | 805 |
+  | power_sum_2 | 3477 | 490 | 3745 |
+  | power_sum_3 | 3231 | 732 | 3513 |
+  | power_sum_4 | 4688 | 1634 | 5011 |
+  | newton_three | 6288 | 1203 | 6646 |
+  | total | 19376 | 5043 (−74%) | 21383 (+10%) |
+
+  Findings: certificates cut Lean's work 1.5–7× per step, most for nonlinear steps. On this
+  suite they *accelerate* but do not *enable*: the rules prove every step too. A wrong
+  certificate is rejected and costs ~10%. Wall time per file is dominated by loading the
+  imports (≈40–46 s either way; one cold run took 530 s), so the gain shows in large files
+  and in budget-bound steps, not in a single small file.
+- Unit tests: `tests/unit/test_certificates.py` (slot, scope, failures, chains),
+  `tests/unit/test_ring_certificates.py` (skipped without sympy). Not done: certifiers for
+  inequalities (Farkas / sums of squares), goal states from the REPL.
+
 ### Domain packages; pyleanx-analysis (2026-11-19, evening)
 - **Separate domain packages**: `domains/analysis` is its own distribution
   (`pyleanx-analysis`, entry point `pyleanx.packs`), built only on PyLeanX and never

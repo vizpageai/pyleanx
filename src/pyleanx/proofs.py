@@ -784,6 +784,13 @@ _JUSTIFY_IMPORTS = (*_AUTO_IMPORTS, "Aesop", "Mathlib.Tactic.FunProp",
                     "Mathlib.Tactic.NormNum.Basic", "Mathlib.Tactic.Ring.RingNF")
 
 
+def _given(step: object) -> tuple[tuple[str, Any], ...]:
+    """The statements in scope at ``step`` while its theorem is rendered (for certifiers)."""
+    from .justify import statements_for
+
+    return tuple(statements_for(step).items())
+
+
 def _plain_relation(prop: Any) -> bool:
     """Is ``prop`` a relation =, ≤, <, ≥, > (nothing for ``intros`` to introduce)?"""
     from .expr import Compare
@@ -806,9 +813,16 @@ class Justify(Tactic):
     #: also try after ``intros``: needed only when the goal may introduce something (∀, →,
     #: ≠, …); a plain relation (=, ≤, <, ≥, >) has nothing to introduce
     intros: bool = field(default=True, compare=False)
+    #: the statement this step proves, when known (certifiers see it; see justify.py)
+    goal: Expr | None = field(default=None, compare=False)
+    #: statements in scope at the step, by Lean name (what certifiers may use)
+    given: tuple[tuple[str, Expr], ...] = field(default=(), compare=False)
 
     def imports(self) -> tuple[str, ...]:
-        return (*_JUSTIFY_IMPORTS, *(i for t in self.facts for i in term_imports(t)))
+        from .justify import certifier_imports
+
+        extra = certifier_imports() if self.goal is not None else ()
+        return (*_JUSTIFY_IMPORTS, *(i for t in self.facts for i in term_imports(t)), *extra)
 
     def _core(self) -> list[str]:
         from .justify import alternatives
@@ -816,7 +830,7 @@ class Justify(Tactic):
 
         fs = [render_term(t) for t in self.facts]
         lemmas = [f for f, t in zip(fs, self.facts, strict=True) if not isinstance(t, Expr)]
-        return alternatives(fs, lemmas, self.avoid)
+        return alternatives(fs, lemmas, self.avoid, goal=self.goal, given=dict(self.given))
 
     def alternatives(self) -> list[str]:
         core = self._core()
@@ -855,7 +869,8 @@ class Claim(Tactic):
         if self.proof is not None:
             return self.proof
         return Justify(self.facts, self.unfold, self.avoid,
-                       intros=not _plain_relation(self.prop))
+                       intros=not _plain_relation(self.prop), goal=self.prop,
+                       given=_given(self))
 
     def imports(self) -> tuple[str, ...]:
         return self.justification().imports()
@@ -1317,9 +1332,14 @@ class Chain(Tactic):
         return _compare(_REL_OPS[self.relation()], self.first, self.links[-1][1])
 
     def as_calc(self) -> Calc:
+        from .expr import _compare
+
+        prev = [self.first, *(e for _, e, _, _ in self.links)]
+        given = _given(self)
         return Calc(first=self.first, links=tuple(
-            (r, e, Justify(f, self.unfold, self.avoid, intros=False))  # links are relations
-            for r, e, f, _ in self.links))
+            (r, e, Justify(f, self.unfold, self.avoid, intros=False,  # links are relations
+                           goal=_compare(_REL_OPS[r], prev[i], e), given=given))
+            for i, (r, e, f, _) in enumerate(self.links)))
 
     def imports(self) -> tuple[str, ...]:
         return self.as_calc().imports()

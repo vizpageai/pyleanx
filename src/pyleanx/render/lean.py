@@ -662,7 +662,7 @@ def render_module(
         b.spans.append(SourceSpan(s, e, "library_fact", None, f"library fact {fact.name}"))
     r = _ExprRenderer(unicode_types)
     dep_lines: dict[str, tuple[int, int]] = {}
-    from ..justify import active_packs, collecting_macros
+    from ..justify import active_packs, collecting_macros, known_statements
 
     defined: set[str] = set()  # justification macros already in the file
     for thm in emitted:
@@ -675,7 +675,11 @@ def render_module(
         # preamble does not change when a proof does).
         rendered: list[tuple[Tactic, list[str]]] = []
         if thm.proof is not None:
-            with active_packs(theorem_packs(thm)), collecting_macros() as macros:
+            from ..derivation import derivation
+
+            given = derivation(thm).given()
+            with active_packs(theorem_packs(thm)), collecting_macros() as macros, \
+                    known_statements(given):
                 rendered = [(step, render_tactic_lines(step)) for step in thm.proof.flat()]
             for name, definition in macros.items():
                 if name not in defined:
