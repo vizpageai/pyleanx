@@ -65,3 +65,15 @@ def test_geometry_rules_belong_to_the_geometry_pack():
             "close:distinct vertices"} <= names
     with j.active_packs(frozenset()):
         assert not any("angle_comm" in a for a in j.alternatives(["h"], ["h"]))
+
+
+def test_intros_copy_only_where_the_goal_can_introduce_something():
+    import pyleanx as pl
+
+    x = pl.symbol("x", pl.Real)
+    relation = pl.claim(x >= 0, because="hx", name="h").justification()
+    binder = pl.claim(pl.Forall(x, x * x >= 0), name="h").justification()
+    inequality = pl.claim(x != 0, because="hx", name="h").justification()  # ≠ is → False
+    assert not any(a.startswith("(intros;") for a in relation.alternatives())
+    assert any(a.startswith("(intros;") for a in binder.alternatives())
+    assert any(a.startswith("(intros;") for a in inequality.alternatives())

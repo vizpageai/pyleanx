@@ -39,6 +39,9 @@ see [docs/stability.md](docs/stability.md)).
   - The numeric sanity check is a framework (`register_function`, `register_apply`,
     `register_sampler`, `register_construction`); points and figures are the geometry
     pack's.
+  - A step stating a plain relation (=, ≤, <, ≥, >) and every link of a chain are no longer
+    searched a second time after `intros` (which has nothing to introduce there): the Lean
+    generated for the 73 written proofs is 24% smaller (24.6 MB → 18.7 MB).
   - Compact Lean: the side-goal closers of the justification search are one Lean macro per
     file instead of being repeated in every alternative; Lean's work for the Euclid proofs
     halves (parsing 19 s → 5 s).

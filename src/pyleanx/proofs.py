@@ -784,6 +784,13 @@ _JUSTIFY_IMPORTS = (*_AUTO_IMPORTS, "Aesop", "Mathlib.Tactic.FunProp",
                     "Mathlib.Tactic.NormNum.Basic", "Mathlib.Tactic.Ring.RingNF")
 
 
+def _plain_relation(prop: Any) -> bool:
+    """Is ``prop`` a relation =, ≤, <, ≥, > (nothing for ``intros`` to introduce)?"""
+    from .expr import Compare
+
+    return isinstance(prop, Compare) and prop.op in ("eq", "le", "lt", "ge", "gt")
+
+
 @dataclass(frozen=True)
 class Justify(Tactic):
     """Close one step of a written proof from the cited facts and everything proved so far.
@@ -796,6 +803,9 @@ class Justify(Tactic):
     facts: tuple[Term, ...] = ()
     unfold: tuple[str, ...] = ()  # names of local definitions (pl.let) in scope
     avoid: tuple[str, ...] = field(default=(), compare=False)  # set from Theorem(avoid=…)
+    #: also try after ``intros``: needed only when the goal may introduce something (∀, →,
+    #: ≠, …); a plain relation (=, ≤, <, ≥, >) has nothing to introduce
+    intros: bool = field(default=True, compare=False)
 
     def imports(self) -> tuple[str, ...]:
         return (*_JUSTIFY_IMPORTS, *(i for t in self.facts for i in term_imports(t)))
@@ -811,6 +821,11 @@ class Justify(Tactic):
     def alternatives(self) -> list[str]:
         core = self._core()
         one = "first | " + " | ".join(core)
+        if not self.intros:  # a plain relation: `intros` would do nothing
+            alts = list(core)
+            if self.unfold:
+                alts.append(f"(simp only [{', '.join(self.unfold)}] at *; {one})")
+            return alts
         alts = [*core, f"(intros; {one})"]
         if self.unfold:
             alts.append(f"(intros; simp only [{', '.join(self.unfold)}] at *; {one})")
@@ -839,7 +854,8 @@ class Claim(Tactic):
     def justification(self) -> Tactic:
         if self.proof is not None:
             return self.proof
-        return Justify(self.facts, self.unfold, self.avoid)
+        return Justify(self.facts, self.unfold, self.avoid,
+                       intros=not _plain_relation(self.prop))
 
     def imports(self) -> tuple[str, ...]:
         return self.justification().imports()
@@ -1302,7 +1318,8 @@ class Chain(Tactic):
 
     def as_calc(self) -> Calc:
         return Calc(first=self.first, links=tuple(
-            (r, e, Justify(f, self.unfold, self.avoid)) for r, e, f, _ in self.links))
+            (r, e, Justify(f, self.unfold, self.avoid, intros=False))  # links are relations
+            for r, e, f, _ in self.links))
 
     def imports(self) -> tuple[str, ...]:
         return self.as_calc().imports()
