@@ -204,3 +204,20 @@ def test_derivation_lists_certificates(certifier):
 def test_pack_certifiers_need_their_pack():
     with pytest.raises(ValueError, match="register the pack"):
         justify.register_certifier("x", lambda g: None, pack="no-such-pack")
+
+
+def test_a_domain_pack_registers_certifiers_active_with_its_vocabulary():
+    from pyleanx.render.lean import render_module
+
+    pack = pl.domain_pack("certpack_test", symbols=("Certpack.",))
+    pack.certifier("pack-cert", lambda g: "exact PACK_CERT")
+    pack.nonneg("Certpack.size", positive=True)
+    try:
+        assert justify.nonneg_heads()["Certpack.size"] is True
+        # a theorem without the pack's vocabulary: the pack's certifier is not active
+        assert "PACK_CERT" not in render_module([_thm()]).source
+        assert any(c.name == "pack-cert" and c.pack == "certpack_test"
+                   for c in justify.certifiers())
+    finally:
+        justify.unregister_certifier("pack-cert", pack="certpack_test")
+        justify._NONNEG_HEADS.pop("Certpack.size", None)

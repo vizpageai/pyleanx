@@ -45,8 +45,9 @@ theorem square_identity (x y : Real) :
 #print axioms square_identity
 ```
 
-> **Status: alpha (0.1.0).** The Python API, Lean code generation, verification with axiom
-> audit, written proofs and the domain libraries are implemented and tested against real Lean.
+> **Status: alpha (0.2.0).** The Python API, Lean code generation, verification with axiom
+> audit, written proofs and the core (derivation graph, justification rules, certifiers, the
+> extension interface for domain packages) are implemented and tested against real Lean.
 > See [docs/roadmap.md](docs/roadmap.md) for test evidence and known limitations. The API may
 > still change in 0.x releases ([stability policy](docs/stability.md)).
 
@@ -84,6 +85,11 @@ print(pythagoras.prose(pythagoras.check()))   # numbered steps, ✔ Checked by L
   show: … Hint: …".
 * **What a textbook leaves implicit** (∠ABC = ∠CBA, |AB| = |BA|, distinct vertices, the order of
   a triangle's vertices) is supplied for you, and checked.
+* **Search in Python, checking in Lean**: with `import pyleanx.certifiers`
+  (`pip install "pyleanx[certify]"`), steps such as AM–GM, `x/y + y/x ≥ 2`, `∃ y, y² + 2y = 3`
+  or `(m − n) ∣ m³ − n³` get a certificate found in Python (a linear program, a solved
+  witness, a quotient) that Lean only checks; on 28 test steps Lean proves 28 with
+  certificates and 14 without ([Writing a certifier](docs/tutorials/certifiers.md)).
 
 See [examples/pythagoras_similar.py](examples/pythagoras_similar.py),
 [examples/euclid_book1.py](examples/euclid_book1.py), the harmonic analysis series

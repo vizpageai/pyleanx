@@ -60,9 +60,24 @@ def _register(name: str, certify: Any, priority: float) -> None:
         NAMES.append(name)
 
 
+#: functions Lean's ``positivity`` proves nonnegative (True: positive), used by the
+#: inequality certifier; a domain pack adds its own with ``pack.nonneg``
+STANDARD_NONNEG = {"Real.sqrt": False, "abs": False, "Real.exp": True, "Real.cosh": True,
+                   "norm": False, "Nat.factorial": True}
+
+
 def enable() -> None:
     """Register every certifier (done on import)."""
+    import importlib.util
+
+    if importlib.util.find_spec("sympy") is None:
+        raise ImportError("pyleanx.certifiers needs sympy and scipy: "
+                          "pip install 'pyleanx[certify]'")
+    from ..justify import register_nonneg
     from . import divisibility, inequality, polynomial, witness
+
+    for head, positive in STANDARD_NONNEG.items():
+        register_nonneg(head, positive=positive)
 
     _register(polynomial.NAME, polynomial.certify, 10)
     _register(inequality.NAME, inequality.certify, 20)

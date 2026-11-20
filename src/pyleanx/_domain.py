@@ -38,14 +38,21 @@ def catalog_status(project_mathlib: str | None) -> str:
 
 
 def all_catalogs() -> Mapping[str, Mapping[str, Name]]:
-    from . import algebra, analysis, complex_analysis, geometry, harmonic, mathlib, numbers
+    """Catalog key -> its facts: ``pl.mathlib`` and every registered domain
+    (:func:`pyleanx.fact_search.domains`: the built-in packs, and installed domain packages
+    once imported). A domain's key is its module's last name (``pyleanx.algebra`` ->
+    ``algebra``), or its full module name if that is taken."""
+    import importlib
 
-    return {
-        "mathlib": {n: getattr(mathlib, n) for n in mathlib.__all__},
-        "algebra": algebra.LEMMAS,
-        "analysis": analysis.LEMMAS,
-        "geometry": geometry.LEMMAS,
-        "numbers": numbers.LEMMAS,
-        "complex_analysis": complex_analysis.LEMMAS,
-        "harmonic": harmonic.LEMMAS,
-    }
+    from . import mathlib
+    from .fact_search import domains
+
+    out: dict[str, Mapping[str, Name]] = {
+        "mathlib": {n: getattr(mathlib, n) for n in mathlib.__all__}}
+    for d in domains():
+        lemmas = getattr(importlib.import_module(d.module), "LEMMAS", None)
+        if not isinstance(lemmas, Mapping):
+            continue
+        key = d.module.rsplit(".", 1)[-1]
+        out[d.module if key in out else key] = lemmas
+    return out

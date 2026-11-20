@@ -45,7 +45,12 @@ See [The core](core.md) for how these fit together.
 ::: pyleanx.justify
     options:
       members: [Step, Rule, Pack, add_rule, register_pack, alternatives, rules, packs_using,
-                active_packs]
+                active_packs, Goal, Certifier, register_certifier, unregister_certifier,
+                certifiers, certificates, register_nonneg]
+
+::: pyleanx.certifiers
+    options:
+      members: [enable, disable, facts]
 
 ::: pyleanx.pack
     options:

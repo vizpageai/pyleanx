@@ -15,6 +15,9 @@ PyLeanX uses [semantic versioning](https://semver.org). During the `0.x` series:
 
 - Everything exported from `pyleanx` (`pl.__all__`), the domain modules
   (`pyleanx.algebra`, `pyleanx.analysis`, `pyleanx.geometry`) and `pyleanx.agent`.
+- The core modules: `pyleanx.ops`, `pyleanx.derivation`, `pyleanx.justify`, `pyleanx.pack`,
+  `pyleanx.packs`, `pyleanx.certifiers`, and `get_checker` / `register_checker` in
+  `pyleanx.backend.interface` (the names each lists in `__all__`).
 - The CLI commands, their flags and exit codes.
 - The JSON schema of `VerificationResult.to_dict()` (`schema_version`), the theorem bank
   file format (`schema`) and the canonical theorem JSON.
@@ -37,10 +40,20 @@ Public features carry one of two labels:
   hypothesis name that the proof never defines (which names count as hypothesis-like may
   change). The progress lines of the first `check` (stderr) are not an API. The heuristics of
   `benchmarks/naturalness.py` are not an API.
+- **beta** in 0.2, the extension interface of the core, which domain packages are built
+  on and which their first authors may still shape: `pl.domain_pack` / `DomainPack`, the
+  rule and pack registry of `pyleanx.justify` (`register_pack`, `add_rule`), certifiers
+  (`register_certifier`, `Goal`, `register_nonneg`, `DomainPack.certifier`), the
+  `pyleanx.packs` entry point, `register_checker`, `Derivation.goal` /
+  `Derivation.contexts` / `Derivation.certificates`, and `pyleanx.certifiers` (which
+  certificates it finds may improve; a certificate is never trusted, Lean checks it).
+  `pyleanx.ops` and the rest of `pyleanx.derivation` are stable.
 
-Which alternatives the gap filler tries, and in which order, is not part of the API: a
-later release may close more steps (never fewer is the aim, and the benchmark measures it),
-and Lean checks whatever it produces.
+Which alternatives the gap filler tries, and in which order, and which certificates the
+certifiers propose, is not part of the API: a later release may close more steps (never
+fewer is the aim, and the benchmarks measure it), and Lean checks whatever it produces.
+Registering a domain pack, rule or certifier changes the Lean a proof generates, so a
+result's fingerprint records it; a pack takes part only once imported, never implicitly.
 
 ## Deprecations
 

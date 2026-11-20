@@ -374,8 +374,10 @@ def nonneg_combination(target: Any, atoms: Sequence[tuple[Any, bool]], gens: Seq
         return lam_s, mus, c
 
     try:
-        import numpy as np
+        import numpy
         from scipy.optimize import linprog as sp_linprog
+
+        np: Any = numpy
     except ImportError:
         np = None
     if np is not None:

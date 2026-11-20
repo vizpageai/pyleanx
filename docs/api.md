@@ -1,4 +1,4 @@
-# PyLeanX API reference (v0.1)
+# PyLeanX API reference (v0.2)
 
 All names are available as `import pyleanx as pl`.
 
@@ -406,7 +406,11 @@ See [The core](core.md) for the design. The objects users meet:
 | `pl.finset_range(n)` | {0, …, n − 1}; `pl.sum(pl.finset_range(n), lambda k: k**2, sort=pl.Nat)` is written ∑_{k<n} k² and evaluated by the sanity check |
 | `pyleanx.ops.substitute(e, (x, 0))`, `ops.exchange(e, (A, B))`, `ops.free_vars(e)`, `ops.same(a, b)`, `ops.vocabulary(thm)` | operations on statements (pairs, since variables cannot be dict keys) |
 | `thm.derivation()` / `pl.derivation(thm)` | the proof's steps, what each cites and has in scope; prints as a table (`depends_on`, `cited_by`) |
-| `pl.domain_pack(name, sorts=…, symbols=…, imports=…)` | a domain pack: `.rule`, `.facts`, `.function`, `.apply`, `.sampler`, `.bigop`, `.construction`, `.hint` ([Domain packages](domains.md)) |
+| `d.goal(node)`, `d.scope_statements(node)` | the goal a step proves (tracked through `fix`, `take`, `suffices`, `suppose_not`, cases, induction) and the statements in its scope |
+| `d.certificates("h1")` | what the registered certifiers propose for a step (Lean checks whichever is used) |
+| `pl.domain_pack(name, sorts=…, symbols=…, imports=…)` | a domain pack: `.rule`, `.certifier`, `.nonneg`, `.facts`, `.function`, `.apply`, `.sampler`, `.bigop`, `.construction`, `.hint` ([Domain packages](domains.md)) |
+| `pyleanx.justify.register_certifier(name, certify, priority=…, imports=…)` | a certifier: `certify(goal)` searches in Python and returns tactic text Lean checks ([Writing a certifier](tutorials/certifiers.md)) |
+| `import pyleanx.certifiers` (`pip install 'pyleanx[certify]'`) | the shipped certifiers: polynomial equalities, inequalities (Positivstellensatz by linear programming), ∃ witnesses, divisibility; `pyleanx.certifiers.disable()` |
 | `pyleanx.packs.load_plugins()` | import the installed domain packages (entry point `pyleanx.packs`) |
 | `pyleanx.backend.interface.get_checker("batch" \| "repl")`, `register_checker` | the kernels `verify` and `check` use; registering one is trusting it |
 

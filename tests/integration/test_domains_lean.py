@@ -64,10 +64,13 @@ def test_m6_false_geometry_claim_rejected(lean_project):
 def test_every_catalog_name_exists_in_pinned_mathlib(lean_project):
     from pyleanx._domain import all_catalogs
     from pyleanx.backend.declarations import check_declarations
+    from pyleanx.proofs import LibraryFact
 
     names, imports = [], set()
     for cat in all_catalogs().values():
         for ref in cat.values():
+            if isinstance(ref, LibraryFact):   # proved by PyLeanX, not a Mathlib name
+                continue
             names.append(ref.name)
             imports.update(ref.imports)
     infos = check_declarations(names, imports, lean_project, timeout=1800)

@@ -33,6 +33,7 @@ nav:
       - Using Mathlib: tutorials/mathlib.md
       - Writing proofs like a mathematician: tutorials/written-proofs.md
       - Fast feedback and natural steps: tutorials/natural-proofs.md
+      - Writing a certifier: tutorials/certifiers.md
       - Any Lean vocabulary: tutorials/general.md
       - Libraries beyond Mathlib: tutorials/libraries.md
       - Interactive proving: tutorials/interactive.md

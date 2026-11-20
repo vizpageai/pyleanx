@@ -182,7 +182,7 @@ the benchmark results (`benchmarks/lean_results.json`).
 | K6 | Remembered winners: the alternative that closed a step is recorded (REPL) and tried first next time | a measurable speed-up of warm re-checks; a step whose winner no longer applies falls back to the full search |
 | K7 | Compact justification: write repeated parts of the search once per file as Lean macros | all 72 proofs re-verified with Lean; Lean's work measured before and after |
 
-## Status (2026-11-19)
+## Status (2026-11-20)
 
 | Phase | State | Evidence |
 |---|---|---|
@@ -191,7 +191,8 @@ the benchmark results (`benchmarks/lean_results.json`).
 | K2 | done | `pyleanx/derivation.py`; the unknown-hypothesis check reads it (same names as before on all 72 proofs) |
 | K3 | done | `pyleanx/ops.py`; pack activation uses `ops.vocabulary` |
 | K4 | done | `pyleanx/numeric.py` registries; `pyleanx/_geometry_numeric.py`. Sanity reports of 77 cases identical, sampled values included |
-| K5 | partly | fact-search registry and `pyleanx/packs.py` done. Facts already share one type (`Name`, with `LibraryFact` for facts proved in PyLeanX and `TheoremRef` for cited theorems). Still to do: the theorem bank's catalogue list (`_domain.all_catalogs`) from the registry, and exact statement contracts per fact ([foundations](foundations.md) F2) |
+| K5 | partly | fact-search registry and `pyleanx/packs.py` done; facts share one type (`Name`, with `LibraryFact` for facts proved in PyLeanX and `TheoremRef` for cited theorems); the theorem bank's and the agent's catalogues come from the registry (installed domain packages included once imported). Still to do: exact statement contracts per fact ([foundations](foundations.md) F2) |
+| Certifiers | done (beta) | `pyleanx/justify.py` (slot, `Goal`, scope and goals from the derivation graph), `pyleanx/certifiers` (polynomial, inequality, witness, divisibility). Pinned Lean, 28 steps: 14 proved by the rules, 28 with certificates; CI integration test through `verify()` |
 | K7 | done | The step-independent side-goal closers are one macro per file (`pyleanx_close_…`), called by every step. Lean's profiler on the 7 Euclid proofs: ≈38 s of work (parsing 19.1 s) before, ≈19 s (parsing 4.9 s) after; file 888 KB → 469 KB; all 72 proofs: 30.7 MB → 24.6 MB of Lean (the gain is largest in geometry, whose closers are longest), re-verified with Lean: 72/72. Writing *every* step's search as a macro was measured too and is worse (≈47 s): each macro is compiled like a program |
 | K6 | tried, not kept | Implemented and measured on the 7 Euclid proofs (REPL): cold check 750 s (Mathlib import); warm re-checks 75 s and 70 s with remembered winners first, 70 s without. No gain: a warm check's time is not spent on failing alternatives. The change was reverted (it also made `check()` able to accept a step that `verify()` times out on). Next: profile where a warm check spends its time before optimising |
 

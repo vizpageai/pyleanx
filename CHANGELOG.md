@@ -7,6 +7,13 @@ see [docs/stability.md](docs/stability.md)).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-20
+
+The core: statements, operations, the derivation graph, the justification engine (rules
+and certifiers) and the extension interface on which domain packages are built, measured
+against the pinned Lean. The extension interface is **beta** (see
+[docs/stability.md](docs/stability.md)): domain packages will be added on top of it.
+
 ### Added
 - **Certifiers** (`pyleanx.justify.register_certifier`): a step's statement and the
   statements in its scope go to Python, which may search for a *certificate* (tactic text
@@ -18,7 +25,11 @@ see [docs/stability.md](docs/stability.md)).
   multiplication by an inverse atom; contradictions for `False` goals. The derivation graph
   computes goals through `fix`, `take`, `suffices`, `suppose_not`, case splits and
   induction. On 28 steps from eight areas, Lean proves 28 with certificates and 14
-  without. [docs/core.md](docs/core.md).
+  without. [docs/core.md](docs/core.md), tutorial
+  [Writing a certifier](docs/tutorials/certifiers.md).
+- `DomainPack.certifier` (a pack's certifiers apply only where its vocabulary is used) and
+  `DomainPack.nonneg` / `justify.register_nonneg` (terms `positivity` proves nonnegative,
+  declared without importing the certifiers).
 - **Domain packages**: separate distributions built on the core and never imported by it,
   discovered through the `pyleanx.packs` entry point (`pyleanx.packs.load_plugins`;
   `pyleanx doctor` lists them, `pyleanx facts` searches their facts). A package takes part
@@ -79,6 +90,9 @@ see [docs/stability.md](docs/stability.md)).
   benchmark proofs, 28 are now tried on samples (18 before), with no finding on any of them.
 
 ### Changed
+- The citable-fact catalogues (theorem bank indexing, the agent's import table) come from the
+  domain registry: the `realvar` and `hilbert` packs are included now, and so is an
+  installed domain package once imported. Existing catalogue keys are unchanged.
 - Proofs cite facts by name (`because=[geo.sss, "h"]`); the examples, tutorials and README
   no longer cite by description. `geo.cpctc` is the CPCTC family as one name, and `because=`
   accepts such a group. Descriptions remain a way to *find* facts (`pl.search_facts`,

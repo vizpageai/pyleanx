@@ -226,6 +226,29 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - [ ] Benchmark re-run with the upgraded baseline proposer.
 - Unit tests: 248 passed; ruff and mypy clean.
 
+### Release preparation: 0.2.0, the core (2026-11-20)
+- **CI on `011ccd4`** (all certifier work): every job green except `lint + types`: build +
+  clean install, unit tests on Linux/macOS/Windows × Python 3.11–3.13, Lean integration
+  (with `tests/integration/test_certifiers_lean.py`), Lean examples, Lean benchmark, docs.
+  The lint failure: with sympy and scipy installed (they are in `dev` now), mypy saw a
+  module variable assigned `None`; fixed, and mypy now passes with and without them and for
+  win32 and linux.
+- **Domain packages later**: the citable-fact catalogues come from the domain registry (an
+  installed package joins once imported); `DomainPack.certifier` and `DomainPack.nonneg`; the
+  table of `positivity`-nonnegative heads lives in the core, empty, so a pack can declare
+  its terms without importing the certifiers.
+- **Public API**: `docs/stability.md` lists the core modules; `ops` and `derivation` are
+  stable, the extension interface (packs, rules, certifiers, plugins, checkers) is beta.
+  API guide, Python reference and the tutorial "Writing a certifier" (run against Lean by
+  the doc test).
+- **Version 0.2.0** in `pyleanx.__version__`, `CITATION.cff` and the changelog. Wheel
+  built from source (`setuptools.build_meta`): contains `pyleanx/certifiers`, the Lean
+  template and `py.typed`; installed with `--no-deps` in a clean venv it imports, renders
+  Lean, reports `pyleanx 0.2.0`, and `import pyleanx.certifiers` without sympy says what to
+  install. `mkdocs build --strict`: no warnings.
+- Left to the maintainer: tag `v0.2.0` and push it (the `release` workflow builds, checks
+  and publishes), and the one-time PyPI trusted-publisher setup (docs/releasing.md).
+
 ### Core: certifiers, search in Python and checking in Lean (2026-11-20)
 - `pyleanx.justify.register_certifier`: a certifier receives the step's statement and the
   statements in its scope (from the derivation graph, scope-aware: a step never sees a later

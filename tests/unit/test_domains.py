@@ -99,8 +99,9 @@ def test_inequality_collects_variables_from_assumptions():
 
 def test_catalogs_are_named_references_with_imports():
     cats = all_catalogs()
+    # pl.mathlib and every registered domain (built-in packs; installed ones once imported)
     assert set(cats) == {"mathlib", "algebra", "analysis", "geometry", "numbers",
-                         "complex_analysis", "harmonic"}
+                         "complex_analysis", "harmonic", "realvar", "hilbert"}
     total = 0
     for cat in cats.values():
         for key, ref in cat.items():
@@ -114,3 +115,27 @@ def test_catalogs_are_named_references_with_imports():
 def test_catalog_status_flags_other_mathlib_revisions():
     assert catalog_status(VERIFIED_MATHLIB) == "ok"
     assert "lemma names may differ" in catalog_status("0" * 40)
+
+
+def test_a_registered_domain_package_joins_the_catalogs(tmp_path, monkeypatch):
+    import sys
+
+    from pyleanx import fact_search
+
+    pkg = tmp_path / "mytopo"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text(
+        "from pyleanx._domain import lemma\n"
+        "LEMMAS = {'interior_subset': lemma('interior_subset', 'Mathlib.Topology.Basic')}\n",
+        encoding="utf-8")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    saved = dict(fact_search._REGISTRY)
+    try:
+        fact_search.register_domain("mytopo", prefix="top", title="Topology")
+        cats = all_catalogs()
+        assert cats["mytopo"]["interior_subset"].name == "interior_subset"
+    finally:
+        fact_search._REGISTRY.clear()
+        fact_search._REGISTRY.update(saved)
+        fact_search._catalog.cache_clear()
+        sys.modules.pop("mytopo", None)

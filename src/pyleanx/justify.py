@@ -252,6 +252,21 @@ class Goal:
         return [t for _, t in _run(sub)]
 
 
+#: Lean heads of terms that Lean's ``positivity`` proves nonnegative (True: positive), read
+#: by certifiers. Empty in the core: pyleanx.certifiers registers the standard functions,
+#: a domain pack its own (``pack.nonneg("MeasureTheory.Measure.real")``).
+_NONNEG_HEADS: dict[str, bool] = {}
+
+
+def register_nonneg(lean_head: str, *, positive: bool = False) -> None:
+    """Declare that ``positivity`` proves terms ``lean_head …`` nonnegative (or positive)."""
+    _NONNEG_HEADS[lean_head] = positive
+
+
+def nonneg_heads() -> dict[str, bool]:
+    return dict(_NONNEG_HEADS)
+
+
 #: how deeply certifiers may call each other through :meth:`Goal.certify`
 MAX_DEPTH = 3
 
@@ -564,4 +579,4 @@ __all__ = ["SLOTS", "Certifier", "Goal", "Pack", "Rule", "Step", "active_packs",
            "alternatives", "certificates", "certifier_imports", "certifiers",
            "current_packs", "known_statements", "packs", "packs_using", "register_certifier",
            "register_pack", "rules", "statements_for", "unregister_certifier",
-           "StepContext", "context_for", "MAX_DEPTH"]
+           "StepContext", "context_for", "MAX_DEPTH", "nonneg_heads", "register_nonneg"]

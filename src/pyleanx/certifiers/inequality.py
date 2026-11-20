@@ -22,14 +22,11 @@ from __future__ import annotations
 from math import ceil
 from typing import Any
 
-from ..justify import Goal
+from ..justify import Goal, nonneg_heads
 from ._algebra import Translator, Unsupported, degree, monomials, nonneg_combination
 from .polynomial import equalities, inverse_facts, ring_sort
 
 NAME = "inequality"
-#: heads of terms Lean's ``positivity`` proves nonnegative (``True``: positive)
-NONNEG_HEADS: dict[str, bool] = {"Real.sqrt": False, "abs": False, "Real.exp": True,
-                                 "Real.cosh": True, "norm": False, "Nat.factorial": True}
 #: the largest number of candidate nonnegative terms offered to the linear program
 MAX_ATOMS = 900
 _ORDERED = ("Int", "Rat", "Real")
@@ -37,9 +34,12 @@ _LEAN_SORT = {"Int": "ℤ", "Rat": "ℚ", "Real": "ℝ"}
 
 
 def register_nonneg(lean_head: str, *, positive: bool = False) -> None:
-    """Declare that ``positivity`` proves terms ``lean_head …`` nonnegative (or positive);
-    a domain pack can add its own (e.g. a norm or a measure)."""
-    NONNEG_HEADS[lean_head] = positive
+    """Declare that ``positivity`` proves terms ``lean_head …`` nonnegative (or positive).
+    The table lives in the core (:func:`pyleanx.justify.register_nonneg`), so a domain pack
+    can declare its terms without importing the certifiers."""
+    from ..justify import register_nonneg as core
+
+    core(lean_head, positive=positive)
 
 
 def _relation(stmt: Any) -> tuple[str, Any, Any] | None:
@@ -87,8 +87,9 @@ def _nonneg_atoms(tr: Translator) -> list[tuple[str, Any, bool]]:
     out = []
     for text, (sym, e) in tr.atoms.items():
         positive = None
-        if isinstance(e, App) and e.func.lean_name in NONNEG_HEADS:
-            positive = NONNEG_HEADS[e.func.lean_name]
+        heads = nonneg_heads()
+        if isinstance(e, App) and e.func.lean_name in heads:
+            positive = heads[e.func.lean_name]
         elif isinstance(e, Cast) and getattr(e.arg.sort, "name", None) == "Nat":
             positive = False
         if positive is None:
@@ -247,4 +248,4 @@ def certify(goal: Goal) -> str | None:
     return tactic
 
 
-__all__ = ["MAX_ATOMS", "NAME", "NONNEG_HEADS", "candidates", "certify", "register_nonneg"]
+__all__ = ["MAX_ATOMS", "NAME", "candidates", "certify", "register_nonneg"]

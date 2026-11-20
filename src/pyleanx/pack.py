@@ -35,6 +35,21 @@ class DomainPack:
 
         add_rule(slot, priority, make, pack=self.name, name=name)
 
+    def certifier(self, name: str, certify: Any, *, priority: float = 0,
+                  imports: Iterable[str] = ()) -> None:
+        """A certifier (:func:`pyleanx.justify.register_certifier`): a search in Python whose
+        certificate Lean checks; active in theorems that use this pack's vocabulary."""
+        from .justify import register_certifier
+
+        register_certifier(name, certify, priority=priority, pack=self.name, imports=imports)
+
+    def nonneg(self, lean_head: str, *, positive: bool = False) -> None:
+        """Terms ``lean_head …`` that Lean's ``positivity`` proves nonnegative (or positive):
+        the inequality certifier may use them."""
+        from .justify import register_nonneg
+
+        register_nonneg(lean_head, positive=positive)
+
     # --- citable facts (pyleanx.fact_search) ----------------------------------------
     def facts(self, module: str, *, prefix: str, title: str = "") -> None:
         """Make the ``LEMMAS`` of ``module`` citable and searchable (``pl.search_facts``)."""
