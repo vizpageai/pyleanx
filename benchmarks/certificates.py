@@ -85,6 +85,32 @@ def suite() -> list[tuple[str, pl.Theorem]]:
         ("number theory", one("divides_combination", [m, n], {"h": nt.divides(m, n)},
                               nt.divides(m, 2 * n + 3 * n * n))),
         ("number theory", one("nat_divides_square_plus", [k], {}, nt.divides(k, k ** 2 + k))),
+        # division: x / y is x * y⁻¹, with y * y⁻¹ = 1 from y ≠ 0 or y > 0
+        ("division", one("am_hm_two", [x, y], {"hx": x > 0, "hy": y > 0},
+                         x / y + y / x >= 2)),
+        ("division", one("reciprocal_le_one", [x], {"hx": x >= 1, "hx0": x > 0}, 1 / x <= 1)),
+        ("division", one("fraction_square", [a, x], {"hx": x != 0},
+                         (a / x) ** 2 * x ** 2 == a ** 2)),
+        ("division", one("halve_equation", [y], {"h": y / 2 == 3}, y == 6)),
+        # goals that change during a written proof (no step states them)
+        ("proof structure", pl.Theorem(
+            "after_fix", [], conclusion=pl.Forall([a, b], pl.Implies(
+                a >= 0, pl.Implies(b >= 0, a ** 3 + b ** 3 >= a ** 2 * b + a * b ** 2))),
+            proof=pl.proof(pl.fix(a, b, assume={"ha": a >= 0, "hb": b >= 0}),
+                           pl.conclude(because=["ha", "hb"])))),
+        ("proof structure", pl.Theorem(
+            "square_plus_two_positive", [x], conclusion=x ** 2 + 2 * x + 2 > 0,
+            proof=pl.proof(pl.suppose_not(x ** 2 + 2 * x + 2 <= 0, name="hneg"),
+                           pl.conclude(because="hneg")))),
+        ("proof structure", pl.Theorem(
+            "product_by_cases", [x], assumptions={"hx": pl.Or(x <= 0, x >= 1)},
+            conclusion=x * (x - 1) >= 0,
+            proof=pl.proof(pl.cases_on(pl.case(x <= 0, pl.conclude(because="h0"), name="h0"),
+                                       pl.case(x >= 1, pl.conclude(because="h1"), name="h1"),
+                                       because="hx")))),
+        ("proof structure", pl.Theorem(
+            "exists_between_auto", [x], conclusion=pl.Exists(y, pl.And(y > x, y < x + 2)),
+            proof=pl.auto())),
     ]
 
 

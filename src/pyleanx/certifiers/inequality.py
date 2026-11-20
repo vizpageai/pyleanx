@@ -24,7 +24,7 @@ from typing import Any
 
 from ..justify import Goal
 from ._algebra import Translator, Unsupported, degree, monomials, nonneg_combination
-from .polynomial import equalities, ring_sort
+from .polynomial import equalities, inverse_facts, ring_sort
 
 NAME = "inequality"
 #: heads of terms Lean's ``positivity`` proves nonnegative (``True``: positive)
@@ -57,16 +57,21 @@ def _relation(stmt: Any) -> tuple[str, Any, Any] | None:
 
 def _hypotheses(goal: Goal, tr: Translator) -> list[tuple[str, Any, bool]]:
     """``(proof of smaller ≤/< larger, larger - smaller, strict)`` for usable inequalities."""
-    from ..expr import Compare
+    from ..expr import Compare, NotP
     from . import facts
 
     out = []
     for proof, stmt in facts(goal):
-        rel = _relation(stmt)
+        negated = isinstance(stmt, NotP)
+        rel = _relation(stmt.arg if negated else stmt)
         if rel is None or ring_sort(rel[1], rel[2]) != tr.sort:
             continue
         a, b = tr.try_poly(rel[1]), tr.try_poly(rel[2])
         if a is None or b is None:
+            continue
+        if negated:   # ¬(a ≤ b): b < a;  ¬(a < b): b ≤ a
+            lemma = "not_le" if rel[0] == "le" else "not_lt"
+            out.append((f"({lemma}.mp {proof})", a - b, rel[0] == "le"))
             continue
         if isinstance(stmt, Compare) and stmt.op == "ge":
             proof = f"(ge_iff_le.mp {proof})"
@@ -134,6 +139,18 @@ def candidates(target: Any, hyps: list[tuple[str, Any, bool]], tr: Translator,
             if dg + 2 * degree(q, syms) <= top:
                 out.append((f"(mul_nonneg (sub_nonneg.mpr {le(p, s)}) "
                             f"(sq_nonneg ({tr.lean(q)})))", sp.expand(g * q ** 2), False))
+    # two hypotheses times a square of a difference of variables (x/y + y/x ≥ 2 needs
+    # (x - y)²·x⁻¹·y⁻¹ ≥ 0), allowed two degrees more when the goal has inverses
+    extra = 2 if tr.inverses else 0
+    linear = [q for q in squares if degree(q, syms) == 1]
+    if len(hyps) <= 8:
+        for i, (p1, g1, s1) in enumerate(hyps):
+            for p2, g2, s2 in hyps[i + 1:]:
+                for q in linear:
+                    if degree(g1 * g2, syms) + 2 <= top + extra:
+                        out.append((f"(mul_nonneg (mul_nonneg (sub_nonneg.mpr {le(p1, s1)}) "
+                                    f"(sub_nonneg.mpr {le(p2, s2)})) (sq_nonneg ({tr.lean(q)})))",
+                                    sp.expand(g1 * g2 * q ** 2), False))
     # no duplicates (by polynomial), at most MAX_ATOMS
     seen: set[Any] = set()
     unique = []
@@ -146,7 +163,63 @@ def candidates(target: Any, hyps: list[tuple[str, Any, bool]], tr: Translator,
     return unique[:MAX_ATOMS]
 
 
+def _search(goal: Goal, tr: Translator, target: Any, strict: bool) -> str | None:
+    """The ``linear_combination`` argument proving ``target ≥ 0`` (``> 0`` if strict)."""
+    hyps = _hypotheses(goal, tr)
+    eqs = equalities(goal, tr)
+    inv_eqs, inv_pos = inverse_facts(goal, tr)
+    eqs += inv_eqs
+    hyps += [(p, g, s) for p, g, s in inv_pos]
+    atoms = candidates(target, hyps, tr, [g for _, g in eqs])
+    if not atoms and not eqs:
+        return None
+    try:
+        found = nonneg_combination(target, [(p, s) for _, p, s in atoms],
+                                   [g for _, g in eqs], tr.symbols,
+                                   strict=strict, integral=not tr.field)
+    except Unsupported:
+        return None
+    if found is None:
+        return None
+    lam, mus, _ = found
+    try:
+        terms = [(lv, proof) for lv, (proof, _, _) in zip(lam, atoms, strict=True) if lv != 0]
+        # The search writes the gap as Σ λ·(r - l) + Σ μ·(a - b) for inequalities l ≤ r and
+        # equalities a = b; linear_combination counts an equality, like an inequality, as
+        # b - a. So the equalities enter with -μ.
+        terms += [(-mu, proof) for mu, (proof, _) in zip(mus, eqs, strict=True)]
+        return tr.combination(terms)
+    except Unsupported:
+        return None
+
+
+def _contradiction(goal: Goal) -> str | None:
+    """``False`` from the statements in scope: a combination proving ``0 < 0``."""
+    import sympy as sp
+
+    from ..expr import NotP
+    from . import facts
+
+    sorts: list[str] = []
+    for _, stmt in facts(goal):
+        rel = _relation(stmt.arg if isinstance(stmt, NotP) else stmt)
+        s = ring_sort(rel[1], rel[2]) if rel else None
+        if s in _ORDERED and s not in sorts:
+            sorts.append(s)
+    for sort in sorts:
+        tr = Translator(sort)
+        text = _search(goal, tr, sp.Integer(0), strict=True)
+        if text is not None:
+            return (f"exact absurd (show (0 : {_LEAN_SORT[sort]}) < 0 by "
+                    f"linear_combination {text}) (lt_irrefl _)")
+    return None
+
+
 def certify(goal: Goal) -> str | None:
+    from ..expr import PropConst
+
+    if isinstance(goal.statement, PropConst) and goal.statement.value is False:
+        return _contradiction(goal)
     rel = _relation(goal.statement)
     if rel is None:
         return None
@@ -161,25 +234,8 @@ def certify(goal: Goal) -> str | None:
         target = sp.expand(tr.poly(large) - tr.poly(small))
     except Unsupported:
         return None
-    hyps = _hypotheses(goal, tr)
-    eqs = equalities(goal, tr)
-    atoms = candidates(target, hyps, tr, [g for _, g in eqs])
-    if not atoms and not eqs:
-        return None
-    try:
-        found = nonneg_combination(target, [(p, s) for _, p, s in atoms],
-                                   [g for _, g in eqs], tr.symbols,
-                                   strict=kind == "lt", integral=not tr.field)
-    except Unsupported:
-        return None
-    if found is None:
-        return None
-    lam, mus, _ = found
-    try:
-        terms = [(lv, proof) for lv, (proof, _, _) in zip(lam, atoms, strict=True) if lv != 0]
-        terms += [(mu, proof) for mu, (proof, _) in zip(mus, eqs, strict=True)]
-        text = tr.combination(terms)
-    except Unsupported:
+    text = _search(goal, tr, target, strict=kind == "lt")
+    if text is None:
         return None
     tactic = f"linear_combination {text}" if text else "linear_combination"
     if goal.statement.op in ("ge", "gt"):

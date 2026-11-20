@@ -49,6 +49,8 @@ class Translator:
             raise Unsupported(sort)
         self.sort = sort
         self.atoms: dict[str, tuple[Any, Any]] = {}   # Lean text -> (symbol, Expr)
+        #: symbol of an inverse atom ``q⁻¹`` -> the denominator ``q`` (an Expr)
+        self.inverses: dict[Any, Any] = {}
 
     @property
     def field(self) -> bool:
@@ -96,9 +98,25 @@ class Translator:
             if e.op == "div" and self.field and isinstance(e.rhs, Lit) and e.rhs.value != 0:
                 return self.poly(e.lhs) / sp.Rational(e.rhs.value.numerator,
                                                       e.rhs.value.denominator)
+            if e.op == "div" and self.field:
+                # x / q = x * q⁻¹, as Lean's `ring` normalises it; q⁻¹ is an atom tied to q
+                # by q * q⁻¹ = 1 when q ≠ 0 is known (see inverse_facts)
+                return self.poly(e.lhs) * self.inverse(e.rhs)
         if getattr(e, "is_prop", False):
             raise Unsupported("a proposition")
         return self._atom(e)       # any other term of this sort: opaque
+
+    def inverse(self, q: Any) -> Any:
+        """The atom ``q⁻¹``."""
+        from ..render.lean import render_expr
+
+        self.poly(q)        # q's own atoms first (and its sort checked)
+        text = f"({render_expr(q)})⁻¹"
+        if text not in self.atoms:
+            sym = sympy().Symbol(f"a{len(self.atoms)}")
+            self.atoms[text] = (sym, None)
+            self.inverses[sym] = q
+        return self.atoms[text][0]
 
     def try_poly(self, e: Any) -> Any | None:
         try:
@@ -342,6 +360,15 @@ def nonneg_combination(target: Any, atoms: Sequence[tuple[Any, bool]], gens: Seq
         mus, c = found
         if c < 0 or (strict and c == 0 and not any(lam[i] > 0 for i in strict_cols[:-1])):
             return None
+        if sp.expand(target) == 0:
+            # a contradiction (0 < 0) is scale-free: the smallest whole coefficients
+            from math import lcm
+
+            scale = sp.Rational(lcm(*(x.denominator for x in lam if x)), 1) if any(lam) else 1
+            lam_s = [lv * scale for lv in lam_s]
+            mus = [sp.expand(m * scale) for m in mus]
+            c = c * scale
+            lam = [Fraction(int(v.p), int(v.q)) for v in map(sp.Rational, lam_s)]
         if integral and not all(x.denominator == 1 for x in lam):
             return None
         return lam_s, mus, c

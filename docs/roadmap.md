@@ -244,8 +244,19 @@ explained; to investigate on an idle machine before claiming batch speedups).
 - **Lean measurement 1** (8 equality steps, `#count_heartbeats`, heartbeat limit lifted):
   19,376 → 5,043 thousand heartbeats; the rules prove all 8 too; a wrong certificate first
   costs +10%.
-- **Lean measurement 2** (`benchmarks/certificates.py`, 20 steps in 6 domains, default
-  budget `maxHeartbeats 200000`, pinned Lean 4.34.1 / Mathlib d13f23b):
+- **Lean measurement 2** (`benchmarks/certificates.py`, 20 steps in 6 domains): rules 10/20,
+  certified 20/20, wrong-first 10/20; 38.7 → 13.7 million heartbeats.
+- **Goals through written proofs**: the derivation graph computes the goal after `fix`
+  (∀/⇒ peeled, fixed hypotheses stated), `take`, `suffices`, `suppose_not` (`False`, the
+  assumption in scope), each case of a split, and induction (goal at 0 and k + 1, the
+  hypothesis at k); `choose` states each named part. Contradiction certificates (`False`
+  from `0 < 0`), negated hypotheses (`¬(a ≤ b)` as `b < a`), and division (`x / q` as
+  `x * q⁻¹` with `q * q⁻¹ = 1` from `q ≠ 0`/`q > 0`/`positivity`; `q⁻¹ > 0` from `q > 0`).
+- **Bug found by Lean and fixed**: inequality certificates that use an *equation* had the
+  equation's multiplier with the wrong sign (`linear_combination` counts `a = b` as `b - a`
+  in an inequality goal). Found when the two division inequalities failed; checked with a
+  direct Lean probe; `sin² x ≤ 1` now uses its certificate too (1,294 → 398 thousand).
+- **Lean measurement 3** (28 steps, default budget, pinned Lean 4.34.1 / Mathlib d13f23b):
 
   | domain | steps | rules only | certified | wrong certificate first |
   |---|---|---|---|---|
@@ -255,19 +266,22 @@ explained; to investigate on an idle machine before claiming batch speedups).
   | trigonometry | 2 | 2 | 2 | 2 |
   | logic (∃) | 3 | 0 | 3 | 0 |
   | number theory | 3 | 1 | 3 | 1 |
-  | **total** | **20** | **10** | **20** | **10** |
+  | division | 4 | 2 | 4 | 2 |
+  | proof structure (fix, contradiction, cases, ∃ by auto) | 4 | 2 | 4 | 2 |
+  | **total** | **28** | **14** | **28** | **14** |
 
-  Lean's work: rules 38.7, certified 13.7, wrong-first 42.3 (millions of heartbeats); on
-  the 10 steps the rules prove, 15.9 → 7.1. Certificates cost more on 2 steps
-  (`√x + 1 > 0`: 154 → 757 thousand; `sin² x ≤ 1`: 1,294 → 1,573). Axioms: the standard
-  three everywhere. Wall time per file is dominated by imports and machine load
-  (38–454 s for the same imports).
-- Unit tests: `tests/unit/test_certificates.py` (slot, scope, goals of conclusions and
-  `auto`, composition), `tests/unit/test_certifiers.py` (each certifier, negative cases: no
-  certificate for a false (in)equality or an impossible ∃; skipped without sympy).
+  Lean's work: rules 61.3, certified 16.5, wrong-first 67.0 (millions of heartbeats); on
+  the 14 steps the rules prove, 22.8 → 7.7. One step costs more with its certificate
+  (`√x + 1 > 0`: 154 → 757 thousand). Axioms: the standard three everywhere. Wall time per
+  file is dominated by imports and machine load (66–692 s for the same imports).
+- Tests: `tests/unit/test_certificates.py` (slot, scope, goal tracking through fix,
+  contradiction, cases, take, induction, choose), `tests/unit/test_certifiers.py` (each
+  certifier; negative cases: no certificate for a false (in)equality, a consistent set of
+  hypotheses, an impossible ∃), `tests/integration/test_certifiers_lean.py` (real Lean via
+  `verify()`; a wrong certificate never verifies a false step).
 - Not done: sums of squares beyond the diagonally dominant cone (needs an SDP solver),
-  division (`x / y`) beyond atoms, goals after `fix`/`intro`/cases (goal states from the
-  REPL), modular arithmetic, inequalities over ℕ.
+  goals after raw tactics (goal states from the REPL), modular arithmetic, inequalities
+  over ℕ.
 
 ### Domain packages; pyleanx-analysis (2026-11-19, evening)
 - **Separate domain packages**: `domains/analysis` is its own distribution

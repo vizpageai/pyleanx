@@ -14,8 +14,11 @@ see [docs/stability.md](docs/stability.md)).
   `Derivation.certificates(step)` shows them; claims, chain links, conclusions and
   `pl.auto()` get them. **`pyleanx.certifiers`** (opt-in, `pip install pyleanx[certify]`):
   polynomial equalities, inequalities (Positivstellensatz by linear programming),
-  existential witnesses and divisibility, with non-ring terms as atoms. On 20 steps from
-  six domains, Lean proves 20 with certificates and 10 without. [docs/core.md](docs/core.md).
+  existential witnesses and divisibility, with non-ring terms as atoms and division as
+  multiplication by an inverse atom; contradictions for `False` goals. The derivation graph
+  computes goals through `fix`, `take`, `suffices`, `suppose_not`, case splits and
+  induction. On 28 steps from eight areas, Lean proves 28 with certificates and 14
+  without. [docs/core.md](docs/core.md).
 - **Domain packages**: separate distributions built on the core and never imported by it,
   discovered through the `pyleanx.packs` entry point (`pyleanx.packs.load_plugins`;
   `pyleanx doctor` lists them, `pyleanx facts` searches their facts). A package takes part

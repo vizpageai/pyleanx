@@ -1,7 +1,7 @@
 {
   "rules": {
-    "seconds": 454.3,
-    "bytes": 147821,
+    "seconds": 83.8,
+    "bytes": 210246,
     "theorems": {
       "substitute_square": {
         "heartbeats": 486,
@@ -36,7 +36,7 @@
         "axioms": []
       },
       "am_gm_two": {
-        "heartbeats": 1448,
+        "heartbeats": 1447,
         "errors": 1,
         "axioms": [
           "propext",
@@ -183,12 +183,88 @@
           "Classical.choice",
           "Quot.sound"
         ]
+      },
+      "am_hm_two": {
+        "heartbeats": 2797,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "reciprocal_le_one": {
+        "heartbeats": 3724,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "fraction_square": {
+        "heartbeats": 1867,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "halve_equation": {
+        "heartbeats": 563,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "after_fix": {
+        "heartbeats": 8292,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "square_plus_two_positive": {
+        "heartbeats": 1293,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "product_by_cases": {
+        "heartbeats": 3120,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "exists_between_auto": {
+        "heartbeats": 934,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
       }
     }
   },
   "certified": {
-    "seconds": 219.2,
-    "bytes": 153516,
+    "seconds": 692.2,
+    "bytes": 218207,
     "theorems": {
       "substitute_square": {
         "heartbeats": 311,
@@ -308,7 +384,7 @@
         ]
       },
       "sin_square_le_one": {
-        "heartbeats": 1573,
+        "heartbeats": 398,
         "errors": 0,
         "axioms": [
           "propext",
@@ -366,12 +442,84 @@
         "axioms": [
           "propext"
         ]
+      },
+      "am_hm_two": {
+        "heartbeats": 797,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "reciprocal_le_one": {
+        "heartbeats": 455,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "fraction_square": {
+        "heartbeats": 580,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "halve_equation": {
+        "heartbeats": 215,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "after_fix": {
+        "heartbeats": 791,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "square_plus_two_positive": {
+        "heartbeats": 429,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "product_by_cases": {
+        "heartbeats": 538,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "exists_between_auto": {
+        "heartbeats": 203,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
       }
     }
   },
   "wrong": {
-    "seconds": 38.0,
-    "bytes": 149563,
+    "seconds": 65.6,
+    "bytes": 212550,
     "theorems": {
       "substitute_square": {
         "heartbeats": 743,
@@ -420,7 +568,7 @@
         ]
       },
       "am_gm_three": {
-        "heartbeats": 5370,
+        "heartbeats": 5371,
         "errors": 1,
         "axioms": [
           "propext",
@@ -430,7 +578,7 @@
         ]
       },
       "cauchy_schwarz_two": {
-        "heartbeats": 2367,
+        "heartbeats": 2368,
         "errors": 1,
         "axioms": [
           "propext",
@@ -554,6 +702,82 @@
         "errors": 0,
         "axioms": [
           "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "am_hm_two": {
+        "heartbeats": 3175,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "reciprocal_le_one": {
+        "heartbeats": 4021,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "fraction_square": {
+        "heartbeats": 2257,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "halve_equation": {
+        "heartbeats": 798,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "after_fix": {
+        "heartbeats": 8803,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "square_plus_two_positive": {
+        "heartbeats": 1294,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "product_by_cases": {
+        "heartbeats": 3437,
+        "errors": 0,
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ]
+      },
+      "exists_between_auto": {
+        "heartbeats": 935,
+        "errors": 1,
+        "axioms": [
+          "propext",
+          "sorryAx",
           "Classical.choice",
           "Quot.sound"
         ]

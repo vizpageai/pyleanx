@@ -80,12 +80,67 @@ def test_conclusions_and_auto_know_their_goal(certifier):
     assert src.index("exact CERTIFICATE") < src.index("ring1")
 
 
-def test_goal_is_unknown_after_a_step_that_changes_it(certifier):
+def test_goal_after_fix_is_the_body_with_the_fixed_variable(certifier):
     thm = pl.Theorem(
         "f", [x], assumptions={"hx": x > 0}, conclusion=pl.Forall(y, pl.Implies(y > x, y > 0)),
         proof=pl.proof(pl.fix(y, assume={"hy": y > x}), pl.conclude(because=["hx", "hy"])))
     render_module([thm])
-    assert certifier == []        # after `fix`, the goal is not tracked: no certifier call
+    (g,) = certifier
+    assert g.statement.same_structure(y > 0)
+    assert dict(g.given)["hy"].same_structure(y > x)      # the fixed hypothesis' statement
+
+
+def test_goals_through_contradiction_cases_and_take():
+    from pyleanx.derivation import derivation
+
+    contra = pl.Theorem("c", [x], conclusion=x * x >= 0, proof=pl.proof(
+        pl.suppose_not(x * x < 0, name="hn"), pl.conclude(because="hn")))
+    d = derivation(contra)
+    concl = next(n for n in d if n.kind == "conclusion")
+    assert d.goal(concl).same_structure(pl.FALSE)
+    assert d.scope_statements(concl)["hn"].same_structure(x * x < 0)
+
+    split = pl.Theorem("s", [x], assumptions={"h": pl.Or(x <= 0, x >= 1)},
+                       conclusion=x * (x - 1) >= 0, proof=pl.proof(pl.cases_on(
+                           pl.case(x <= 0, pl.conclude(because="h0"), name="h0"),
+                           pl.case(x >= 1, pl.conclude(because="h1"), name="h1"),
+                           because="h")))
+    d = derivation(split)
+    concls = [n for n in d if n.kind == "conclusion"]
+    assert len(concls) == 2 and all(d.goal(n).same_structure(x * (x - 1) >= 0)
+                                    for n in concls)
+    assert d.scope_statements(concls[1])["h1"].same_structure(x >= 1)
+
+    take = pl.Theorem("e", [x], conclusion=pl.Exists(y, y > x), proof=pl.proof(
+        pl.take(x + 1), pl.conclude()))
+    d = derivation(take)
+    assert d.goal(next(n for n in d if n.kind == "conclusion")).same_structure(x + 1 > x)
+
+
+def test_induction_goals_and_hypothesis():
+    from pyleanx.derivation import derivation
+
+    n, k = pl.symbols("n k", pl.Nat)
+    thm = pl.Theorem("i", [n], conclusion=2 * n >= n, proof=pl.proof(pl.induction_on(
+        n, k=k, base=pl.proof(pl.conclude()), step=pl.proof(pl.conclude(because="ih")))))
+    d = derivation(thm)
+    base, step = [nd for nd in d if nd.kind == "conclusion"]
+    assert d.goal(base).same_structure(2 * pl.nat(0) >= pl.nat(0)) or         "0" in str(d.goal(base))
+    assert d.goal(step).same_structure(2 * (k + 1) >= k + 1)
+    assert d.scope_statements(step)["ih"].same_structure(2 * k >= k)
+
+
+def test_choose_names_state_the_parts():
+    from pyleanx.derivation import derivation
+
+    thm = pl.Theorem("ch", [x], assumptions={"h": pl.Exists(y, pl.And(y > x, y < 2))},
+                     conclusion=x < 2, proof=pl.proof(
+                         pl.choose(y, such_that=pl.And(y > x, y < 2), because="h",
+                                   names="h1 h2"),
+                         pl.conclude(because=["h1", "h2"])))
+    d = derivation(thm)
+    scope = d.scope_statements(next(nd for nd in d if nd.kind == "conclusion"))
+    assert scope["h1"].same_structure(y > x) and scope["h2"].same_structure(y < 2)
 
 
 def test_certifiers_can_reduce_a_goal_to_another():

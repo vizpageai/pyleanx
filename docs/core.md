@@ -97,10 +97,13 @@ justify.register_certifier("ring.linear_combination", certify,
                            imports=("Mathlib.Tactic.LinearCombination",))
 ```
 
-Certifiers run for claims, chain links, conclusions and `pl.auto()`: the derivation graph
-carries the goal through the steps that keep it (claims, choices, definitions, "it
-suffices to show"), and leaves it unknown after a step that changes it in a way it does
-not track (`fix`, cases, induction). Certificates are tried first in the step's
+Certifiers run for claims, chain links, conclusions and `pl.auto()`. The derivation graph
+computes each step's goal from the statement, as Lean's goal evolves: claims, choices and
+definitions keep it; `fix` peels ∀ and ⇒ (and states the fixed hypotheses); `take`
+instantiates ∃; `suffices` replaces it; `suppose_not` makes it `False` (with the assumption
+in scope); each case of a split keeps it (with the case's hypothesis); induction gives the
+goal at 0 and at k + 1 and the hypothesis at k. After a step it does not model (a raw
+tactic), the goal is unknown and no certificate is proposed. Certificates are tried first in the step's
 `first | …`; the rules follow, so a wrong or missing certificate costs one failed
 alternative and nothing else. A certifier that raises is skipped with a warning.
 Certifiers must be deterministic (the generated Lean is fingerprinted); a pack registers
@@ -119,28 +122,35 @@ four certifiers:
 | `witness` | `∃ x, P x` | solve the equations of `P` (sympy), else simple terms; the instance is proved by the other certifiers | `exact ⟨w, (by …), …⟩` |
 | `divisibility` | `a ∣ b` (ℕ, ℤ) from cited divisibilities and equalities | the quotient as an ideal-membership coefficient | `exact ⟨q, by linear_combination …⟩` |
 
-Terms that are not ring arithmetic (`Real.sin x`, `√x`, `x / y`, ℕ subtraction, `n % 3`) are
-opaque atoms, which is sound: a certificate valid for every value of the atom is valid for
-its actual value. So the same certifiers serve every Mathlib domain whose step is
-algebraic in such terms; a pack declares more nonnegative terms with
+Terms that are not ring arithmetic (`Real.sin x`, `√x`, ℕ subtraction, `n % 3`) are opaque
+atoms, which is sound: a certificate valid for every value of the atom is valid for its
+actual value. Division `x / q` is `x * q⁻¹`, as Lean's `ring` normalises it, with the atom
+`q⁻¹` tied to `q` by `q * q⁻¹ = 1` (`mul_inv_cancel₀`, from a fact `q ≠ 0`, `q > 0`, `q < 0`,
+or else `positivity`) and known positive when `q > 0` is (`inv_pos`). For a `False` goal
+the inequality certifier looks for a contradiction (a combination proving `0 < 0`);
+negated hypotheses `¬(a ≤ b)` count as `b < a`. So the same certifiers serve every Mathlib
+domain whose step is algebraic in such terms; a pack declares more nonnegative terms with
 `certifiers.inequality.register_nonneg("MeasureTheory.measure")`.
 
-**Measured** with pinned Lean (`benchmarks/certificates.py`): 20 one-step theorems from
-algebra, inequalities, analysis, trigonometry, logic and number theory, each checked under
-Lean's default budget (`maxHeartbeats 200000`), work counted with `#count_heartbeats`:
+**Measured** with pinned Lean (`benchmarks/certificates.py`): 28 theorems from algebra,
+inequalities, analysis, trigonometry, logic, number theory, division and written proofs
+whose goal changes (after `fix`, by contradiction, by cases, ∃ under `auto`), each checked
+under Lean's default budget (`maxHeartbeats 200000`), work counted with `#count_heartbeats`:
 
 | | steps proved | Lean's work (10⁶ heartbeats) |
 |---|---|---|
-| justification rules only | **10 / 20** | 38.7 |
-| certificates first | **20 / 20** | 13.7 |
-| a wrong certificate first | 10 / 20 (the rules' result) | 42.3 |
+| justification rules only | **14 / 28** | 61.3 |
+| certificates first | **28 / 28** | 16.5 |
+| a wrong certificate first | 14 / 28 (the rules' result) | 67.0 |
 
 The rules (`linarith`, `nlinarith`, `positivity`, `aesop`, `grind`, …) fail on AM–GM for two
-and three variables, Cauchy–Schwarz in ℝ², `x³y + xy³ ≤ x⁴ + y⁴`, `x > 1 → x³ > 1`, all three
-existence statements and both divisibilities over ℤ; certificates prove them. On the 10
-steps both prove, Lean's work falls from 15.9 to 7.1 (×10⁶) heartbeats; it rises on two
-(`√x + 1 > 0`, where `positivity` alone is cheaper, and `sin² x ≤ 1`). Every result depends
-only on `propext`, `Classical.choice`, `Quot.sound`.
+and three variables, Cauchy–Schwarz in ℝ², `x³y + xy³ ≤ x⁴ + y⁴`, `x > 1 → x³ > 1`,
+`x/y + y/x ≥ 2`, `1/x ≤ 1`, all four existence statements, both divisibilities over ℤ and
+the step after `fix`; certificates prove them. On the 14 steps both prove, Lean's work
+falls from 22.8 to 7.7 (×10⁶) heartbeats; it rises on one (`√x + 1 > 0`, where
+`positivity` alone is cheaper). Every result depends only on `propext`,
+`Classical.choice`, `Quot.sound`. `tests/integration/test_certifiers_lean.py` checks a
+selection through `verify()` (axiom audit included) in CI.
 
 ## Constraints from Lean's mechanism
 

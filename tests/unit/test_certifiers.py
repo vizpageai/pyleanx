@@ -164,3 +164,39 @@ def test_certificates_in_a_written_proof():
     src = render_module([thm]).source
     assert "linear_combination (sq_nonneg (a - b))" in src
     assert "import Mathlib.Tactic.LinearCombination" in src
+
+
+# --- division and contradiction -------------------------------------------------------
+
+def test_division_uses_inverse_atoms_tied_by_nonzero_facts():
+    assert only(x * (1 / x) == 1, hx=x > 0) == \
+        ("polynomial", "linear_combination (mul_inv_cancel₀ (ne_of_gt hx))")
+    assert only(y == 6, h=y / 2 == 3) == ("polynomial", "linear_combination 2 * h")
+    _, text = only((a / x) ** 2 * x ** 2 == a ** 2, hx=x != 0)
+    assert "(mul_inv_cancel₀ hx)" in text
+    assert certs(a / x + b / x == (a + b) / x, hx=x != 0) == []   # `ring` alone
+
+
+def test_without_a_nonzero_fact_positivity_is_asked():
+    _, text = only(a / (x ** 2 + 1) * (x ** 2 + 1) == a)
+    assert "(show (x ^ 2 + 1 : ℝ) ≠ 0 by positivity)" in text
+
+
+@needs_scipy
+def test_am_hm_uses_two_positive_inverses_and_a_square():
+    _, text = only(x / y + y / x >= 2, hx=x > 0, hy=y > 0)
+    assert "inv_pos.mpr hx" in text and "inv_pos.mpr hy" in text
+    assert "sq_nonneg (x - y)" in text
+
+
+def test_contradiction_from_the_hypotheses():
+    name, text = only(pl.FALSE, h=x ** 2 + 2 * x + 2 <= 0)
+    assert name == "inequality"
+    assert text == ("exact absurd (show (0 : ℝ) < 0 by linear_combination h + "
+                    "(sq_nonneg (x + 1))) (lt_irrefl _)")
+    assert certs(pl.FALSE, h=x ** 2 <= 0) == []         # consistent (x = 0): none
+
+
+def test_negated_hypotheses_are_used():
+    _, text = only(x > 1, h=pl.Not(x <= 1))
+    assert "(not_le.mp h)" in text
